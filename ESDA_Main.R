@@ -4,11 +4,10 @@
 #Then check for wells with the same spatial location. Only the deepest well at the same spatial location will be retained.
 #Then perform al local outlier analysis.
 
-# Setting up Working Directory and Libraries ----
-setwd("C:/Users/Jared/Documents/Cornell/Research/Masters - Spatial Assessment/Figures")
-
+# Libraries ----
+library(sp) # map plots
 library(rgdal) #spatial data reading/writing
-library(GISTools) #map making
+library(GISTools) #map making tools
 library(dgof) #ks test for discrete distributions
 library(Hmisc) #minor tick marks
 
@@ -64,8 +63,8 @@ DataAll = Data[-which(Data$Gradient < 0),]
 
 
 # Check Wells in same spatial location ----
-#Note that this step is used here only for using the QsDev function to calculate the local
-# median surface heat flow. These variables are overwritten at a later step.
+#Note that this step is used here so that the QsDev function to calculate the local
+# median surface heat flow uses only unique locations.
 
 #Find all points that share the same location and take the deepest measurement.
 Same = SameSpot(DataAll)
@@ -86,6 +85,99 @@ Rerun = Rerun[c((nrow(Rerun) - 4):nrow(Rerun)),]
 Rerun$APINo = SortData$RerunWells$APINo
 SortData$Sorted@data[c((nrow(SortData$Sorted) - 4):nrow(SortData$Sorted)),] = Rerun[,-c(1,8,9,ncol(Rerun))]
 
+# Make a plot of the heat flow vs. depth of BHT measurement for the wells in the same spot----
+# Make a copy of the database to track the wells in the same spatial location.
+PlotSpots = DataAll@data
+# The wells in the same spot will be assigned the same number in a field named SameSpot
+PlotSpots$SameSpot = NA
+
+count = 1
+
+for (i in 1:nrow(Same$StoreData_Frame)){
+  #Only take the unique spots that have more than 1 point
+  if (any(Same$StoreData_Frame[i,] == 1) & is.na(PlotSpots$SameSpot[as.numeric(colnames(Same$StoreData_Frame)[i])]) == TRUE){
+    #Have not checked this spot yet. Gather all well indicies with the same spatial location.
+    Indxs = as.numeric(colnames(Same$StoreData_Frame[which(Same$StoreData_Frame[i,] == 1)]))
+    
+    #Assign a number to these wells in the same spot
+    PlotSpots$SameSpot[Indxs] = count
+    count = count + 1
+  }
+}
+
+#Sort by the same spot number
+PlotSpots = PlotSpots[order(PlotSpots$SameSpot),]
+
+#Retain only data in same spot as other data
+PlotSpots = PlotSpots[which(is.na(PlotSpots$SameSpot) == FALSE),]
+
+#Sort by the depth of the deepest well in the set of points
+for (i in 1:length(unique(PlotSpots$SameSpot))){
+  #Determine how many wells there are in the same spot
+  indxs = which(PlotSpots$SameSpot == i)
+  #Sort only these wells and place the sorted data in those rows
+  PlotSpots[indxs,] = PlotSpots[indxs,][order(PlotSpots$WellDepth[indxs]),]
+}
+
+#Sort groups of wells by the shallowest well.
+#Obtain index of shallowest well for each location
+indxShallow = vector('numeric', length(unique(PlotSpots$SameSpot)))
+for (j in 1:length(unique(PlotSpots$SameSpot))){
+  indxShallow[j] = which(PlotSpots$SameSpot == j)[1]
+}
+for (i in 1:length(unique(PlotSpots$SameSpot))){
+  #Sort only these wells and place the sorted data in those rows
+  NewInds = PlotSpots$SameSpot[indxShallow][order(PlotSpots$WellDepth[indxShallow])]
+}
+
+#Make new database for the final plotting of points
+PlotFinal = PlotSpots
+
+#index of data in the PlotFinal database
+len = 1
+for (i in 1:length(unique(PlotSpots$SameSpot))){
+  #Determine how many wells there are in the same spot
+  indxs = which(PlotSpots$SameSpot == NewInds[i])
+  
+  if (anyDuplicated(PlotSpots$Qs[indxs]) != 0){
+    #Find the indices that have same heat flow
+    res = which(PlotSpots$Qs[indxs] %in% unique(PlotSpots$Qs[indxs][duplicated(PlotSpots$Qs[indxs])]) == TRUE)
+    #Of those, find indices with the same well depth
+    dpth = which(PlotSpots$WellDepth[indxs][res] %in% unique(PlotSpots$WellDepth[indxs][res][duplicated(PlotSpots$WellDepth[indxs][res])]) == TRUE)
+    
+    #If they all have the same heat flow, check if they have the same depth.
+    if ((length(res) == length(indxs)) & (length(dpth) == length(indxs))){
+      #Do not record this in the PlotFinal database. Remove the last length(indxs) rows from the database.
+      PlotFinal = PlotFinal[-((nrow(PlotFinal) - (length(indxs)-1)):nrow(PlotFinal)),]
+    }else{
+      PlotFinal[len:(len + (length(indxs)-1)),] = PlotSpots[indxs,]
+      len = len + length(indxs)
+    }
+  }else{
+    PlotFinal[len:(len + (length(indxs)-1)),] = PlotSpots[indxs,]
+    len = len + length(indxs)
+  }
+}
+
+#Colors by location, sorted by the highest Qs to lowest in shallowest measurement
+PlotColPal = colorRampPalette(colors = c('red', 'orange', 'yellow', 'green', 'blue', 'purple'))
+cols = PlotColPal(length(unique(PlotFinal$SameSpot)))
+
+#Make plot
+png('SameSpotWells_QsVsDepth_colrev.png', res = 600, units = 'in', width = 7, height = 7)
+par(mar = c(4.5, 5, 1.5, 1.5), xaxs='i', yaxs='i')
+for (i in 1:length(unique(PlotFinal$SameSpot))){
+  if (i == 1){
+    plot(PlotFinal$WellDepth[which(PlotFinal$SameSpot == PlotFinal$SameSpot[length(unique(PlotFinal$SameSpot)) + 1 - i])], PlotFinal$Qs[which(PlotFinal$SameSpot == PlotFinal$SameSpot[length(unique(PlotFinal$SameSpot)) + 1 - i])], type = 'o', col = cols[length(unique(PlotFinal$SameSpot)) + 1 - i], pch = 16, xlim = c(0,3500), ylim = c(0,250), xlab = 'Well Depth (m)', ylab = expression('Surface Heat Flow' ~ (mW/m^2)), cex.axis = 1.5, cex.lab = 1.5)
+  }else{
+    plot(PlotFinal$WellDepth[which(PlotFinal$SameSpot == PlotFinal$SameSpot[length(unique(PlotFinal$SameSpot)) + 1 - i])], PlotFinal$Qs[which(PlotFinal$SameSpot == PlotFinal$SameSpot[length(unique(PlotFinal$SameSpot)) + 1 - i])], type = 'o', col = cols[length(unique(PlotFinal$SameSpot)) + 1 - i], pch = 16, xlim = c(0,3500), ylim = c(0,250), axes = FALSE, xlab = '', ylab = '')
+  }
+  par(new = TRUE)
+}
+par(new = FALSE)
+minor.tick(nx=5,ny=5)
+dev.off()
+
 # Fixme: Nugget for equilibrium wells. Need Calvin's dataset of temperature profiles. Should use only deep wells? ----
 #Reliable Well API Numbers
 Reliable = c("37005215920000", "37021209380000", "37021200780000", "37027206440000", "37027205360000", "37031240530000",
@@ -104,7 +196,7 @@ which(DataAll$APINo %in% Reliable)
 LocsNugs = matrix(0, ncol=9, nrow=1)
 colnames(LocsNugs) = c('RowID_', 'POINT_X', 'POINT_Y', 'Nugget', 'Max', 'Min', 'Sd', 'PtPairs', 'NumPts')
 count=0
-#Mark the indext with a 1 when it is used.
+#Mark the index with a 1 when it is used.
 IndsUsed = vector('numeric', length=nrow(Same$StoreData_Frame))
 for (i in 1:nrow(Same$StoreData_Frame)){
   #Only take the unique spots that have more than 1 point
@@ -471,7 +563,7 @@ WellsSorted = rbind(WellsSorted, DataAll[which(DataAll$WellDepth > 750 & DataAll
 WellsSorted = rbind(WellsSorted, DataAll[which(DataAll$WellDepth > 750 & DataAll$WellDepth < 1000 & DataAll$County == 'CLARION' & DataAll$State == 'PA' & DataAll$LatDegr > 41.3),])
 WellsSorted = rbind(WellsSorted, DataAll[which(DataAll$WellDepth > 750 & DataAll$WellDepth < 1000 & DataAll$County == 'JEFFERSON' & DataAll$State == 'PA' & DataAll$LatDegr <= 41.16776),])
 
-writeOGR(WellsSorted, dsn=getwd(), layer="WellsForOutlierTest_HFThesis", driver="ESRI Shapefile")
+writeOGR(WellsSorted, dsn=getwd(), layer="WellsForOutlierTest_ESDA", driver="ESRI Shapefile")
 
 dev.off()
 png("WellsRemoved_PAWellsAddedBack.png", width=6, height=6, units='in', res=150)
@@ -604,11 +696,12 @@ plot(WV, lwd = 2, add=TRUE)
 plot(MD, lwd = 2, add=TRUE)
 plot(KY, lwd = 2, add=TRUE)
 plot(VA, lwd = 2, add=TRUE)
+#plot(NoOuts, pch = 16, add = TRUE, cex=0.5)
 plot(Outs[which(Outs$out_loc_lo == 1),][order(Outs$WellDepth[which(Outs$out_loc_lo == 1)], decreasing = TRUE), ],
      pch = 16, 
      col = colFun(Outs[which(Outs$out_loc_lo == 1),][order(Outs$WellDepth[which(Outs$out_loc_lo == 1)], decreasing = TRUE), ]$out_loc_drank*25), 
      cex = 0.5, add = TRUE)
-north.arrow(-75, 37.5, 0.1, lab = 'N', col='black', cex = 1.5)
+north.arrow(-83, 39.5, 0.1, lab = 'N', col='black', cex = 1.5)
 degAxis(side = 2, seq(34, 46, 2), cex.axis = 1.5)
 degAxis(side = 2, seq(34, 46, 1), labels = FALSE)
 degAxis(side = 4, seq(34, 46, 1), labels = FALSE)
@@ -625,11 +718,12 @@ plot(WV, lwd = 2, add=TRUE)
 plot(MD, lwd = 2, add=TRUE)
 plot(KY, lwd = 2, add=TRUE)
 plot(VA, lwd = 2, add=TRUE)
+#plot(NoOuts, pch = 16, add = TRUE, cex=0.5)
 plot(Outs[which(Outs$out_loc_lo == 0),][order(Outs$WellDepth[which(Outs$out_loc_lo == 0)], decreasing = TRUE), ],
      pch = 16, 
      col = colFun(Outs[which(Outs$out_loc_lo == 0),][order(Outs$WellDepth[which(Outs$out_loc_lo == 0)], decreasing = TRUE), ]$out_loc_drank*25), 
      cex = .5, add = TRUE)
-north.arrow(-75, 37.5, 0.1, lab = 'N', col='black', cex = 1.5)
+north.arrow(-83, 39.5, 0.1, lab = 'N', col='black', cex = 1.5)
 degAxis(side = 2, seq(34, 46, 2), cex.axis = 1.5)
 degAxis(side = 2, seq(34, 46, 1), labels = FALSE)
 degAxis(side = 4, seq(34, 46, 1), labels = FALSE)
@@ -955,7 +1049,7 @@ legend('topleft', title = ' ', legend = c('Not Outlier', 'Low Outlier', 'High Ou
 dev.off()
 
 
-# #Test Spatial Patterns in Outliers - by Depth
+# Test Spatial Patterns in Outliers - by Depth
 # scaleRange = c(750,4200)
 # scaleBy = 690
 # Pal = colPal((scaleRange[2] - scaleRange[1])/scaleBy + 1)
