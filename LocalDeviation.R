@@ -3,12 +3,16 @@
 #neighborhood criteria. These are the radius size and the maximum number of points.
 #The minimum number of points is 3 for the median to be more robust than the mean.
 
+#Fixme: Add in a minimum depth of points for neighborhood.
+
 QsDev = function(Data,    # The unprojected dataset
                  Var,     # The variable to be tested for the local region
                  xName,   # Name of the x coordinate in Data in UTM coordinates
                  yName,   # Name of the y coordinate in Data in UTM coordinates
                  rad,     # Radius to search for points (m)
-                 max_pts  # maximum number of points
+                 max_pts, # maximum number of points
+                 minDpth=NA, # minimum depth of the neighborhood points
+                 DpthName=NA # name of the field for the well depth
 ){
   # Add a column for the local mean and median
   Data$RegMean = NA
