@@ -3,6 +3,7 @@ This repository contains exploratory data analysis (EDA) and exploratory spatial
 
 This repository depends on functions located in the following repositories:
 calvinwhealton -> geothermal_pfa -> combining_metrics_2016 branch -> outliers
+
 jds485 -> Geothermal_DataAnalysis_CrossSections
 
 The methods of EDA and ESDA used in ESDA_Main.R include:
