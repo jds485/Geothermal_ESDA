@@ -2,6 +2,7 @@
 This repository contains exploratory data analysis (EDA) and exploratory spatial data analysis (ESDA) functions and scripts, which may be useful for cleaning geothermal datasets and other spatial datasets.
 
 This repository depends on functions located in the following repositories:
+
 calvinwhealton -> geothermal_pfa -> combining_metrics_2016 branch -> outliers
 
 jds485 -> Geothermal_DataAnalysis_CrossSections
