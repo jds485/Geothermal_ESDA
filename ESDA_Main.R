@@ -1,6 +1,7 @@
 #Description----
 #This script checks for and removes wells with negative gradients. 
 #Then checks for wells with the same spatial location. Only the deepest well at the same spatial location is retained.
+# Special cases of different BHT at the same depth are handled by either assigning a more likely depth to the point, or averaging the data.
 #Then performs a local spatial outlier analysis.
 
 # Libraries ----
@@ -9,26 +10,28 @@ library(rgdal) #spatial data reading/writing
 library(GISTools) #map making tools
 library(dgof) #ks test for discrete distributions
 library(Hmisc) #minor tick marks
-library(xlsx) #for Excel data reading
+library(readxl) #for Excel data reading
+library(changepoint) #for changepoint analysis on the minimum BHT depth cutoff
 
 # Loading Code from Repositories ----
-setwd("C:\\Users\\Jared\\Documents\\Cornell\\Research\\Publications\\ESDA\\ESDACode\\Geothermal_ESDA")
+setwd("C:\\Users\\jsmif\\Documents\\Cornell\\Research\\Publications\\ESDA\\ESDACode\\Geothermal_ESDA")
 source('LocalDeviation.R')
 source('ColorFunctions.R')
-setwd('C:\\Users\\Jared\\Documents\\Cornell\\Research\\Publications\\DOE Grant\\ThermalConductivity\\Geothermal_DataAnalysis_CrossSections\\Geothermal_DataAnalysis_CrossSections')
+setwd('C:\\Users\\jsmif\\Documents\\Cornell\\Research\\Publications\\DOE Grant\\ThermalConductivity\\Geothermal_DataAnalysis_CrossSections\\Geothermal_DataAnalysis_CrossSections')
 source("DealingWithDataInDuplicateLocations.R")
-setwd('C:\\Users\\Jared\\Documents\\Cornell\\Research\\Publications\\DOE Grant\\CombiningRiskFactorCode\\geothermal_pfa\\outliers')
+setwd('C:\\Users\\jsmif\\Documents\\Cornell\\Research\\Publications\\DOE Grant\\CombiningRiskFactorCode\\geothermal_pfa\\outliers')
 source('outlier_identification.R')
 # Loading Data and Map Layers ----
 #Wells with surface heat flow and temperatures at depth calculated
-setwd("C:/Users/Jared/Documents/Cornell/Research/Masters - Spatial Assessment/Figures")
-Wells = read.csv('EDAWells_AllTempsThicksConds_BaseCorr.csv', stringsAsFactors=FALSE)
+setwd("C:/Users/jsmif/Documents/Cornell/Research/Masters - Spatial Assessment/Figures")
+#Wells = read.csv('EDAWells_AllTempsThicksConds_BaseCorr.csv', stringsAsFactors=FALSE)
+Wells = read.csv('EDAWells_AllTempsThicksConds_BaseCorr_2018.csv', stringsAsFactors=FALSE)
 coordinates(Wells) = c('LongDgr', 'LatDegr')
 proj4string(Wells) = CRS("+init=epsg:4326")
 
 #Spicer equilibrium well temperature profiles
-setwd('C:\\Users\\Jared\\Documents\\Cornell\\Research\\Publications\\ESDA')
-Spicer = read.xlsx(file = 'EquilibriumTempProfiles.xlsx', sheetName = 'Spicers', header = TRUE)
+setwd('C:\\Users\\jsmif\\Documents\\Cornell\\Research\\Publications\\ESDA')
+Spicer = read_xlsx(path = paste0(getwd(), '/EquilibriumTempProfiles.xlsx'), sheet = 'Spicers')
 coordinates(Spicer) = c("Long", "Lat")
 proj4string(Spicer) = CRS("+init=epsg:4326")
 
@@ -38,7 +41,7 @@ coordinates(Whealton) = c("Long", "Lat")
 proj4string(Whealton) = CRS("+init=epsg:4326")
 
 #Political boundaries
-setwd('C:/Users/Jared/Documents/Cornell/Research/Masters - Spatial Assessment/GIS/Population Density/2013_us_state_500k')
+setwd('C:/Users/jsmif/Documents/Cornell/Research/Masters - Spatial Assessment/GIS/Population Density/2013_us_state_500k')
 States = readOGR(dsn=getwd(), layer="us_state_WGS", stringsAsFactors=FALSE)
 NY = States[which(States$STATEFP == "36"),]
 PA = States[which(States$STATEFP == "42"),]
@@ -46,14 +49,14 @@ WV = States[which(States$STATEFP == "54"),]
 MD = States[which(States$STATEFP == "24"),]
 KY = States[which(States$STATEFP == "21"),]
 VA = States[which(States$STATEFP == "51"),]
-setwd('C:/Users/Jared/Documents/Cornell/Research/Masters - Spatial Assessment/GIS/Population Density/2013_us_countys_500k')
+setwd('C:/Users/jsmif/Documents/Cornell/Research/Masters - Spatial Assessment/GIS/Population Density/2013_us_countys_500k')
 Counties = readOGR(dsn=getwd(), layer="us_county_WGS", stringsAsFactors=FALSE) 
 
 #Spatial interpolation regions
-InterpRegs = readOGR(dsn="C:/Users/Jared/Documents/Cornell/Research/Masters - Spatial Assessment/Figures/BaseCorrWells", layer="AllSectionsMerged", stringsAsFactors=FALSE) 
+InterpRegs = readOGR(dsn="C:/Users/jsmif/Documents/Cornell/Research/Masters - Spatial Assessment/Figures/BaseCorrWells", layer="AllSectionsMerged", stringsAsFactors=FALSE) 
 InterpRegs = spTransform(InterpRegs, CRS = CRS("+init=epsg:4326"))
 #50 km bounded regions within the potential field edges - only applies to the WV regions
-setwd("C:\\Users\\Jared\\Documents\\Cornell\\Research\\Publications\\DOE Grant\\InterpolationDataset\\NewBoundaries\\NAD_InterpolationBounds")
+setwd("C:\\Users\\jsmif\\Documents\\Cornell\\Research\\Publications\\DOE Grant\\InterpolationDataset\\NewBoundaries\\NAD_InterpolationBounds")
 VR_Bounded = readOGR(dsn=getwd(), layer = 'BoundedVREdit6') 
 VR_Bounded = spTransform(VR_Bounded, CRS = CRS("+init=epsg:4326"))
 CWV_Bounded = readOGR(dsn = getwd(), layer = 'BoundedCWV_Edit3')
@@ -62,13 +65,13 @@ MT_Bounded = readOGR(dsn = getwd(), layer = 'BoundedMT_Edit')
 MT_Bounded = spTransform(MT_Bounded, CRS = CRS("+init=epsg:4326"))
 
 #Set working directory back to project directory
-setwd("C:/Users/Jared/Documents/Cornell/Research/Masters - Spatial Assessment/Figures")
+setwd("C:/Users/jsmif/Documents/Cornell/Research/Masters - Spatial Assessment/Figures")
 
 # Remove Negative Gradient Wells ----
-NegsAll = length(Wells$Gradient[which(Wells$Gradient < 0)])
+NegsAll = Wells[Wells$Gradient <= 0,]
 
 #Deepest well that has a negative gradient
-MaxDepth_NegGrad = max(Wells$WellDepth[which(Wells$Gradient < 0)])
+MaxDepth_NegGrad = max(NegsAll$WellDepth)
 
 #Location of wells that have negative Gradients.
 plot(Wells, pch=16, col='black')
@@ -78,10 +81,10 @@ plot(WV, add=TRUE)
 plot(MD, add=TRUE)
 plot(KY, add=TRUE)
 plot(VA, add=TRUE)
-plot(Wells[which(Wells$Gradient < 0),], pch=16, col='red', add=TRUE)
+plot(NegsAll, pch=16, col='red', add=TRUE)
 
 #Remove the negative gradient wells before the sorting of wells in the same spatial locations:
-Wells_PosGrad = Wells[-which(Wells$Gradient < 0),]
+Wells_PosGrad = Wells[-which(Wells$Gradient <= 0),]
 
 
 # Identify Wells in Same Spatial Location ----
@@ -91,21 +94,70 @@ Wells_PosGrad = Wells[-which(Wells$Gradient < 0),]
 #Find all points that share the same location and take the deepest measurement.
 Same = SameSpot(Wells_PosGrad)
 SortData = SortingWells(Same$SameSpot, Same$StoreData_Frame, Wells_PosGrad, 'BHT', 'TruVrtc', 'DrllrTt', 'DpthOfM', 'WellDepth', 2)
-write.csv(SortData$Sorted, "SortedUniqueSpots_AllTemps_ESDA.csv")
-write.csv(SortData$RerunWells, "RerunWells_AllTemps_ESDA.csv")
+write.csv(SortData$Sorted, "SortedUniqueSpots_AllTemps_ESDA_2018.csv")
+write.csv(SortData$RerunWells, "RerunWells_AllTemps_ESDA_2018.csv")
+
+#Fixme: Using IndsDeepSmallerBHT, check that all deeper data points have a greater temperature than shallower data points.
+Wells_PosGrad[as.numeric(colnames(Same$StoreData_Frame[which(Same$StoreData_Frame[which(as.numeric(colnames(Same$StoreData_Frame)) == unique(SortData$IndsDeepSmallerBHT)[3]),] == 1)])),]
+
+#Check how many of these are greater than 2 degrees or so
+counter = 0
+for (i in 1:length(unique(SortData$IndsDeepSmallerBHT))){
+  BHTs = Wells_PosGrad$BHT[as.numeric(colnames(Same$StoreData_Frame[which(Same$StoreData_Frame[which(as.numeric(colnames(Same$StoreData_Frame)) == unique(SortData$IndsDeepSmallerBHT)[i]),] == 1)]))]
+  if ((max(BHTs) - min(BHTs)) > 2){
+    counter = counter + 1
+  }
+}
+counter
+
+#Find which states have the most duplicate measurements
+png('Barplot_PointsSameSpatialLocationStates.png', res = 300, width = 8, height = 5, units = 'in')
+layout(rbind(c(1,2)))
+counts = table(Wells_PosGrad$State[as.numeric(colnames(Same$StoreData_Frame))])
+barplot(counts, ylim = c(0,700), xlab = 'State', ylab = 'Frequency', main = 'Points Sharing Spatial Coordinates', cex.axis = 1.5, cex.lab = 1.5)
+#map
+plot(Wells_PosGrad[as.numeric(colnames(Same$StoreData_Frame)),], pch = 16, cex = 0.3, col = 'grey')
+plot(NY, lwd = 2, add=TRUE)
+plot(PA, lwd = 2, add=TRUE)
+plot(WV, lwd = 2, add=TRUE)
+plot(MD, lwd = 2, add=TRUE)
+plot(KY, lwd = 2, add=TRUE)
+plot(VA, lwd = 2, add=TRUE)
+north.arrow(-75, 37, 0.1, lab = 'N', col='black', cex = 1.5)
+degAxis(side = 2, seq(34, 46, 2), cex.axis = 1.5)
+degAxis(side = 2, seq(34, 46, 1), labels = FALSE)
+degAxis(side = 4, seq(34, 46, 1), labels = FALSE)
+degAxis(side = 1, seq(-70, -86, -2), cex.axis = 1.5)
+degAxis(side = 3, seq(-70, -86, -1), labels = FALSE)
+degAxis(side = 1, seq(-70, -86, -1), labels = FALSE)
+dev.off()
+
+#Wells in start of dataset
+length(Wells_PosGrad)
+#Number of locations with wells in same spatial coordinates
+nrow(unique(Wells_PosGrad@coords[as.numeric(colnames(Same$StoreData_Frame)),]))
+#Wells after sorting
+length(SortData$Sorted)
+#Wells in same spatial location
+length(Same$StoreData_Frame)
+#Wells with multiple BHTs at same depth that should be rerun because they did not have depth field information
+length(SortData$RerunWells)
 
 #58 points in 27 unique locations have a different BHT measurement at the same depth.
 BHTsDiffSameDepth = length(unique(SortData$IndsDifferent))
 BHTsDiffSameDepth_UniqueLocs = nrow(unique(Wells_PosGrad[SortData$IndsDifferent,]@coords))
 #Used to see how many wells had a CensorTemp controlled output. Max of about 13 C
-SortData_TestCensor = SortingWells(Same$SameSpot, Same$StoreData_Frame, Wells_PosGrad, 'BHT', 'TruVrtc', 'DrllrTt', 'DpthOfM', 'WellDepth', 14)
+SortData_TestCensor = SortingWells(Same$SameSpot, Same$StoreData_Frame, Wells_PosGrad, 'BHT', 'TruVrtc', 'DrllrTt', 'DpthOfM', 'WellDepth', Inf)
+
+#Locations dropped as a result of censoring
+nrow(unique(Wells_PosGrad@coords[unique(SortData$IndsCensTemp),]))
 
 #The wells that are rerun should overwrite the last rows in SortedUniqueSopts
 #Load in the wells that were rerun and add them to the SortData$Sorted
 Rerun = read.csv('SortedUniqueSpots_AllTemps_ESDA_RerunAdded.csv', stringsAsFactors = FALSE)
-Rerun = Rerun[c((nrow(Rerun) - 4):nrow(Rerun)),]
+Rerun = Rerun[c((nrow(Rerun) - (nrow(SortData$RerunWells) - 1)):nrow(Rerun)),]
 Rerun$APINo = SortData$RerunWells$APINo
-SortData$Sorted@data[c((nrow(SortData$Sorted) - 4):nrow(SortData$Sorted)),] = Rerun[,-c(1,8,9,ncol(Rerun))]
+SortData$Sorted@data[c((nrow(SortData$Sorted) - (nrow(SortData$RerunWells) - 1)):nrow(SortData$Sorted)),] = Rerun[,-c(1,8,9,ncol(Rerun))]
 
 # Line plot of the heat flow vs. depth of BHT measurement for the wells in the same spot----
 
@@ -203,6 +255,38 @@ par(new = FALSE)
 minor.tick(nx=5,ny=5)
 dev.off()
 
+#Transform to spatial data
+coordinates(PlotFinal) = c('coords_x1', 'coords_x2')
+
+png('SameSpotWells_BHTVsLocation.png', res = 600, units = 'in', width = 7, height = 7)
+par(mar = c(4.5, 5, 1.5, 1.5))
+for (i in 1:length(unique(PlotFinal$SameSpot))){
+  #Indices for the deepest wells at a location
+  indsMaxDepth = which(PlotFinal$WellDepth[which(PlotFinal$SameSpot == PlotFinal$SameSpot[length(unique(PlotFinal$SameSpot)) + 1 - i])] == max(PlotFinal$WellDepth[which(PlotFinal$SameSpot == PlotFinal$SameSpot[length(unique(PlotFinal$SameSpot)) + 1 - i])]))
+  if (i == 1){
+    #Record used coordinates
+    Coords = PlotFinal[which(PlotFinal$SameSpot == PlotFinal$SameSpot[length(unique(PlotFinal$SameSpot)) + 1 - i]),][1,]
+    #All others black
+    plot(rep(i,length(PlotFinal$BHT[which(PlotFinal$SameSpot == PlotFinal$SameSpot[length(unique(PlotFinal$SameSpot)) + 1 - i])])), PlotFinal$BHT[which(PlotFinal$SameSpot == PlotFinal$SameSpot[length(unique(PlotFinal$SameSpot)) + 1 - i])], type = 'o', col = 'black', pch = 16, xlim = c(0,length(unique(PlotFinal$SameSpot))), ylim = c(0,120), xlab = 'Same Spot Well', ylab = expression(paste('BHT (', degree, 'C)')), cex.axis = 1.5, cex.lab = 1.5)
+    par(new=TRUE)
+    #Max depth wells red
+    plot(rep(i, length(indsMaxDepth)), PlotFinal$BHT[which(PlotFinal$SameSpot == PlotFinal$SameSpot[length(unique(PlotFinal$SameSpot)) + 1 - i])][indsMaxDepth], type = 'o', col = 'red', pch = 16, xlim = c(0,length(unique(PlotFinal$SameSpot))), ylim = c(0,120), xlab = '', ylab = '', axes=FALSE)
+  }else if (nrow(zerodist(rbind(PlotFinal[which(PlotFinal$SameSpot == PlotFinal$SameSpot[length(unique(PlotFinal$SameSpot)) + 1 - i]),][1,], Coords))) == 0){
+    #Record used coordinates
+    Coords = rbind(PlotFinal[which(PlotFinal$SameSpot == PlotFinal$SameSpot[length(unique(PlotFinal$SameSpot)) + 1 - i]),][1,], Coords)
+    #All others black
+    plot(rep(i,length(PlotFinal$BHT[which(PlotFinal$SameSpot == PlotFinal$SameSpot[length(unique(PlotFinal$SameSpot)) + 1 - i])])), PlotFinal$BHT[which(PlotFinal$SameSpot == PlotFinal$SameSpot[length(unique(PlotFinal$SameSpot)) + 1 - i])], type = 'o', col = 'black', pch = 16, xlim = c(0,length(unique(PlotFinal$SameSpot))), ylim = c(0,120), xlab = '', ylab = '', axes = FALSE)
+    par(new=TRUE)
+    #Max depth wells red
+    plot(rep(i, length(indsMaxDepth)), PlotFinal$BHT[which(PlotFinal$SameSpot == PlotFinal$SameSpot[length(unique(PlotFinal$SameSpot)) + 1 - i])][indsMaxDepth], type = 'o', col = 'red', pch = 16, xlim = c(0,length(unique(PlotFinal$SameSpot))), ylim = c(0,120), axes = FALSE, xlab = '', ylab = '')
+  }
+  par(new = TRUE)
+}
+par(new = FALSE)
+minor.tick(nx=5,ny=5)
+dev.off()
+
+
 # Nugget Effect for wells in the same spatial location ----
 
 #Fixme: Add nugget for equilibrium wells. 
@@ -251,6 +335,7 @@ write.csv(LocsNugs, 'NuggetLocations.csv')
 NuggetWells = readOGR(dsn=getwd(), layer='Nugget_Locations_Sections')
 png('NuggetWellsDistributions.png', res=600, width=12, height=6, units='in')
 par(mar=c(5,5,2,2), yaxt='n')
+#Fixme: Some boxes have only 3 points. They should not be boxes.
 boxplot(Nugget ~ Id, data = NuggetWells, at=c(9, 2, 7, 3, 6, 8, 1, 4, 5), varwidth = TRUE, col=c('gray', 'orange', 'blue', 'yellow', 'skyblue', 'purple', 'red', 'green', 'springgreen'), names=c('VR', 'WPA', 'SWPA', 'NWPANY', 'ENYPA', 'CWV', 'CT', 'CNY', 'ENY'), pch=16, cex.axis=1.5, cex.lab=1.5, ylab=expression('Sample Nugget Semivariance' ~ (mW/m^2)^2), xlab='Interpolation Region', log='y')
 par(yaxt='s')
 at.y <- outer(1:9, 10^(-7:7))
@@ -309,12 +394,11 @@ degAxis(side = 3, seq(-70, -86, -1), labels = FALSE)
 degAxis(side = 1, seq(-70, -86, -1), labels = FALSE)
 dev.off()
 
-# EDA for the well database ----
+# ESDA for the well database ----
 
 #Wells must be checked for negatives before this analysis.
 #Plots for all data - No Map or Histogram. Can use the wells in the same spatial location.
 sets = rbind(c(1,2,7,7), c(3,4,7,7), c(5,6,7,7))
-layout(sets)
 png("HeatFlowEDA_Thesis_SplitAll.png", width=9, height=9, units="in", res=600)
 layout(sets)
 EDAPlots = function(DataAll, Var, Unit, ymin, ymax){
@@ -386,53 +470,65 @@ SortData$Sorted@data = DataTab
 #Rename to shorter variable
 WellsSort = SortData$Sorted
 
-#These figures should be made with a dataset that has unique spatial locations.
+#These figures should be made with a dataset that has unique spatial locations, as completed above.
 
 #With map
 sets = rbind(c(1,2,7,7), c(3,4,7,7), c(5,6,8,8), c(9,9,8,8))
-layout(sets)
 png("HeatFlowEDA_Thesis_SplitAll_Map_Log_WellDepthSort_MedDiff_DeepWells.png", width=10, height=10, units="in", res=600)
 layout(sets)
 EDAPlots = function(DataAll, Var, Unit, ymin, ymax){
   plot(DataAll$WellDepth[which(DataAll$State == "MD")], DataAll@data[Var][,1][which(DataAll$State == "MD")], col = "orange", pch=16, xlim=c(0,7000), ylim=c(ymin,ymax), ylab='', xlab='Depth of BHT (m)', main='Maryland', cex.main=2, cex.axis=1.5, cex.lab=1.5, log = 'y', axes=FALSE)
+  par(tck = -0.03)
   axis(side = 1, at = seq(0,7000,1000), labels = TRUE, cex.axis = 1.2)
   axis(side = 2, at = 10^seq(0,4,1), labels=expression("10"^0, "10"^1, "10"^2, "10"^3, "10"^4), cex.axis=1.5, las = 1)
+  par(tck = -0.015)
   axis(side = 2, at = c(seq(.2,.9,.1),seq(2,9,1),seq(20,90,10),seq(200,900,100), seq(2000,9000,1000)), labels = FALSE)
   lines(c(1000,1000),c(0.001,2000))
   lines(c(600,600),c(0.001,2000), lty=2)
   plot(DataAll$WellDepth[which(DataAll$State == "KY")], DataAll@data[Var][,1][which(DataAll$State == "KY")], col = "purple", pch=16, xlim=c(0,7000), ylim=c(ymin,ymax), ylab='', xlab='Depth of BHT (m)', main='Kentucky', cex.main=2, cex.axis=1.5, cex.lab=1.5, log = 'y', axes=FALSE)
+  par(tck = -0.03)
   axis(side = 1, at = seq(0,7000,1000), labels = TRUE, cex.axis = 1.2)
   axis(side = 2, at = 10^seq(0,4,1), labels=expression("10"^0, "10"^1, "10"^2, "10"^3, "10"^4), cex.axis=1.5, las = 1)
+  par(tck = -0.015)
   axis(side = 2, at = c(seq(.2,.9,.1),seq(2,9,1),seq(20,90,10),seq(200,900,100), seq(2000,9000,1000)), labels = FALSE)
   lines(c(1000,1000),c(0.001,2000))
   lines(c(600,600),c(0.001,2000), lty=2)
   plot(DataAll$WellDepth[which(DataAll$State == "VA")], DataAll@data[Var][,1][which(DataAll$State == "VA")], col = "yellow", pch=16, xlim=c(0,7000), ylim=c(ymin,ymax), ylab=Unit, xlab='Depth of BHT (m)', main='Virginia', cex.main=2, cex.axis=1.5, cex.lab=1.5, log = 'y', axes=FALSE)
+  par(tck = -0.03)
   axis(side = 1, at = seq(0,7000,1000), labels = TRUE, cex.axis = 1.2)
   axis(side = 2, at = 10^seq(0,4,1), labels=expression("10"^0, "10"^1, "10"^2, "10"^3, "10"^4), cex.axis=1.5, las = 1)
+  par(tck = -0.015)
   axis(side = 2, at = c(seq(.2,.9,.1),seq(2,9,1),seq(20,90,10),seq(200,900,100), seq(2000,9000,1000)), labels = FALSE)
   lines(c(1000,1000),c(0.001,2000))
   lines(c(600,600),c(0.001,2000), lty=2)
   plot(DataAll$WellDepth[which(DataAll$State == "WV")], DataAll@data[Var][,1][which(DataAll$State == "WV")], col = "green", pch=16, xlim=c(0,7000), ylim=c(ymin,ymax), ylab='', xlab='Depth of BHT (m)', main='West Virginia', cex.main=2, cex.axis=1.5, cex.lab=1.5, log = 'y', axes=FALSE)
+  par(tck = -0.03)
   axis(side = 1, at = seq(0,7000,1000), labels = TRUE, cex.axis = 1.2)
   axis(side = 2, at = 10^seq(0,4,1), labels=expression("10"^0, "10"^1, "10"^2, "10"^3, "10"^4), cex.axis=1.5, las = 1)
+  par(tck = -0.015)
   axis(side = 2, at = c(seq(.2,.9,.1),seq(2,9,1),seq(20,90,10),seq(200,900,100), seq(2000,9000,1000)), labels = FALSE)
   lines(c(1000,1000),c(0.001,2000))
   lines(c(600,600),c(0.001,2000), lty=2)
   plot(DataAll$WellDepth[which(DataAll$State == "PA")], DataAll@data[Var][,1][which(DataAll$State == "PA")], col = "red", pch=16, xlim=c(0,7000), ylim=c(ymin,ymax), ylab='', xlab='Depth of BHT (m)', main='Pennsylvania', cex.main=2, cex.axis=1.5, cex.lab=1.5, log = 'y', axes=FALSE)
+  par(tck = -0.03)
   axis(side = 1, at = seq(0,7000,1000), labels = TRUE, cex.axis = 1.2)
   axis(side = 2, at = 10^seq(0,4,1), labels=expression("10"^0, "10"^1, "10"^2, "10"^3, "10"^4), cex.axis=1.5, las = 1)
+  par(tck = -0.015)
   axis(side = 2, at = c(seq(.2,.9,.1),seq(2,9,1),seq(20,90,10),seq(200,900,100), seq(2000,9000,1000)), labels = FALSE)
   lines(c(1000,1000),c(0.001,2000))
   lines(c(600,600),c(0.001,2000), lty=2)
   plot(DataAll$WellDepth[which(DataAll$State == "NY")], DataAll@data[Var][,1][which(DataAll$State == "NY")], col = "blue", pch=16, xlim=c(0,7000), ylim=c(ymin,ymax), ylab='', xlab='Depth of BHT (m)', main='New York', cex.main=2, cex.axis=1.5, cex.lab=1.5, log = 'y', axes=FALSE)
+  par(tck = -0.03)
   axis(side = 1, at = seq(0,7000,1000), labels = TRUE, cex.axis = 1.2)
   axis(side = 2, at = 10^seq(0,4,1), labels=expression("10"^0, "10"^1, "10"^2, "10"^3, "10"^4), cex.axis=1.5, las = 1)
+  par(tck = -0.015)
   axis(side = 2, at = c(seq(.2,.9,.1),seq(2,9,1),seq(20,90,10),seq(200,900,100), seq(2000,9000,1000)), labels = FALSE)
   lines(c(1000,1000),c(0.001,2000))
   lines(c(600,600),c(0.001,2000), lty=2)
 }
 par(mar=c(4,5.5,3,2), xaxs = 'i', yaxs = 'i')
 EDAPlots(WellsSort, "Qs", Unit=expression("Surface Heat Flow" ~ (mW/m^2)),.5, 2000)
+par(tck = NA)
 # Non-Deviation from local average plot
 # EDAPlots = function(DataAll, Var, Unit, ymin, ymax){
 #   plot(DataAll$WellDepth[which(DataAll$State == "NY")], DataAll@data[Var][,1][which(DataAll$State == "NY")], col = "blue", pch=16, xlim=c(0,7000), ylim=c(ymin,ymax), ylab=Unit, xlab='Depth of BHT (m)', main='All States', cex.main=2, cex.axis=1.5, cex.lab=1.5, log = 'y', axes = FALSE)
@@ -480,10 +576,10 @@ EDAPlotsMed = function(DataAll, Var, Unit, ymin, ymax){
   par(new=T)
   plot(DataAll$WellDepth[which(DataAll$State == "MD" & DataAll$RegMed > -9999)], DataAll@data[which(DataAll$State == "MD" & DataAll$RegMed > -9999), Var] - DataAll@data[which(DataAll$State == "MD" & DataAll$RegMed > -9999), 'RegMed'], col = "orange", pch=16, xlim=c(0,7000), ylim=c(ymin,ymax), ylab='', xlab='', main='', axes=FALSE)
 }
-EDAPlotsMed(WellsSort, "Qs", Unit=expression(paste("Site Q"['s'], " - Local Median Q"['s'], " (mW/m"^2, ")")),-100, 300)
+EDAPlotsMed(WellsSort, "Qs", Unit=expression(paste("Site Q"['s'], " - Local Median Q"['s'], " (mW/m"^2, ")")),-100, 600)
 axis(side = 1, at = seq(0,7000,1000), labels = TRUE, cex.axis = 1.5)
 axis(side = 2, at = seq(-200,1300,50), labels=TRUE, cex.axis=1.5)
-minor.tick(nx = 5, ny = 10)
+minor.tick(nx = 5, ny = 1)
 lines(c(-100,10000), c(0,0))
 lines(c(1000,1000),c(-1000,2000))
 lines(c(600,600),c(-1000,2000), lty=2)
@@ -510,7 +606,7 @@ degAxis(side = 3, seq(-70, -86, -1), labels = FALSE)
 degAxis(side = 1, seq(-70, -86, -1), labels = FALSE)
 legend('topleft', title = expression(paste('Q'['s'], ' (mW/m'^2,')' )), legend = c('<40', '40 - 50', '50 - 60', '60 - 70', '70 - 80', '>80'), pch = 16, cex = 1.8, col = colFun(c(30, 45, 55, 65, 75, 90)))
 par(mar=c(4,5.5,3,2))
-hist(WellsSort$Qs, breaks = c(seq(0, 130, 5), 1500), freq = FALSE, xlim = c(0,120), ylim = c(0,0.1), xlab = expression(paste('Surface Heat Flow (mW/m'^2,')')), cex.lab = 1.5, cex.axis = 1.5, main = 'Histogram of All Data', cex.main = 2)
+hist(WellsSort$Qs, breaks = c(seq(0, 130, 5), 1500), freq = FALSE, xlim = c(0,120), ylim = c(0,0.05), xlab = expression(paste('Surface Heat Flow (mW/m'^2,')')), cex.lab = 1.5, cex.axis = 1.5, main = 'Histogram of All Data', cex.main = 2)
 dev.off()
 
 #Only Local Median Deviation
@@ -626,6 +722,14 @@ lines(c(600,600),c(-1000,2000), lty=2, lwd = 3)
 legend('topright', legend=c("New York", "Pennsylvania", "West Virginia", "Kentucky", "Maryland", "Virginia", "600 m", "1000 m"), pch=c(rep(16, 6),NA,NA), lty = c(rep(NA, 6), 2,1), lwd = 3, col=c("blue", "red", "green", "purple","orange","yellow","black", "black"), cex=1.7)
 dev.off()
 
+#Changepoint detection for minimum BHT well depth----
+#Sort the well database by the well depth
+OrderedWells = WellsSort[order(WellsSort$WellDepth),]
+
+#Compute the changepoint as a depth series. Remove NA values from points with too few neighbors to be tested.
+cpt.mean((OrderedWells$Qs - OrderedWells$RegMed)[-which(is.na(OrderedWells$Qs - OrderedWells$RegMed))], test.stat = "CUSUM", penalty = 'None', method = 'AMOC')
+#767 m is changepoint detected depth with AMOC
+OrderedWells$WellDepth[3855]
 
 # Add shallow data back into dataset for PA region ----
 WellsSort$LatDeg = WellsSort@coords[,2]
@@ -701,9 +805,8 @@ WellsDeep = rbind(WellsDeep, WellsSort[which(WellsSort$WellDepth > 750 & WellsSo
 WellsDeep = rbind(WellsDeep, WellsSort[which(WellsSort$WellDepth > 750 & WellsSort$WellDepth < 1000 & WellsSort$County == 'CLARION' & WellsSort$State == 'PA' & WellsSort$LatDegr > 41.3),])
 WellsDeep = rbind(WellsDeep, WellsSort[which(WellsSort$WellDepth > 750 & WellsSort$WellDepth < 1000 & WellsSort$County == 'JEFFERSON' & WellsSort$State == 'PA' & WellsSort$LatDegr <= 41.16776),])
 
-writeOGR(WellsDeep, dsn=getwd(), layer="WellsForOutlierTest_ESDA", driver="ESRI Shapefile")
+writeOGR(WellsDeep, dsn=getwd(), layer="WellsForOutlierTest_ESDA_2018", driver="ESRI Shapefile")
 
-dev.off()
 png("WellsRemoved_PAWellsAddedBack.png", width=6, height=6, units='in', res=150)
 plot(WellsSort, pch=16, col='red')
 plot(WellsDeep, pch=16, add=TRUE)
@@ -716,7 +819,7 @@ plot(VA, add=TRUE)
 dev.off()
 
 # Outlier Detection ----
-#This should be run after duplicate points and negative gradient values have been taken care of.
+#This should be run after points have been reduced to unique locations, and negative gradient values have been taken care of.
 
 #Data must have a column of UTM coordinates in m for this to work because it relies on Euclidian distances.
 WellsDeep = spTransform(WellsDeep, CRS('+init=epsg:26917'))
@@ -772,8 +875,8 @@ proj4string(TestedOutliers_HeatFlow_min2k$NotOutliers) = CRS('+init=epsg:26917')
 coordinates(TestedOutliers_HeatFlow_min2k$Outliers) = c('POINT_X', 'POINT_Y')
 proj4string(TestedOutliers_HeatFlow_min2k$Outliers) = CRS('+init=epsg:26917')
 
-writeOGR(TestedOutliers_HeatFlow$NotOutliers, dsn=getwd(), layer="DeepestWells_NotOutliers_32km_Qs_CorrBase_Ranked", driver = "ESRI Shapefile")
-writeOGR(TestedOutliers_HeatFlow$Outliers, dsn=getwd(), layer="DeepestWells_Outliers_32km_Qs_CorrBase_Ranked", driver = "ESRI Shapefile")
+writeOGR(TestedOutliers_HeatFlow$NotOutliers, dsn=getwd(), layer="DeepestWells_NotOutliers_32km_Qs_CorrBase_Ranked_2018", driver = "ESRI Shapefile")
+writeOGR(TestedOutliers_HeatFlow$Outliers, dsn=getwd(), layer="DeepestWells_Outliers_32km_Qs_CorrBase_Ranked_2018", driver = "ESRI Shapefile")
 
 #Convert back to WGS coordinate system
 Outs = spTransform(TestedOutliers_HeatFlow$Outliers, CRS = CRS("+init=epsg:4326"))
@@ -793,7 +896,6 @@ colPal = colorRampPalette(colors = rev(c('red', 'orange', 'yellow', 'green', 'bl
 Pal = colPal((scaleRange[2] - scaleRange[1])/scaleBy + 1)
 Pal = c(Pal[-3], Pal[length(Pal)])
 sets = rbind(c(1,3), c(2,4))
-layout(sets)
 png("OutlierRankMap_Counties.png", width=8, height=8, units="in", res=600)
 layout(sets)
 par(mar=c(4.5,4.5,2,1))
@@ -875,6 +977,7 @@ HiFun = stepfun(x = seq(1,25,.5), y = c(0,CumHi))
 UnifFun = stepfun(x = seq(1,25,0.5), y = c(seq(0,1,0.5/24.5)), right = FALSE, f = 0)
 
 #Note that the plotting characters are CLOSED circles where they are plotted, even though the (confusing) default is open circles.
+png('KS_CDFs.png', res = 300, width = 5, height = 5, units = 'in')
 par(xaxs = 'i', yaxs = 'i')
 plot(LoFun, pch = NA, col = 'blue', lwd = 2, xlab = 'Depth Rank', ylab = 'Cumulative Frequency', xlim = c(0,25), ylim = c(0,1), cex.axis = 1.5, cex.lab = 1.5, cex.main = 2, main = 'Empirical CDFs for K-S Test')
 par(new = TRUE)
@@ -883,6 +986,7 @@ par(new = TRUE)
 plot(UnifFun, pch = NA, col = 'black', axes=FALSE, xlab='', ylab='', lwd = 2, xlim = c(0,25), ylim = c(0,1), main = '')
 legend('topleft', legend = c('Discrete Uniform Distribution', 'Low Outliers', 'High Outliers'), lwd = 2, pch = NA, col = c('black', 'blue', 'red'))
 minor.tick(nx=5,ny=2)
+dev.off()
 
 #KS Test Statistics
 #Needs to use the uniform as decimals because of the == comparison in ecdf
@@ -892,7 +996,7 @@ KS_StatLo = max(abs(LoFun(knots(LoFun)) - UnifFun(knots(UnifFun))))
 KSHi = ks.test(x = Outs$out_loc_drank[which(Outs$out_loc_lo == 0)], y = UnifFun, simulate.p.value = TRUE, B = 10000)
 KSLo = ks.test(x = Outs$out_loc_drank[which(Outs$out_loc_lo == 1)], y = UnifFun, simulate.p.value = TRUE, B = 10000)
 
-#Both significant at 1% level. The distribution is not random at 1% level.
+#Both significant at 3% level. The distribution is not random at 1% level.
 
 # Poisson Test for Depth Bins ----
 #Arrival rate in outliers per well
@@ -1005,7 +1109,7 @@ plot(Outs[which(Outs$WellDepth >= 2000 & Outs$WellDepth < 3000 & Outs$out_loc_lo
 boxplot(Outs$out_loc_rmrank[which(Outs$out_loc_lo == 1)] ~ as.factor(Outs$out_loc_drank[which(Outs$out_loc_lo == 1)]*25), cex.axis = 1.5, cex.main = 2)
 boxplot(Outs$out_loc_rmrank[which(Outs$out_loc_lo == 0)] ~ as.factor(Outs$out_loc_drank[which(Outs$out_loc_lo == 0)]*25), cex.axis = 1.5, cex.main = 2)
 
-#Are any ranks clustered more than would be expected under a random process?
+#Fixme: Are any ranks clustered more than would be expected under a random process?
 
 
 # Make panel plot of depth horizons with low and high outliers colored in, as well as missing datapoints
