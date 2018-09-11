@@ -1,4 +1,4 @@
-#Description----
+# Description----
 #This script checks for and removes wells with negative gradients. 
 #Then checks for wells with the same spatial location. Only the deepest well at the same spatial location is retained.
 # Special cases of different BHT at the same depth are handled by either assigning a more likely depth to the point, or averaging the data.
@@ -474,7 +474,7 @@ WellsSort = SortData$Sorted
 
 #With map
 sets = rbind(c(1,2,7,7), c(3,4,7,7), c(5,6,8,8), c(9,9,8,8))
-png("HeatFlowEDA_Thesis_SplitAll_Map_Log_WellDepthSort_MedDiff_DeepWells.png", width=10, height=10, units="in", res=600)
+png("HeatFlowEDA_Thesis_SplitAll_Map_Log_WellDepthSort_MedDiff_DeepWells_Box.png", width=10, height=10, units="in", res=600)
 layout(sets)
 EDAPlots = function(DataAll, Var, Unit, ymin, ymax){
   plot(DataAll$WellDepth[which(DataAll$State == "MD")], DataAll@data[Var][,1][which(DataAll$State == "MD")], col = "orange", pch=16, xlim=c(0,7000), ylim=c(ymin,ymax), ylab='', xlab='Depth of BHT (m)', main='Maryland', cex.main=2, cex.axis=1.5, cex.lab=1.5, log = 'y', axes=FALSE)
@@ -485,6 +485,9 @@ EDAPlots = function(DataAll, Var, Unit, ymin, ymax){
   axis(side = 2, at = c(seq(.2,.9,.1),seq(2,9,1),seq(20,90,10),seq(200,900,100), seq(2000,9000,1000)), labels = FALSE)
   lines(c(1000,1000),c(0.001,2000))
   lines(c(600,600),c(0.001,2000), lty=2)
+  par(xpd = TRUE)
+  text(x = -2000, y = 5000, expression(bold('A')), cex = 2)
+  par(xpd = FALSE)
   plot(DataAll$WellDepth[which(DataAll$State == "KY")], DataAll@data[Var][,1][which(DataAll$State == "KY")], col = "purple", pch=16, xlim=c(0,7000), ylim=c(ymin,ymax), ylab='', xlab='Depth of BHT (m)', main='Kentucky', cex.main=2, cex.axis=1.5, cex.lab=1.5, log = 'y', axes=FALSE)
   par(tck = -0.03)
   axis(side = 1, at = seq(0,7000,1000), labels = TRUE, cex.axis = 1.2)
@@ -584,7 +587,11 @@ lines(c(-100,10000), c(0,0))
 lines(c(1000,1000),c(-1000,2000))
 lines(c(600,600),c(-1000,2000), lty=2)
 legend('topright', legend=c("New York", "Pennsylvania", "West Virginia", "Kentucky", "Maryland", "Virginia"), pch=16, col=c("blue", "red", "green", "purple","orange","yellow"), cex=2)
-par(mar = c(2,2,1.2,1), xaxs = 'i', yaxs = 'i')
+box(which = 'figure', lwd = 2)
+par(xpd = TRUE)
+text(x = -800, y = 625, expression(bold('C')), cex = 2)
+par(xpd = FALSE)
+par(mar = c(2,2.5,1.2,1), xaxs = 'i', yaxs = 'i')
 plot(WellsSort, pch = 16, col = "white", cex = 0.5)
 plot(NY, lwd = 2, add=TRUE)
 plot(PA, lwd = 2, add=TRUE)
@@ -605,8 +612,14 @@ degAxis(side = 1, seq(-70, -86, -2), cex.axis = 1.5)
 degAxis(side = 3, seq(-70, -86, -1), labels = FALSE)
 degAxis(side = 1, seq(-70, -86, -1), labels = FALSE)
 legend('topleft', title = expression(paste('Q'['s'], ' (mW/m'^2,')' )), legend = c('<40', '40 - 50', '50 - 60', '60 - 70', '70 - 80', '>80'), pch = 16, cex = 1.8, col = colFun(c(30, 45, 55, 65, 75, 90)))
-par(mar=c(4,5.5,3,2))
-hist(WellsSort$Qs, breaks = c(seq(0, 130, 5), 1500), freq = FALSE, xlim = c(0,120), ylim = c(0,0.05), xlab = expression(paste('Surface Heat Flow (mW/m'^2,')')), cex.lab = 1.5, cex.axis = 1.5, main = 'Histogram of All Data', cex.main = 2)
+box(which = 'figure', lwd = 2)
+par(xpd = TRUE)
+text(x = -83.5, y = 43.5, expression(bold('D')), cex = 2)
+par(mar=c(4,5.5,3,2), xpd = FALSE)
+hist(WellsSort$Qs, breaks = seq(0, 1500, 5), freq = TRUE, xlim = c(0,120), ylim = c(0,5000), xlab = expression(paste('Surface Heat Flow (mW/m'^2,')')), cex.lab = 1.5, cex.axis = 1.5, main = 'Histogram of All Data', cex.main = 2)
+box(which = 'figure', lwd = 2)
+par(xpd = TRUE)
+text(x = -15, y = 5500, expression(bold('B')), cex = 2)
 dev.off()
 
 #Only Local Median Deviation
@@ -722,7 +735,7 @@ lines(c(600,600),c(-1000,2000), lty=2, lwd = 3)
 legend('topright', legend=c("New York", "Pennsylvania", "West Virginia", "Kentucky", "Maryland", "Virginia", "600 m", "1000 m"), pch=c(rep(16, 6),NA,NA), lty = c(rep(NA, 6), 2,1), lwd = 3, col=c("blue", "red", "green", "purple","orange","yellow","black", "black"), cex=1.7)
 dev.off()
 
-#Changepoint detection for minimum BHT well depth----
+# Changepoint detection for minimum BHT well depth----
 #Sort the well database by the well depth
 OrderedWells = WellsSort[order(WellsSort$WellDepth),]
 
@@ -818,7 +831,7 @@ plot(KY, add=TRUE)
 plot(VA, add=TRUE)
 dev.off()
 
-# Outlier Detection ----
+# Spatial Outlier Detection ----
 #This should be run after points have been reduced to unique locations, and negative gradient values have been taken care of.
 
 #Data must have a column of UTM coordinates in m for this to work because it relies on Euclidian distances.
@@ -888,6 +901,69 @@ NoOuts_min2k = spTransform(TestedOutliers_HeatFlow_min2k$NotOutliers, CRS = CRS(
 
 Outs_max2k = spTransform(TestedOutliers_HeatFlow_max2k$Outliers, CRS = CRS("+init=epsg:4326"))
 NoOuts_max2k = spTransform(TestedOutliers_HeatFlow_max2k$NotOutliers, CRS = CRS("+init=epsg:4326"))
+
+# Map of outliers----
+#Colors
+colPal = colorRampPalette(colors = rev(c('red', 'orange', 'yellow', 'green', 'blue')))
+scaleRange = c(10,90)
+scaleBy = 20
+Pal = colPal((scaleRange[2] - scaleRange[1])/scaleBy + 1)
+
+#Wells in NAD83 UTM17N
+WellsDeepWGS = spTransform(WellsDeep, CRSobj = CRS('+init=epsg:4326'))
+NotOutliersWGS = spTransform(TestedOutliers_HeatFlow$NotOutliers, CRSobj = CRS('+init=epsg:4326'))
+OutliersWGS = spTransform(TestedOutliers_HeatFlow$Outliers, CRSobj = CRS('+init=epsg:4326'))
+
+png('LoHiOuts_Map.png', res = 1200, units = 'in', width = 14, height = 7)
+layout(cbind(1,2))
+par(xaxs = 'i', yaxs = 'i', mar = c(2,3,3,1))
+plot(WellsDeepWGS, col = 'white', pch = 16, cex = 0.2, main = 'Low Outliers', cex.main = 2)
+plot(NY, lwd = 2, add=TRUE)
+plot(PA, lwd = 2, add=TRUE)
+plot(WV, lwd = 2, add=TRUE)
+plot(MD, lwd = 2, add=TRUE)
+plot(KY, lwd = 2, add=TRUE)
+plot(VA, lwd = 2, add=TRUE)
+plot(Counties[Counties$STATEFP %in% c(42,36,54,24,21,51),], border = 'grey', add=TRUE)
+plot(NotOutliersWGS[NotOutliersWGS$out_loc_error == 0,], pch = 16, cex = 0.2, add = TRUE)
+plot(NotOutliersWGS[NotOutliersWGS$out_loc_error == 1,], pch = 17, col = 'purple', cex = 0.4, add = TRUE)
+plot(OutliersWGS[OutliersWGS$out_loc_lo == 1,], pch = 16, col = colFun(OutliersWGS$Qs[OutliersWGS$out_loc_lo == 1]), cex = 0.7, add = TRUE)
+box()
+north.arrow(-75, 37.5, 0.1, lab = 'N', col='black', cex = 1.5)
+degAxis(side = 2, seq(34, 46, 2), cex.axis = 1.5)
+degAxis(side = 2, seq(34, 46, 1), labels = FALSE)
+degAxis(side = 4, seq(34, 46, 1), labels = FALSE)
+degAxis(side = 1, seq(-70, -86, -2), cex.axis = 1.5)
+degAxis(side = 3, seq(-70, -86, -1), labels = FALSE)
+degAxis(side = 1, seq(-70, -86, -1), labels = FALSE)
+legend('topleft', title = expression(paste('Q'[s], ' (mW/m'^2, ')')), legend = c('< 30', '30 - 50', '50 - 70', '70 - 90', '>= 90', 'Not Tested', 'Not Outlier'), col = c(colFun(c(20,40,60,80,100)), 'purple', 'black'), pch = c(16,16,16,16,16,17,16))
+
+par(xaxs = 'i', yaxs = 'i', mar = c(2,3,3,1))
+plot(WellsDeepWGS, col = 'white', pch = 16, cex = 0.2, main = 'High Outliers', cex.main = 2)
+plot(NY, lwd = 2, add=TRUE)
+plot(PA, lwd = 2, add=TRUE)
+plot(WV, lwd = 2, add=TRUE)
+plot(MD, lwd = 2, add=TRUE)
+plot(KY, lwd = 2, add=TRUE)
+plot(VA, lwd = 2, add=TRUE)
+plot(Counties[Counties$STATEFP %in% c(42,36,54,24,21,51),], border = 'grey', add=TRUE)
+plot(NotOutliersWGS[NotOutliersWGS$out_loc_error == 0,], pch = 16, cex = 0.2, add = TRUE)
+plot(NotOutliersWGS[NotOutliersWGS$out_loc_error == 1,], pch = 17, col = 'purple', cex = 0.4, add = TRUE)
+plot(OutliersWGS[OutliersWGS$out_loc_hi == 1,], pch = 16, col = colFun(OutliersWGS$Qs[OutliersWGS$out_loc_hi == 1]), cex = 0.7, add = TRUE)
+box()
+north.arrow(-75, 37.5, 0.1, lab = 'N', col='black', cex = 1.5)
+degAxis(side = 2, seq(34, 46, 1), labels = FALSE)
+degAxis(side = 4, seq(34, 46, 1), labels = FALSE)
+degAxis(side = 1, seq(-70, -86, -2), cex.axis = 1.5)
+degAxis(side = 3, seq(-70, -86, -1), labels = FALSE)
+degAxis(side = 1, seq(-70, -86, -1), labels = FALSE)
+legend('topleft', title = expression(paste('Q'[s], ' (mW/m'^2, ')')), legend = c('< 30', '30 - 50', '50 - 70', '70 - 90', '>= 90', 'Not Tested', 'Not Outlier'), col = c(colFun(c(20,40,60,80,100)), 'purple', 'black'), pch = c(16,16,16,16,16,17,16))
+dev.off()
+
+
+
+#Outliers vs. Depth----
+plot(OutliersWGS$WellDepth, OutliersWGS$Qs)
 
 # Map of the depth ranks of outliers ----
 scaleRange = c(1,25)
@@ -1438,3 +1514,81 @@ dev.off()
 # par(new = TRUE)
 # plot(x = temp, y = MT@data$Qs[which(MT@data$ot_lc_rr == 1)], col = 'black', pch = 16, xlab = '', ylab = '', axes = FALSE, xlim = c(-3.5,3.5), ylim = c(5,120))
 # dev.off()
+
+#With Map
+sets = rbind(c(1,2,3,4), c(5,6,7,8),c(9,10,10,10))
+png('QQPlotHeatFlow_BeforeCorr_NotOutTest_Map.png', res=600, units='in', width=13, height=10)
+layout(sets)
+par(mar=c(4,5,3,2))
+qqnorm(CT@data$Qs, cex.axis=1.5, cex.lab=1.5, main='Chautauqua, NY', ylab=expression('Sample Quantiles' ~ (mW/m^2)), cex.main=2, col='red')
+qqline(CT@data$Qs)
+qqnorm(WPA@data$Qs, cex.axis=1.5, cex.lab=1.5, main='Western PA', ylab=expression('Sample Quantiles' ~ (mW/m^2)), cex.main=2, col='orange', xlim = c(-3.5,3.5), ylim = c(10,70))
+qqline(WPA@data$Qs)
+temp = qqnorm(WPA@data$Qs, plot.it = FALSE)$x[which(WPA@data$ot_lc_rr == 1)]
+par(new = TRUE)
+plot(x = temp, y = WPA@data$Qs[which(WPA@data$ot_lc_rr == 1)], col = 'black', pch = 16, xlab = '', ylab = '', axes = FALSE, xlim = c(-3.5,3.5), ylim = c(10,70))
+qqnorm(NWPANY@data$Qs, cex.axis=1.5, cex.lab=1.5, main='Northwestern NY and PA', ylab=expression('Sample Quantiles' ~ (mW/m^2)), cex.main=2, col='yellow', xlim = c(-3,3), ylim = c(5,75))
+qqline(NWPANY@data$Qs)
+temp = qqnorm(NWPANY@data$Qs, plot.it = FALSE)$x[which(NWPANY@data$ot_lc_rr == 1)]
+par(new = TRUE)
+plot(x = temp, y = NWPANY@data$Qs[which(NWPANY@data$ot_lc_rr == 1)], col = 'black', pch = 16, xlab = '', ylab = '', axes = FALSE, xlim = c(-3,3), ylim = c(5,75))
+qqnorm(CNY@data$Qs, cex.axis=1.5, cex.lab=1.5, main='Central NY', ylab=expression('Sample Quantiles' ~ (mW/m^2)), cex.main=2, col='green', xlim = c(-2.75,2.75), ylim = c(35,65))
+qqline(CNY@data$Qs)
+temp = qqnorm(CNY@data$Qs, plot.it = FALSE)$x[which(CNY@data$ot_lc_rr == 1)]
+par(new = TRUE)
+plot(x = temp, y = CNY@data$Qs[which(CNY@data$ot_lc_rr == 1)], col = 'black', pch = 16, xlab = '', ylab = '', axes = FALSE, xlim = c(-2.75,2.75), ylim = c(35,65))
+qqnorm(ENY@data$Qs, cex.axis=1.5, cex.lab=1.5, main='Eastern NY', ylab=expression('Sample Quantiles' ~ (mW/m^2)), cex.main=2, col='springgreen', xlim = c(-3,3), ylim = c(30,75))
+qqline(ENY@data$Qs)
+temp = qqnorm(ENY@data$Qs, plot.it = FALSE)$x[which(ENY@data$ot_lc_rr == 1)]
+par(new = TRUE)
+plot(x = temp, y = ENY@data$Qs[which(ENY@data$ot_lc_rr == 1)], col = 'black', pch = 16, xlab = '', ylab = '', axes = FALSE, xlim = c(-3,3), ylim = c(30,75))
+qqnorm(ENYPA@data$Qs, cex.axis=1.5, cex.lab=1.5, main='Eastern NY and PA', ylab=expression('Sample Quantiles' ~ (mW/m^2)), cex.main=2, col='skyblue', xlim = c(-3,3), ylim = c(10,110))
+qqline(ENYPA@data$Qs)
+temp = qqnorm(ENYPA@data$Qs, plot.it = FALSE)$x[which(ENYPA@data$ot_lc_rr == 1)]
+par(new = TRUE)
+plot(x = temp, y = ENYPA@data$Qs[which(ENYPA@data$ot_lc_rr == 1)], col = 'black', pch = 16, xlab = '', ylab = '', axes = FALSE, xlim = c(-3,3), ylim = c(10,110))
+qqnorm(SWPA@data$Qs, cex.axis=1.5, cex.lab=1.5, main='Southwestern PA', ylab=expression('Sample Quantiles' ~ (mW/m^2)), cex.main=2, col='blue', xlim = c(-4,4), ylim = c(5,110))
+qqline(SWPA@data$Qs)
+temp = qqnorm(SWPA@data$Qs, plot.it = FALSE)$x[which(SWPA@data$ot_lc_rr == 1)]
+par(new = TRUE)
+plot(x = temp, y = SWPA@data$Qs[which(SWPA@data$ot_lc_rr == 1)], col = 'black', pch = 16, xlab = '', ylab = '', axes = FALSE, xlim = c(-4,4), ylim = c(5,110))
+qqnorm(CWV@data$Qs, cex.axis=1.5, cex.lab=1.5, main='Central WV', ylab=expression('Sample Quantiles' ~ (mW/m^2)), cex.main=2, col='purple', xlim = c(-4,4), ylim = c(5,120))
+qqline(CWV@data$Qs)
+temp = qqnorm(CWV@data$Qs, plot.it = FALSE)$x[which(CWV@data$ot_lc_rr == 1)]
+par(new = TRUE)
+plot(x = temp, y = CWV@data$Qs[which(CWV@data$ot_lc_rr == 1)], col = 'black', pch = 16, xlab = '', ylab = '', axes = FALSE, xlim = c(-4,4), ylim = c(5,120))
+qqnorm(MT@data$Qs, cex.axis=1.5, cex.lab=1.5, main='Western WV', ylab=expression('Sample Quantiles' ~ (mW/m^2)), cex.main=2, col='violet', xlim = c(-3.5,3.5), ylim = c(5,120))
+qqline(MT@data$Qs)
+temp = qqnorm(MT@data$Qs, plot.it = FALSE)$x[which(MT@data$ot_lc_rr == 1)]
+par(new = TRUE)
+plot(x = temp, y = MT@data$Qs[which(MT@data$ot_lc_rr == 1)], col = 'black', pch = 16, xlab = '', ylab = '', axes = FALSE, xlim = c(-3.5,3.5), ylim = c(5,120))
+
+#Map
+par(xaxs = 'i', yaxs = 'i', mar = c(2,20,2,20))
+#par(pin = c(par('pin')[1], ratio*par('pin')[1]))
+plot(InterpRegs, xlim = c(-82.64474, -74.5), ylim = c(36.75, 43.4))
+plot(InterpRegs[which(InterpRegs$Name == "CT"),], col = 'red', add = TRUE)
+plot(InterpRegs[which(InterpRegs$Name == "WPA"),], col = 'orange', add = TRUE)
+plot(InterpRegs[which(InterpRegs$Name == "NWPANY"),], col = 'yellow', add = TRUE)
+plot(InterpRegs[which(InterpRegs$Name == "CNY"),], col = 'green', add = TRUE)
+plot(InterpRegs[which(InterpRegs$Name == "ENY"),], col = 'springgreen', add = TRUE)
+plot(InterpRegs[which(InterpRegs$Name == "ENYPA"),], col = 'skyblue', add = TRUE)
+plot(InterpRegs[which(InterpRegs$Name == "SWPA"),], col = 'blue', add = TRUE)
+plot(CWV_Bounded, col = 'purple', add = TRUE)
+plot(MT_Bounded, col = 'magenta', add = TRUE)
+plot(VR_Bounded, col = 'gray', add = TRUE)
+plot(NY, lwd = 2, add=TRUE)
+plot(PA, lwd = 2, add=TRUE)
+plot(WV, lwd = 2, add=TRUE)
+plot(MD, lwd = 2, add=TRUE)
+plot(KY, lwd = 2, add=TRUE)
+plot(VA, lwd = 2, add=TRUE)
+north.arrow(-75, 37.5, 0.1, lab = 'N', col='black', cex = 1.5)
+degAxis(side = 2, seq(34, 46, 2), cex.axis = 1.5)
+degAxis(side = 2, seq(34, 46, 1), labels = FALSE)
+degAxis(side = 4, seq(34, 46, 1), labels = FALSE)
+degAxis(side = 1, seq(-70, -86, -2), cex.axis = 1.5)
+degAxis(side = 3, seq(-70, -86, -1), labels = FALSE)
+degAxis(side = 1, seq(-70, -86, -1), labels = FALSE)
+box()
+dev.off()
