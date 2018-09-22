@@ -97,41 +97,6 @@ SortData = SortingWells(Same$SameSpot, Same$StoreData_Frame, Wells_PosGrad, 'BHT
 write.csv(SortData$Sorted, "SortedUniqueSpots_AllTemps_ESDA_2018.csv")
 write.csv(SortData$RerunWells, "RerunWells_AllTemps_ESDA_2018.csv")
 
-#Fixme: Using IndsDeepSmallerBHT, check that all deeper data points have a greater temperature than shallower data points.
-Wells_PosGrad[as.numeric(colnames(Same$StoreData_Frame[which(Same$StoreData_Frame[which(as.numeric(colnames(Same$StoreData_Frame)) == unique(SortData$IndsDeepSmallerBHT)[3]),] == 1)])),]
-
-#Check how many of these are greater than 2 degrees or so
-counter = 0
-for (i in 1:length(unique(SortData$IndsDeepSmallerBHT))){
-  BHTs = Wells_PosGrad$BHT[as.numeric(colnames(Same$StoreData_Frame[which(Same$StoreData_Frame[which(as.numeric(colnames(Same$StoreData_Frame)) == unique(SortData$IndsDeepSmallerBHT)[i]),] == 1)]))]
-  if ((max(BHTs) - min(BHTs)) > 2){
-    counter = counter + 1
-  }
-}
-counter
-
-#Find which states have the most duplicate measurements
-png('Barplot_PointsSameSpatialLocationStates.png', res = 300, width = 8, height = 5, units = 'in')
-layout(rbind(c(1,2)))
-counts = table(Wells_PosGrad$State[as.numeric(colnames(Same$StoreData_Frame))])
-barplot(counts, ylim = c(0,700), xlab = 'State', ylab = 'Frequency', main = 'Points Sharing Spatial Coordinates', cex.axis = 1.5, cex.lab = 1.5)
-#map
-plot(Wells_PosGrad[as.numeric(colnames(Same$StoreData_Frame)),], pch = 16, cex = 0.3, col = 'grey')
-plot(NY, lwd = 2, add=TRUE)
-plot(PA, lwd = 2, add=TRUE)
-plot(WV, lwd = 2, add=TRUE)
-plot(MD, lwd = 2, add=TRUE)
-plot(KY, lwd = 2, add=TRUE)
-plot(VA, lwd = 2, add=TRUE)
-north.arrow(-75, 37, 0.1, lab = 'N', col='black', cex = 1.5)
-degAxis(side = 2, seq(34, 46, 2), cex.axis = 1.5)
-degAxis(side = 2, seq(34, 46, 1), labels = FALSE)
-degAxis(side = 4, seq(34, 46, 1), labels = FALSE)
-degAxis(side = 1, seq(-70, -86, -2), cex.axis = 1.5)
-degAxis(side = 3, seq(-70, -86, -1), labels = FALSE)
-degAxis(side = 1, seq(-70, -86, -1), labels = FALSE)
-dev.off()
-
 #Wells in start of dataset
 length(Wells_PosGrad)
 #Number of locations with wells in same spatial coordinates
@@ -159,6 +124,19 @@ Rerun = Rerun[c((nrow(Rerun) - (nrow(SortData$RerunWells) - 1)):nrow(Rerun)),]
 Rerun$APINo = SortData$RerunWells$APINo
 SortData$Sorted@data[c((nrow(SortData$Sorted) - (nrow(SortData$RerunWells) - 1)):nrow(SortData$Sorted)),] = Rerun[,-c(1,8,9,ncol(Rerun))]
 
+
+#Using IndsDeepSmallerBHT, check how many deeper data points have a greater temperature than shallower data points.
+# Wells_PosGrad[as.numeric(colnames(Same$StoreData_Frame[which(Same$StoreData_Frame[which(as.numeric(colnames(Same$StoreData_Frame)) == unique(SortData$IndsDeepSmallerBHT)[3]),] == 1)])),]
+#Check how many of these are greater than 2 degrees or so
+counter = 0
+for (i in 1:length(unique(SortData$IndsDeepSmallerBHT))){
+  BHTs = Wells_PosGrad$BHT[as.numeric(colnames(Same$StoreData_Frame[which(Same$StoreData_Frame[which(as.numeric(colnames(Same$StoreData_Frame)) == unique(SortData$IndsDeepSmallerBHT)[i]),] == 1)]))]
+  if ((max(BHTs) - min(BHTs)) > 2){
+    counter = counter + 1
+  }
+}
+rm(counter, BHTs)
+
 # Line plot of the heat flow vs. depth of BHT measurement for the wells in the same spot----
 
 #Fixme: Add the equilibrium and pseudo-equilibrium well data to this plot, or make a new plot for these data
@@ -181,6 +159,7 @@ for (i in 1:nrow(Same$StoreData_Frame)){
     count = count + 1
   }
 }
+rm(Indxs, count,i)
 
 #Sort by the same spot number
 PlotSpots = PlotSpots[order(PlotSpots$SameSpot),]
@@ -195,6 +174,7 @@ for (i in 1:length(unique(PlotSpots$SameSpot))){
   #Sort only these wells and place the sorted data in those rows
   PlotSpots[indxs,] = PlotSpots[indxs,][order(PlotSpots$WellDepth[indxs]),]
 }
+rm(i, indxs)
 
 #Sort groups of wells by the shallowest well.
 #Obtain index of shallowest well for each location
@@ -206,36 +186,64 @@ for (i in 1:length(unique(PlotSpots$SameSpot))){
   #Sort only these wells and place the sorted data in those rows
   NewInds = PlotSpots$SameSpot[indxShallow][order(PlotSpots$WellDepth[indxShallow])]
 }
+rm(indxShallow, i, j)
 
-#Make new database for the final plotting of points
+#Make new database for the final plotting of points.
+#All PlotFinal records will be overwritten or deleted in the following for loop.
 PlotFinal = PlotSpots
 
-#index of data in the PlotFinal database
+#index of data in the PlotFinal database - removing duplicate records.
 len = 1
+LocCheck = 0
 for (i in 1:length(unique(PlotSpots$SameSpot))){
   #Determine how many wells there are in the same spot
   indxs = which(PlotSpots$SameSpot == NewInds[i])
   
-  if (anyDuplicated(PlotSpots$Qs[indxs]) != 0){
-    #Find the indices that have same heat flow
-    res = which(PlotSpots$Qs[indxs] %in% unique(PlotSpots$Qs[indxs][duplicated(PlotSpots$Qs[indxs])]) == TRUE)
+  if (anyDuplicated(PlotSpots$BHT[indxs]) != 0){
+    #Find the indices that have same BHT
+    res = which(PlotSpots$BHT[indxs] %in% unique(PlotSpots$BHT[indxs][duplicated(PlotSpots$BHT[indxs])]) == TRUE)
     #Of those, find indices with the same well depth
     dpth = which(PlotSpots$WellDepth[indxs][res] %in% unique(PlotSpots$WellDepth[indxs][res][duplicated(PlotSpots$WellDepth[indxs][res])]) == TRUE)
     
-    #If they all have the same heat flow, check if they have the same depth.
+    #If they all have the same BHT, check if they have the same depth.
     if ((length(res) == length(indxs)) & (length(dpth) == length(indxs))){
-      #Do not record this in the PlotFinal database. Remove the last length(indxs) rows from the database.
-      PlotFinal = PlotFinal[-((nrow(PlotFinal) - (length(indxs)-1)):nrow(PlotFinal)),]
+      #Check if there are two or more sets of duplicate records (e.g. 4 total records, 2 duplicates)
+      if (nrow(unique(PlotSpots[indxs, c('WellDepth', 'BHT')])) > 1){
+        #Retain the unique records, and drop the remaining
+        indxs = indxs[which(rownames(PlotSpots[indxs, c('WellDepth', 'BHT')]) %in% rownames(unique(PlotSpots[indxs, c('WellDepth', 'BHT')])))]
+        
+        #Overwrite the records in PlotFinal. These are the new data.
+        PlotFinal[len:(len + (length(indxs)-1)),] = PlotSpots[indxs,]
+        len = len + length(indxs)
+        #Drop
+        Drop = nrow(PlotSpots[indxs, c('WellDepth', 'BHT')]) - nrow(unique(PlotSpots[indxs, c('WellDepth', 'BHT')]))
+        PlotFinal = PlotFinal[-((nrow(PlotFinal) - (Drop-1)):nrow(PlotFinal)),]
+        
+      }else{
+        LocCheck = LocCheck + 1
+        #Do not record this in the PlotFinal database. Well has only 1 measurement. Remove the last length(indxs) rows. They are not needed.
+        PlotFinal = PlotFinal[-((nrow(PlotFinal) - (length(indxs)-1)):nrow(PlotFinal)),]
+      }
     }else{
+      if (length(dpth) > 0){
+        #Fixme: I think this would not handle the case of multiple different sets of duplicates.
+        #Remove duplicate records, except 1. Keep all others.
+        # Remove the last (length(dpth)-1) rows from the database. They are not needed.
+        PlotFinal = PlotFinal[-((nrow(PlotFinal) - (length(dpth)-2)):nrow(PlotFinal)),]
+        indxs = indxs[-res[dpth[2:length(dpth)]]]
+      }
+      #Overwrite the records in PlotFinal. These are the new data.
       PlotFinal[len:(len + (length(indxs)-1)),] = PlotSpots[indxs,]
       len = len + length(indxs)
     }
   }else{
+    #Overwrite the records in PlotFinal. These are the new data.
     PlotFinal[len:(len + (length(indxs)-1)),] = PlotSpots[indxs,]
     len = len + length(indxs)
   }
 }
-rm(PlotSpots)
+rm(PlotSpots, i, len, indxs, dpth, res, NewInds, Drop)
+
 #Colors by location, sorted by the highest Qs to lowest in shallowest measurement
 PlotColPal = colorRampPalette(colors = c('red', 'orange', 'yellow', 'green', 'blue', 'purple'))
 cols = PlotColPal(length(unique(PlotFinal$SameSpot)))
@@ -253,39 +261,168 @@ for (i in 1:length(unique(PlotFinal$SameSpot))){
 }
 par(new = FALSE)
 minor.tick(nx=5,ny=5)
+legend('topright', legend = c('Shallowest Well is Shallow', '', '', 'Shallowest Well is Deep'), col = c('red', 'yellow', 'green', 'purple'), pch = 16, lty = 1)
 dev.off()
+rm(PlotColPal, cols)
 
 #Transform to spatial data
 coordinates(PlotFinal) = c('coords_x1', 'coords_x2')
+proj4string(PlotFinal) = CRS('+init=epsg:26917')
+PlotFinal = spTransform(PlotFinal, CRS('+init=epsg:4326'))
+
+#Map of which states have the most duplicate measurements
+png('Barplot_PointsSameSpatialLocationStates.png', res = 300, width = 8, height = 5, units = 'in')
+layout(rbind(c(1,2)))
+counts = table(PlotFinal$State)
+#counts = table(Wells_PosGrad$State[as.numeric(colnames(Same$StoreData_Frame))])
+barplot(counts, ylim = c(0,700), xlab = 'State', ylab = 'Frequency', main = 'Points Sharing Spatial Coordinates', cex.axis = 1.5, cex.lab = 1.5)
+#map
+#plot(Wells_PosGrad[as.numeric(colnames(Same$StoreData_Frame)),], pch = 16, cex = 0.3, col = 'grey')
+plot(PlotFinal, pch = 16, cex = 0.3, col = 'white')
+plot(NY, lwd = 2, add=TRUE)
+plot(PA, lwd = 2, add=TRUE)
+plot(WV, lwd = 2, add=TRUE)
+plot(MD, lwd = 2, add=TRUE)
+plot(KY, lwd = 2, add=TRUE)
+plot(VA, lwd = 2, add=TRUE)
+plot(PlotFinal, pch = 16, cex = 0.3, col = 'grey', add = TRUE)
+north.arrow(-75, 37, 0.1, lab = 'N', col='black', cex = 1.5)
+degAxis(side = 2, seq(34, 46, 2), cex.axis = 1.5)
+degAxis(side = 2, seq(34, 46, 1), labels = FALSE)
+degAxis(side = 4, seq(34, 46, 1), labels = FALSE)
+degAxis(side = 1, seq(-70, -86, -2), cex.axis = 1.5)
+degAxis(side = 3, seq(-70, -86, -1), labels = FALSE)
+degAxis(side = 1, seq(-70, -86, -1), labels = FALSE)
+dev.off()
+rm(counts)
+
+#Sort by BHT 
+PlotFinal = PlotFinal[rev(order(PlotFinal$BHT)),]
+
+#Sort by Well Depth 
+#PlotFinal = PlotFinal[rev(order(PlotFinal$WellDepth)),]
 
 png('SameSpotWells_BHTVsLocation.png', res = 600, units = 'in', width = 7, height = 7)
 par(mar = c(4.5, 5, 1.5, 1.5))
 for (i in 1:length(unique(PlotFinal$SameSpot))){
   #Indices for the deepest wells at a location
-  indsMaxDepth = which(PlotFinal$WellDepth[which(PlotFinal$SameSpot == PlotFinal$SameSpot[length(unique(PlotFinal$SameSpot)) + 1 - i])] == max(PlotFinal$WellDepth[which(PlotFinal$SameSpot == PlotFinal$SameSpot[length(unique(PlotFinal$SameSpot)) + 1 - i])]))
+  indsMaxDepth = which(PlotFinal$WellDepth[which(PlotFinal$SameSpot == unique(PlotFinal$SameSpot)[i])] == max(PlotFinal$WellDepth[which(PlotFinal$SameSpot == unique(PlotFinal$SameSpot)[i])]))
   if (i == 1){
     #Record used coordinates
-    Coords = PlotFinal[which(PlotFinal$SameSpot == PlotFinal$SameSpot[length(unique(PlotFinal$SameSpot)) + 1 - i]),][1,]
+    Coords = PlotFinal[which(PlotFinal$SameSpot == unique(PlotFinal$SameSpot)[i]),][1,]
     #All others black
-    plot(rep(i,length(PlotFinal$BHT[which(PlotFinal$SameSpot == PlotFinal$SameSpot[length(unique(PlotFinal$SameSpot)) + 1 - i])])), PlotFinal$BHT[which(PlotFinal$SameSpot == PlotFinal$SameSpot[length(unique(PlotFinal$SameSpot)) + 1 - i])], type = 'o', col = 'black', pch = 16, xlim = c(0,length(unique(PlotFinal$SameSpot))), ylim = c(0,120), xlab = 'Same Spot Well', ylab = expression(paste('BHT (', degree, 'C)')), cex.axis = 1.5, cex.lab = 1.5)
+    plot(rep(i,length(PlotFinal$BHT[which(PlotFinal$SameSpot == unique(PlotFinal$SameSpot)[i])])), PlotFinal$BHT[which(PlotFinal$SameSpot == unique(PlotFinal$SameSpot)[i])], type = 'o', col = 'black', pch = 16, xlim = c(0,length(unique(PlotFinal$SameSpot))), ylim = c(0,140), xlab = 'Same Spot Well', ylab = expression(paste('BHT (', degree, 'C)')), cex.axis = 1.5, cex.lab = 1.5)
     par(new=TRUE)
     #Max depth wells red
-    plot(rep(i, length(indsMaxDepth)), PlotFinal$BHT[which(PlotFinal$SameSpot == PlotFinal$SameSpot[length(unique(PlotFinal$SameSpot)) + 1 - i])][indsMaxDepth], type = 'o', col = 'red', pch = 16, xlim = c(0,length(unique(PlotFinal$SameSpot))), ylim = c(0,120), xlab = '', ylab = '', axes=FALSE)
-  }else if (nrow(zerodist(rbind(PlotFinal[which(PlotFinal$SameSpot == PlotFinal$SameSpot[length(unique(PlotFinal$SameSpot)) + 1 - i]),][1,], Coords))) == 0){
+    plot(rep(i, length(indsMaxDepth)), PlotFinal$BHT[which(PlotFinal$SameSpot == unique(PlotFinal$SameSpot)[i])][indsMaxDepth], type = 'o', col = 'red', pch = 16, xlim = c(0,length(unique(PlotFinal$SameSpot))), ylim = c(0,140), xlab = '', ylab = '', axes=FALSE)
+  }else if (nrow(zerodist(rbind(PlotFinal[which(PlotFinal$SameSpot == unique(PlotFinal$SameSpot)[i]),][1,], Coords))) == 0){
     #Record used coordinates
-    Coords = rbind(PlotFinal[which(PlotFinal$SameSpot == PlotFinal$SameSpot[length(unique(PlotFinal$SameSpot)) + 1 - i]),][1,], Coords)
+    Coords = rbind(PlotFinal[which(PlotFinal$SameSpot == unique(PlotFinal$SameSpot)[i]),][1,], Coords)
     #All others black
-    plot(rep(i,length(PlotFinal$BHT[which(PlotFinal$SameSpot == PlotFinal$SameSpot[length(unique(PlotFinal$SameSpot)) + 1 - i])])), PlotFinal$BHT[which(PlotFinal$SameSpot == PlotFinal$SameSpot[length(unique(PlotFinal$SameSpot)) + 1 - i])], type = 'o', col = 'black', pch = 16, xlim = c(0,length(unique(PlotFinal$SameSpot))), ylim = c(0,120), xlab = '', ylab = '', axes = FALSE)
+    plot(rep(i,length(PlotFinal$BHT[which(PlotFinal$SameSpot == unique(PlotFinal$SameSpot)[i])])), PlotFinal$BHT[which(PlotFinal$SameSpot == unique(PlotFinal$SameSpot)[i])], type = 'o', col = 'black', pch = 16, xlim = c(0,length(unique(PlotFinal$SameSpot))), ylim = c(0,140), xlab = '', ylab = '', axes = FALSE)
     par(new=TRUE)
     #Max depth wells red
-    plot(rep(i, length(indsMaxDepth)), PlotFinal$BHT[which(PlotFinal$SameSpot == PlotFinal$SameSpot[length(unique(PlotFinal$SameSpot)) + 1 - i])][indsMaxDepth], type = 'o', col = 'red', pch = 16, xlim = c(0,length(unique(PlotFinal$SameSpot))), ylim = c(0,120), axes = FALSE, xlab = '', ylab = '')
+    plot(rep(i, length(indsMaxDepth)), PlotFinal$BHT[which(PlotFinal$SameSpot == unique(PlotFinal$SameSpot)[i])][indsMaxDepth], type = 'o', col = 'red', pch = 16, xlim = c(0,length(unique(PlotFinal$SameSpot))), ylim = c(0,140), axes = FALSE, xlab = '', ylab = '')
   }
   par(new = TRUE)
 }
 par(new = FALSE)
 minor.tick(nx=5,ny=5)
 dev.off()
+rm(indsMaxDepth, Coords, i)
 
+#Split by wells that have deeper BHT as smaller value
+
+#Figure out which wells have the deeper BHT as smaller in value
+PlotFinal$IndsDeepSmallBHT = 0
+
+for (i in 1:length(unique(PlotFinal$SameSpot))){
+  #Indices for the deepest wells at a location
+  indsMaxDepth = which(PlotFinal$WellDepth[which(PlotFinal$SameSpot == unique(PlotFinal$SameSpot)[i])] == max(PlotFinal$WellDepth[which(PlotFinal$SameSpot == unique(PlotFinal$SameSpot)[i])]))
+  if (nrow(PlotFinal[which(PlotFinal$SameSpot == unique(PlotFinal$SameSpot)[i]),][-indsMaxDepth,]) >= 1){
+    for (temp in 1:length(indsMaxDepth)){
+      if (any(PlotFinal$BHT[which(PlotFinal$SameSpot == unique(PlotFinal$SameSpot)[i])][indsMaxDepth[temp]] < PlotFinal$BHT[which(PlotFinal$SameSpot == unique(PlotFinal$SameSpot)[i])][-indsMaxDepth])){
+        PlotFinal$IndsDeepSmallBHT[which(PlotFinal$SameSpot == unique(PlotFinal$SameSpot)[i])] = 1
+      }
+    }
+  }
+}
+rm(i, indsMaxDepth, temp)
+
+PlotFinal_DeepBHTsLarge = PlotFinal[PlotFinal$IndsDeepSmallBHT == 0,]
+PlotFinal_DeepBHTsSmall = PlotFinal[PlotFinal$IndsDeepSmallBHT == 1,]
+
+png('SameSpotWells_BHTVsLocation_SortDeepBHTSmaller.png', res = 600, units = 'in', width = 12, height = 6)
+par(mar = c(4.5, 5, 1.5, 1.5))
+layout(rbind(c(1,2)))
+
+#Plot deep BHTs that are larger first
+for (i in 1:length(unique(PlotFinal_DeepBHTsLarge$SameSpot))){
+  #Indices for the deepest wells at a location
+  indsMaxDepth = which(PlotFinal_DeepBHTsLarge$WellDepth[which(PlotFinal_DeepBHTsLarge$SameSpot == unique(PlotFinal_DeepBHTsLarge$SameSpot)[i])] == max(PlotFinal_DeepBHTsLarge$WellDepth[which(PlotFinal_DeepBHTsLarge$SameSpot == unique(PlotFinal_DeepBHTsLarge$SameSpot)[i])]))
+  if (i == 1){
+    #Record used coordinates
+    Coords = PlotFinal_DeepBHTsLarge[which(PlotFinal_DeepBHTsLarge$SameSpot == unique(PlotFinal_DeepBHTsLarge$SameSpot)[i]),][1,]
+    #All others black
+    plot(rep(i,length(PlotFinal_DeepBHTsLarge$BHT[which(PlotFinal_DeepBHTsLarge$SameSpot == unique(PlotFinal_DeepBHTsLarge$SameSpot)[i])])), PlotFinal_DeepBHTsLarge$BHT[which(PlotFinal_DeepBHTsLarge$SameSpot == unique(PlotFinal_DeepBHTsLarge$SameSpot)[i])], type = 'o', col = 'black', pch = 16, xlim = c(0,length(unique(PlotFinal_DeepBHTsLarge$SameSpot))), ylim = c(0,140), xlab = 'Same Spot Well', ylab = expression(paste('BHT (', degree, 'C)')), main = 'Deepest BHT is Largest', cex.axis = 1.5, cex.lab = 1.5)
+    par(new=TRUE)
+    #Max depth wells red
+    plot(rep(i, length(indsMaxDepth)), PlotFinal_DeepBHTsLarge$BHT[which(PlotFinal_DeepBHTsLarge$SameSpot == unique(PlotFinal_DeepBHTsLarge$SameSpot)[i])][indsMaxDepth], type = 'o', col = 'red', pch = 16, xlim = c(0,length(unique(PlotFinal_DeepBHTsLarge$SameSpot))), ylim = c(0,140), xlab = '', ylab = '', axes=FALSE)
+  }else if (nrow(zerodist(rbind(PlotFinal_DeepBHTsLarge[which(PlotFinal_DeepBHTsLarge$SameSpot == unique(PlotFinal_DeepBHTsLarge$SameSpot)[i]),][1,], Coords))) == 0){
+    #Record used coordinates
+    Coords = rbind(PlotFinal_DeepBHTsLarge[which(PlotFinal_DeepBHTsLarge$SameSpot == unique(PlotFinal_DeepBHTsLarge$SameSpot)[i]),][1,], Coords)
+    #All others black
+    plot(rep(i,length(PlotFinal_DeepBHTsLarge$BHT[which(PlotFinal_DeepBHTsLarge$SameSpot == unique(PlotFinal_DeepBHTsLarge$SameSpot)[i])])), PlotFinal_DeepBHTsLarge$BHT[which(PlotFinal_DeepBHTsLarge$SameSpot == unique(PlotFinal_DeepBHTsLarge$SameSpot)[i])], type = 'o', col = 'black', pch = 16, xlim = c(0,length(unique(PlotFinal_DeepBHTsLarge$SameSpot))), ylim = c(0,140), xlab = '', ylab = '', axes = FALSE)
+    par(new=TRUE)
+    #Max depth wells red
+    plot(rep(i, length(indsMaxDepth)), PlotFinal_DeepBHTsLarge$BHT[which(PlotFinal_DeepBHTsLarge$SameSpot == unique(PlotFinal_DeepBHTsLarge$SameSpot)[i])][indsMaxDepth], type = 'o', col = 'red', pch = 16, xlim = c(0,length(unique(PlotFinal_DeepBHTsLarge$SameSpot))), ylim = c(0,140), axes = FALSE, xlab = '', ylab = '')
+  }
+  par(new = TRUE)
+}
+par(new = FALSE)
+minor.tick(nx=5,ny=5)
+
+#Plot deep BHTs that are smaller
+for (i in 1:length(unique(PlotFinal_DeepBHTsSmall$SameSpot))){
+  #Indices for the deepest wells at a location
+  indsMaxDepth = which(PlotFinal_DeepBHTsSmall$WellDepth[which(PlotFinal_DeepBHTsSmall$SameSpot == unique(PlotFinal_DeepBHTsSmall$SameSpot)[i])] == max(PlotFinal_DeepBHTsSmall$WellDepth[which(PlotFinal_DeepBHTsSmall$SameSpot == unique(PlotFinal_DeepBHTsSmall$SameSpot)[i])]))
+  if (i == 1){
+    #Record used coordinates
+    Coords = PlotFinal_DeepBHTsSmall[which(PlotFinal_DeepBHTsSmall$SameSpot == unique(PlotFinal_DeepBHTsSmall$SameSpot)[i]),][1,]
+    #All others black
+    plot(rep(i,length(PlotFinal_DeepBHTsSmall$BHT[which(PlotFinal_DeepBHTsSmall$SameSpot == unique(PlotFinal_DeepBHTsSmall$SameSpot)[i])])), PlotFinal_DeepBHTsSmall$BHT[which(PlotFinal_DeepBHTsSmall$SameSpot == unique(PlotFinal_DeepBHTsSmall$SameSpot)[i])], type = 'o', col = 'black', pch = 16, xlim = c(0,length(unique(PlotFinal_DeepBHTsSmall$SameSpot))), ylim = c(0,140), xlab = 'Same Spot Well', ylab = expression(paste('BHT (', degree, 'C)')), main = 'Deepest BHT is Not Largest', cex.axis = 1.5, cex.lab = 1.5)
+    par(new=TRUE)
+    #Max depth wells red
+    plot(rep(i, length(indsMaxDepth)), PlotFinal_DeepBHTsSmall$BHT[which(PlotFinal_DeepBHTsSmall$SameSpot == unique(PlotFinal_DeepBHTsSmall$SameSpot)[i])][indsMaxDepth], type = 'o', col = 'red', pch = 16, xlim = c(0,length(unique(PlotFinal_DeepBHTsSmall$SameSpot))), ylim = c(0,140), xlab = '', ylab = '', axes=FALSE)
+  }else if (nrow(zerodist(rbind(PlotFinal_DeepBHTsSmall[which(PlotFinal_DeepBHTsSmall$SameSpot == unique(PlotFinal_DeepBHTsSmall$SameSpot)[i]),][1,], Coords))) == 0){
+    #Record used coordinates
+    Coords = rbind(PlotFinal_DeepBHTsSmall[which(PlotFinal_DeepBHTsSmall$SameSpot == unique(PlotFinal_DeepBHTsSmall$SameSpot)[i]),][1,], Coords)
+    #All others black
+    plot(rep(i,length(PlotFinal_DeepBHTsSmall$BHT[which(PlotFinal_DeepBHTsSmall$SameSpot == unique(PlotFinal_DeepBHTsSmall$SameSpot)[i])])), PlotFinal_DeepBHTsSmall$BHT[which(PlotFinal_DeepBHTsSmall$SameSpot == unique(PlotFinal_DeepBHTsSmall$SameSpot)[i])], type = 'o', col = 'black', pch = 16, xlim = c(0,length(unique(PlotFinal_DeepBHTsSmall$SameSpot))), ylim = c(0,140), xlab = '', ylab = '', axes = FALSE)
+    par(new=TRUE)
+    #Max depth wells red
+    plot(rep(i, length(indsMaxDepth)), PlotFinal_DeepBHTsSmall$BHT[which(PlotFinal_DeepBHTsSmall$SameSpot == unique(PlotFinal_DeepBHTsSmall$SameSpot)[i])][indsMaxDepth], type = 'o', col = 'red', pch = 16, xlim = c(0,length(unique(PlotFinal_DeepBHTsSmall$SameSpot))), ylim = c(0,140), axes = FALSE, xlab = '', ylab = '')
+  }
+  par(new = TRUE)
+}
+par(new = FALSE)
+minor.tick(nx=5,ny=5)
+legend('topright', legend = c('Deepest BHTs', 'Other BHTs'), col = c('red', 'black'), pch = 16, lty = 1, cex = 1.5)
+
+dev.off()
+rm(i, indsMaxDepth, Coords)
+
+#Check how many of the Deep BHTs that are smaller are greater than 2 degrees or so
+DeepBHTSmallerBy2C_Counter = 0
+Diff = vector('numeric')
+for (i in 1:length(unique(PlotFinal_DeepBHTsSmall$SameSpot))){
+  BHTs = PlotFinal_DeepBHTsSmall$BHT[PlotFinal_DeepBHTsSmall$SameSpot == unique(PlotFinal_DeepBHTsSmall$SameSpot)[i]]
+  if ((max(BHTs) - min(BHTs)) > 2){
+    DeepBHTSmallerBy2C_Counter = DeepBHTSmallerBy2C_Counter + 1
+    Diff = c(Diff, (max(BHTs) - min(BHTs)))
+  }
+}
+rm(Diff, i, BHTs)
 
 # Nugget Effect for wells in the same spatial location ----
 
@@ -294,8 +431,8 @@ dev.off()
 
 #Compute the Nugget Effect for points in the same spatial location.
 #Make a data frame to store the locations, average nugget, number of nuggets calculated, min, max, and sd of the nugget
-LocsNugs = matrix(0, ncol=9, nrow=1)
-colnames(LocsNugs) = c('RowID_', 'POINT_X', 'POINT_Y', 'Nugget', 'Max', 'Min', 'Sd', 'PtPairs', 'NumPts')
+LocsNugs2 = matrix(0, ncol=9, nrow=1)
+colnames(LocsNugs2) = c('RowID_', 'POINT_X', 'POINT_Y', 'Nugget', 'Max', 'Min', 'Sd', 'PtPairs', 'NumPts')
 count=0
 #Mark the index with a 1 when it is used.
 IndsUsed = vector('numeric', length=nrow(Same$StoreData_Frame))
@@ -317,21 +454,127 @@ for (i in 1:nrow(Same$StoreData_Frame)){
       }
       Nug = VarioPts[lower.tri(VarioPts)]
       #Store spatial location of point and nugget information
-      if (nrow(LocsNugs) == 1 & Nug[1] != 0 & count == 0){
-        LocsNugs[1,] = c(Wells_PosGrad$RowID_[Indxs[1]], Wells_PosGrad$LongDgr[Indxs[1]], Wells_PosGrad$LatDegr[Indxs[1]], mean(Nug), max(Nug), min(Nug), sd(Nug), length(Nug), length(unique(Test)))
+      if (nrow(LocsNugs2) == 1 & Nug[1] != 0 & count == 0){
+        LocsNugs2[1,] = c(Wells_PosGrad$RowID_[Indxs[1]], Wells_PosGrad$LongDgr[Indxs[1]], Wells_PosGrad$LatDegr[Indxs[1]], mean(Nug), max(Nug), min(Nug), sd(Nug), length(Nug), length(unique(Test)))
         count = 1
       }
       else if (count == 1){
-        LocsNugs = rbind(LocsNugs, c(Wells_PosGrad$RowID_[Indxs[1]], Wells_PosGrad$LongDgr[Indxs[1]], Wells_PosGrad$LatDegr[Indxs[1]], mean(Nug), max(Nug), min(Nug), sd(Nug), length(Nug), length(unique(Test))))
+        LocsNugs2 = rbind(LocsNugs2, c(Wells_PosGrad$RowID_[Indxs[1]], Wells_PosGrad$LongDgr[Indxs[1]], Wells_PosGrad$LatDegr[Indxs[1]], mean(Nug), max(Nug), min(Nug), sd(Nug), length(Nug), length(unique(Test))))
       }
     }
   }
 }
-rm(count, i, j, Indxs, Test)
+rm(count, i, j, Indxs, Test, IndsUsed, Nug, VarioPts)
 
-write.csv(LocsNugs, 'NuggetLocations.csv')
+write.csv(LocsNugs2, 'NuggetLocations.csv')
+
+#Using PlotFinal data
+LocsNugs = matrix(0, ncol=9, nrow=length(unique(PlotFinal$SameSpot)))
+colnames(LocsNugs) = c('RowID_', 'POINT_X', 'POINT_Y', 'Nugget', 'Max', 'Min', 'Sd', 'PtPairs', 'NumPts')
+for (i in 1:nrow(LocsNugs)){
+  #Gather all well indicies with the same spatial location.
+  Indxs = which(PlotFinal$SameSpot == unique(PlotFinal$SameSpot)[i])
+  #Get the surface heat flow for these wells in the same location
+  Test = PlotFinal$Qs[Indxs]
+  #Compute nugget
+  VarioPts = matrix(0, nrow=length(Test), ncol=length(Test))
+  for (j in 1:length(Test)){
+    VarioPts[j,] = ((Test - Test[j]))^2/2
+  }
+  Nug = VarioPts[lower.tri(VarioPts)]
+  #Store spatial location of point and nugget information. Take only first index
+  LocsNugs[i,] = c(PlotFinal$RowID_[Indxs[1]], PlotFinal@coords[Indxs[1],1], PlotFinal@coords[Indxs[1],2], mean(Nug), max(Nug), min(Nug), sd(Nug), length(Nug), length(Test))
+}
+rm(i, j, Indxs, Test, Nug, VarioPts)
+
+write.csv(LocsNugs, 'NuggetLocations_2018.csv')
+
+#Add interpolation section to the nugget locations
+LocsNugs = as.data.frame(LocsNugs)
+coordinates(LocsNugs) = c('POINT_X', 'POINT_Y')
+proj4string(LocsNugs) = CRS('+init=epsg:4326')
+
+LocsNugs2 = as.data.frame(LocsNugs2)
+coordinates(LocsNugs2) = c('POINT_X', 'POINT_Y')
+proj4string(LocsNugs2) = CRS('+init=epsg:4326')
+
+LocsNugs$Reg = NA
+LocsNugs$Reg[as.numeric(rownames(LocsNugs[InterpRegs[1,],]@data))] = InterpRegs$Name[1]
+LocsNugs$Reg[as.numeric(rownames(LocsNugs[InterpRegs[2,],]@data))] = InterpRegs$Name[2]
+LocsNugs$Reg[as.numeric(rownames(LocsNugs[InterpRegs[3,],]@data))] = InterpRegs$Name[3]
+LocsNugs$Reg[as.numeric(rownames(LocsNugs[InterpRegs[5,],]@data))] = InterpRegs$Name[5]
+LocsNugs$Reg[as.numeric(rownames(LocsNugs[InterpRegs[6,],]@data))] = InterpRegs$Name[6]
+LocsNugs$Reg[as.numeric(rownames(LocsNugs[InterpRegs[8,],]@data))] = InterpRegs$Name[8]
+LocsNugs$Reg[as.numeric(rownames(LocsNugs[InterpRegs[9,],]@data))] = InterpRegs$Name[9]
+LocsNugs$Reg[as.numeric(rownames(LocsNugs[MT_Bounded,]@data))] = InterpRegs$Name[4]
+LocsNugs$Reg[as.numeric(rownames(LocsNugs[CWV_Bounded,]@data))] = InterpRegs$Name[7]
+LocsNugs$Reg[as.numeric(rownames(LocsNugs[VR_Bounded,]@data))] = 'VR'
+
+#One point is not in the interpolation regions. Will not be used in plots.
+LocsNugs = LocsNugs[is.na(LocsNugs$Reg) == FALSE,]
 
 #Make boxplots for each of the interpolation sections
+png('NuggetWellsDistributions_2018.png', res=600, width=12, height=6, units='in')
+par(mar=c(5,5,2,2), yaxt='n')
+#Fixme: Some boxes have only 3 points. They should not be boxes.
+boxplot(Nugget ~ Reg, data = LocsNugs, at=c(4, 1, 8, 5, 6, 3, 7, 9, 2), varwidth = TRUE, col=c('green', 'red', 'purple', 'springgreen', 'skyblue', 'yellow', 'blue', 'grey', 'orange'), pch=16, cex.axis=1.5, cex.lab=1.5, ylab=expression('Sample Nugget Semivariance' ~ (mW/m^2)^2), xlab='Interpolation Region', log='y')
+par(yaxt='s')
+at.y <- outer(1:9, 10^(-7:7))
+lab.y <- ifelse(log10(at.y) %% 1 == 0, sapply(log10(at.y), function(i) as.expression(bquote(10^ .(i)))), NA)
+par(tcl = -0.2)
+axis(side=2, at=at.y, labels=lab.y, cex.axis=1.5, las=1)
+par(tcl = -0.5)
+at.y <- 10^(-7:7)
+axis(side=2, at=at.y, labels=FALSE, cex.axis=1.5, las=1)
+dev.off()
+
+# With a map next to the boxplot
+pin = par("pin")
+dxy = apply(rbind(c(-82.64474, -74.5), c(36.75, 43.6)), 1, diff)
+ratio = dxy[1]/dxy[2]
+pin[1] = 3 #Modifying for margin space
+png('NuggetWellsDistributions_Boxplot&Map_edit_2018.png', res=600, width=11.2, height=4.2, units='in')
+layout(cbind(1,1,2))
+par(mar=c(4.1,5,0.5,0), yaxt='n')
+boxplot(Nugget ~ Reg, data = LocsNugs, at=c(4, 1, 8, 5, 6, 3, 7, 9, 2), varwidth = TRUE, col=c('green', 'red', 'purple', 'springgreen', 'skyblue', 'yellow', 'blue', 'grey', 'orange'), pch=16, cex.axis=1.5, cex.lab=1.5, ylab=expression('Sample Nugget Semivariance' ~ (mW/m^2)^2), xlab='Interpolation Region', log='y')
+par(yaxt='s')
+at.y <- outer(1:9, 10^(-5:4))
+lab.y <- ifelse(log10(at.y) %% 1 == 0, sapply(log10(at.y),function(i) as.expression(bquote(10^ .(i)))), NA)
+par(tcl = -0.2)
+axis(side=2, at=at.y, labels=lab.y, cex.axis=1.5, las=1)
+par(tcl = -0.5)
+at.y <- 10^(-7:7)
+axis(side=2, at=at.y, labels=FALSE, cex.axis=1.5, las=1)
+#Map
+par(xaxs = 'i', yaxs = 'i', mar = c(0,0,0,0))
+par(pin = c(pin[1], ratio*pin[1]))
+plot(InterpRegs, xlim = c(-82.64474, -74.5), ylim = c(36.75, 43.4))
+plot(InterpRegs[which(InterpRegs$Name == "CT"),], col = 'red', add = TRUE)
+plot(InterpRegs[which(InterpRegs$Name == "WPA"),], col = 'orange', add = TRUE)
+plot(InterpRegs[which(InterpRegs$Name == "NWPANY"),], col = 'yellow', add = TRUE)
+plot(InterpRegs[which(InterpRegs$Name == "CNY"),], col = 'green', add = TRUE)
+plot(InterpRegs[which(InterpRegs$Name == "ENY"),], col = 'springgreen', add = TRUE)
+plot(InterpRegs[which(InterpRegs$Name == "ENYPA"),], col = 'skyblue', add = TRUE)
+plot(InterpRegs[which(InterpRegs$Name == "SWPA"),], col = 'blue', add = TRUE)
+plot(CWV_Bounded, col = 'purple', add = TRUE)
+plot(MT_Bounded, col = 'magenta', add = TRUE)
+plot(VR_Bounded, col = 'gray', add = TRUE)
+plot(NY, lwd = 2, add=TRUE)
+plot(PA, lwd = 2, add=TRUE)
+plot(WV, lwd = 2, add=TRUE)
+plot(MD, lwd = 2, add=TRUE)
+plot(KY, lwd = 2, add=TRUE)
+plot(VA, lwd = 2, add=TRUE)
+plot(LocsNugs, pch = 16, cex = 0.5, add = TRUE)
+north.arrow(-75, 37, 0.1, lab = 'N', col='black', cex = 1.5)
+degAxis(side = 2, seq(34, 46, 2), cex.axis = 1.5)
+degAxis(side = 2, seq(34, 46, 1), labels = FALSE)
+degAxis(side = 4, seq(34, 46, 1), labels = FALSE)
+degAxis(side = 1, seq(-70, -86, -2), cex.axis = 1.5)
+degAxis(side = 3, seq(-70, -86, -1), labels = FALSE)
+degAxis(side = 1, seq(-70, -86, -1), labels = FALSE)
+dev.off()
+
 NuggetWells = readOGR(dsn=getwd(), layer='Nugget_Locations_Sections')
 png('NuggetWellsDistributions.png', res=600, width=12, height=6, units='in')
 par(mar=c(5,5,2,2), yaxt='n')
@@ -962,7 +1205,7 @@ dev.off()
 
 
 
-#Outliers vs. Depth----
+# Outliers vs. Depth----
 plot(OutliersWGS$WellDepth, OutliersWGS$Qs)
 
 # Map of the depth ranks of outliers ----
@@ -1072,7 +1315,11 @@ KS_StatLo = max(abs(LoFun(knots(LoFun)) - UnifFun(knots(UnifFun))))
 KSHi = ks.test(x = Outs$out_loc_drank[which(Outs$out_loc_lo == 0)], y = UnifFun, simulate.p.value = TRUE, B = 10000)
 KSLo = ks.test(x = Outs$out_loc_drank[which(Outs$out_loc_lo == 1)], y = UnifFun, simulate.p.value = TRUE, B = 10000)
 
-#Both significant at 3% level. The distribution is not random at 1% level.
+#Both significant at 3% level. The high distribution is different from random at 1% level.
+
+#Kuiper or Watson test:
+Kuiper_StatHi = abs(max(0, HiFun(knots(HiFun)) - UnifFun(knots(UnifFun)))) + abs(min(0, HiFun(knots(HiFun)) - UnifFun(knots(UnifFun))))
+Kuiper_StatLo = abs(max(0, LoFun(knots(LoFun)) - UnifFun(knots(UnifFun)))) + abs(min(0, LoFun(knots(LoFun)) - UnifFun(knots(UnifFun))))
 
 # Poisson Test for Depth Bins ----
 #Arrival rate in outliers per well
@@ -1405,6 +1652,7 @@ plot(Counties, add = TRUE)
 
 
 # Q-Q plot for the points that are not outliers ----
+#Fixme: Do the clip in R with 2018 Data
 ##Well point file load, spatially referenced. Needs to be in NAD83 UTM17N coordinates
 CT = readOGR(dsn=paste(getwd(), '/BaseCorrWells', sep=''), layer="WellsCT")
 CNY = readOGR(dsn=paste(getwd(), '/BaseCorrWells', sep=''), layer="WellsCNY")
