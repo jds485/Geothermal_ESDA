@@ -1,8 +1,14 @@
 # Description----
-#This script checks for and removes wells with negative gradients. 
-#Then checks for wells with the same spatial location. Only the deepest well at the same spatial location is retained.
-# Special cases of different BHT at the same depth are handled by either assigning a more likely depth to the point, or averaging the data.
-#Then performs a local spatial outlier analysis.
+#Code for Smith et al. paper on Exploratory Spatial Data Analysis Framework for Geothermal Resource Assessments: An Appalachian Basin Case Study
+
+#Outline of Script:
+# Load libraries and data
+#  Note: the Loading Code and Loading Data section of this script can be skipped, and the input data loaded from the InputDataForR.Rdata file.
+# Check for and remove points with negative geothermal gradients. 
+# Check for wells with the same spatial location. Only the deepest well at the same spatial location is retained.
+#  Special cases of different BHT at the same depth are handled by either assigning a more likely depth to the point, or averaging the data.
+# Then performs a local spatial outlier detection and analysis.
+# Then checks the performance of the ESDA methods using semi-variance compuations.
 
 # Libraries ----
 library(sp) # map plots
@@ -12,6 +18,7 @@ library(dgof) #ks test for discrete distributions
 library(Hmisc) #minor tick marks
 library(readxl) #for Excel data reading
 library(changepoint) #for changepoint analysis on the minimum BHT depth cutoff
+library(gstat) #for variogram analysis
 
 # Loading Code from Repositories ----
 setwd("C:\\Users\\jsmif\\Documents\\Cornell\\Research\\Publications\\ESDA\\ESDACode\\Geothermal_ESDA")
@@ -74,14 +81,25 @@ NegsAll = Wells[Wells$Gradient <= 0,]
 MaxDepth_NegGrad = max(NegsAll$WellDepth)
 
 #Location of wells that have negative Gradients.
-plot(Wells, pch=16, col='black')
+png('WellsNegativeGradients.png', res = 300, height = 5, width = 5, units = 'in')
+par(mar = c(2,3,2,2))
+plot(Wells, pch=16, col='black', cex = 0.3)
 plot(NY, add=TRUE)
 plot(PA, add=TRUE)
 plot(WV, add=TRUE)
 plot(MD, add=TRUE)
 plot(KY, add=TRUE)
 plot(VA, add=TRUE)
-plot(NegsAll, pch=16, col='red', add=TRUE)
+plot(NegsAll, pch=16, col='red', add=TRUE, cex = 0.3)
+north.arrow(-75, 37.5, 0.1, lab = 'N', col='black', cex = 1.5)
+degAxis(side = 2, seq(34, 46, 2), cex.axis = 1.5)
+degAxis(side = 2, seq(34, 46, 1), labels = FALSE)
+degAxis(side = 4, seq(34, 46, 1), labels = FALSE)
+degAxis(side = 1, seq(-70, -86, -2), cex.axis = 1.5)
+degAxis(side = 3, seq(-70, -86, -1), labels = FALSE)
+degAxis(side = 1, seq(-70, -86, -1), labels = FALSE)
+legend('topleft', legend = c('Negative Gradient', 'Other'), col = c('red', 'black'), pch = 16)
+dev.off()
 
 #Remove the negative gradient wells before the sorting of wells in the same spatial locations:
 Wells_PosGrad = Wells[-which(Wells$Gradient <= 0),]
@@ -97,15 +115,15 @@ SortData = SortingWells(Same$SameSpot, Same$StoreData_Frame, Wells_PosGrad, 'BHT
 write.csv(SortData$Sorted, "SortedUniqueSpots_AllTemps_ESDA_2018.csv")
 write.csv(SortData$RerunWells, "RerunWells_AllTemps_ESDA_2018.csv")
 
-#Wells in start of dataset
+#Records in start of dataset
 length(Wells_PosGrad)
-#Number of locations with wells in same spatial coordinates
+#Number of locations with records in same spatial coordinates
 nrow(unique(Wells_PosGrad@coords[as.numeric(colnames(Same$StoreData_Frame)),]))
-#Wells after sorting
+#Unique spatial locations after sorting
 length(SortData$Sorted)
-#Wells in same spatial location
+#Records in same spatial location
 length(Same$StoreData_Frame)
-#Wells with multiple BHTs at same depth that should be rerun because they did not have depth field information
+#Locations with multiple BHTs at same depth that should be rerun because they did not have depth field information
 length(SortData$RerunWells)
 
 #58 points in 27 unique locations have a different BHT measurement at the same depth.
@@ -128,21 +146,24 @@ SortData$Sorted@data[c((nrow(SortData$Sorted) - (nrow(SortData$RerunWells) - 1))
 #Using IndsDeepSmallerBHT, check how many deeper data points have a greater temperature than shallower data points.
 # Wells_PosGrad[as.numeric(colnames(Same$StoreData_Frame[which(Same$StoreData_Frame[which(as.numeric(colnames(Same$StoreData_Frame)) == unique(SortData$IndsDeepSmallerBHT)[3]),] == 1)])),]
 #Check how many of these are greater than 2 degrees or so
-counter = 0
+Rows = vector('numeric')
 for (i in 1:length(unique(SortData$IndsDeepSmallerBHT))){
   BHTs = Wells_PosGrad$BHT[as.numeric(colnames(Same$StoreData_Frame[which(Same$StoreData_Frame[which(as.numeric(colnames(Same$StoreData_Frame)) == unique(SortData$IndsDeepSmallerBHT)[i]),] == 1)]))]
-  if ((max(BHTs) - min(BHTs)) > 2){
-    counter = counter + 1
+  Depths = Wells_PosGrad$WellDepth[as.numeric(colnames(Same$StoreData_Frame[which(Same$StoreData_Frame[which(as.numeric(colnames(Same$StoreData_Frame)) == unique(SortData$IndsDeepSmallerBHT)[i]),] == 1)]))]
+  if ((max(BHTs) - max(BHTs[Depths == max(Depths)])) > 2){
+    Rows = c(Rows, Wells_PosGrad$RowID_[as.numeric(colnames(Same$StoreData_Frame[which(Same$StoreData_Frame[which(as.numeric(colnames(Same$StoreData_Frame)) == unique(SortData$IndsDeepSmallerBHT)[i]),] == 1)]))])
   }
 }
-rm(counter, BHTs)
+rm(Rows,BHTs,i,Depths)
 
-# Line plot of the heat flow vs. depth of BHT measurement for the wells in the same spot----
+#  Line plot of the heat flow vs. depth of BHT measurement for the wells in the same spot----
 
 #Fixme: Add the equilibrium and pseudo-equilibrium well data to this plot, or make a new plot for these data
 
 # Make a copy of the database to track the wells in the same spatial location for this plot only.
 PlotSpots = Wells_PosGrad@data
+PlotSpots$LongDgr = Wells_PosGrad@coords[,1]
+PlotSpots$LatDegr = Wells_PosGrad@coords[,2]
 # The wells in the same spot will be assigned the same number in a field named SameSpot
 PlotSpots$SameSpot = NA
 
@@ -150,7 +171,7 @@ count = 1
 
 for (i in 1:nrow(Same$StoreData_Frame)){
   #Only take the unique spots that have more than 1 point
-  if (any(Same$StoreData_Frame[i,] == 1) & is.na(PlotSpots$SameSpot[as.numeric(colnames(Same$StoreData_Frame)[i])]) == TRUE){
+  if ((any(Same$StoreData_Frame[i,] == 1) & is.na(PlotSpots$SameSpot[as.numeric(colnames(Same$StoreData_Frame)[i])])) == TRUE){
     #Have not checked this spot yet. Gather all well indicies with the same spatial location.
     Indxs = as.numeric(colnames(Same$StoreData_Frame[which(Same$StoreData_Frame[i,] == 1)]))
     
@@ -195,6 +216,7 @@ PlotFinal = PlotSpots
 #index of data in the PlotFinal database - removing duplicate records.
 len = 1
 LocCheck = 0
+RemCheck = 0
 for (i in 1:length(unique(PlotSpots$SameSpot))){
   #Determine how many wells there are in the same spot
   indxs = which(PlotSpots$SameSpot == NewInds[i])
@@ -210,27 +232,33 @@ for (i in 1:length(unique(PlotSpots$SameSpot))){
       #Check if there are two or more sets of duplicate records (e.g. 4 total records, 2 duplicates)
       if (nrow(unique(PlotSpots[indxs, c('WellDepth', 'BHT')])) > 1){
         #Retain the unique records, and drop the remaining
-        indxs = indxs[which(rownames(PlotSpots[indxs, c('WellDepth', 'BHT')]) %in% rownames(unique(PlotSpots[indxs, c('WellDepth', 'BHT')])))]
-        
-        #Overwrite the records in PlotFinal. These are the new data.
-        PlotFinal[len:(len + (length(indxs)-1)),] = PlotSpots[indxs,]
-        len = len + length(indxs)
         #Drop
         Drop = nrow(PlotSpots[indxs, c('WellDepth', 'BHT')]) - nrow(unique(PlotSpots[indxs, c('WellDepth', 'BHT')]))
         PlotFinal = PlotFinal[-((nrow(PlotFinal) - (Drop-1)):nrow(PlotFinal)),]
+        
+        #Overwrite the records in PlotFinal. These are the new data.
+        indxs = indxs[which(rownames(PlotSpots[indxs, c('WellDepth', 'BHT')]) %in% rownames(unique(PlotSpots[indxs, c('WellDepth', 'BHT')])))]
+        PlotFinal[len:(len + (length(indxs)-1)),] = PlotSpots[indxs,]
+        len = len + length(indxs)
+        
+        RemCheck = RemCheck + Drop
         
       }else{
         LocCheck = LocCheck + 1
         #Do not record this in the PlotFinal database. Well has only 1 measurement. Remove the last length(indxs) rows. They are not needed.
         PlotFinal = PlotFinal[-((nrow(PlotFinal) - (length(indxs)-1)):nrow(PlotFinal)),]
+        
+        RemCheck = RemCheck + length(indxs)
       }
     }else{
       if (length(dpth) > 0){
-        #Fixme: I think this would not handle the case of multiple different sets of duplicates.
         #Remove duplicate records, except 1. Keep all others.
-        # Remove the last (length(dpth)-1) rows from the database. They are not needed.
-        PlotFinal = PlotFinal[-((nrow(PlotFinal) - (length(dpth)-2)):nrow(PlotFinal)),]
-        indxs = indxs[-res[dpth[2:length(dpth)]]]
+        dups = which(duplicated(x = PlotSpots[indxs,c('BHT', 'WellDepth')]) == TRUE)
+        indxs = indxs[-dups]
+        # Remove the last length(dups) rows from the database. They are not needed.
+        PlotFinal = PlotFinal[-((nrow(PlotFinal) - (length(dups)-1)):nrow(PlotFinal)),]
+        
+        RemCheck = RemCheck + length(dups)
       }
       #Overwrite the records in PlotFinal. These are the new data.
       PlotFinal[len:(len + (length(indxs)-1)),] = PlotSpots[indxs,]
@@ -242,7 +270,7 @@ for (i in 1:length(unique(PlotSpots$SameSpot))){
     len = len + length(indxs)
   }
 }
-rm(PlotSpots, i, len, indxs, dpth, res, NewInds, Drop)
+rm(PlotSpots, i, len, indxs, dpth, res, NewInds, Drop, dups)
 
 #Colors by location, sorted by the highest Qs to lowest in shallowest measurement
 PlotColPal = colorRampPalette(colors = c('red', 'orange', 'yellow', 'green', 'blue', 'purple'))
@@ -266,9 +294,8 @@ dev.off()
 rm(PlotColPal, cols)
 
 #Transform to spatial data
-coordinates(PlotFinal) = c('coords_x1', 'coords_x2')
-proj4string(PlotFinal) = CRS('+init=epsg:26917')
-PlotFinal = spTransform(PlotFinal, CRS('+init=epsg:4326'))
+coordinates(PlotFinal) = c('LongDgr', 'LatDegr')
+proj4string(PlotFinal) = CRS('+init=epsg:4326')
 
 #Map of which states have the most duplicate measurements
 png('Barplot_PointsSameSpatialLocationStates.png', res = 300, width = 8, height = 5, units = 'in')
@@ -413,24 +440,29 @@ dev.off()
 rm(i, indsMaxDepth, Coords)
 
 #Check how many of the Deep BHTs that are smaller are greater than 2 degrees or so
-DeepBHTSmallerBy2C_Counter = 0
+RowsDeepBHTSmallerBy2C_Counter = vector('numeric')
 Diff = vector('numeric')
 for (i in 1:length(unique(PlotFinal_DeepBHTsSmall$SameSpot))){
   BHTs = PlotFinal_DeepBHTsSmall$BHT[PlotFinal_DeepBHTsSmall$SameSpot == unique(PlotFinal_DeepBHTsSmall$SameSpot)[i]]
-  if ((max(BHTs) - min(BHTs)) > 2){
-    DeepBHTSmallerBy2C_Counter = DeepBHTSmallerBy2C_Counter + 1
-    Diff = c(Diff, (max(BHTs) - min(BHTs)))
+  Depths = PlotFinal_DeepBHTsSmall$WellDepth[PlotFinal_DeepBHTsSmall$SameSpot == unique(PlotFinal_DeepBHTsSmall$SameSpot)[i]]
+  Diff = c(Diff, (max(BHTs) - max(BHTs[Depths == max(Depths)])))
+  if ((max(BHTs) - max(BHTs[Depths == max(Depths)])) > 2){
+    RowsDeepBHTSmallerBy2C_Counter = c(RowsDeepBHTSmallerBy2C_Counter, PlotFinal_DeepBHTsSmall$RowID_[PlotFinal_DeepBHTsSmall$SameSpot == unique(PlotFinal_DeepBHTsSmall$SameSpot)[i]])
   }
 }
-rm(Diff, i, BHTs)
+rm(i, BHTs, RowsDeepBHTSmallerBy2C_Counter, Depths)
 
-# Nugget Effect for wells in the same spatial location ----
+#Histogram of the differences between the deepest and shallower BHTs
+hist(Diff, breaks = 300)
+
+#  Nugget Effect for wells in the same spatial location ----
 
 #Fixme: Add nugget for equilibrium wells. 
 #Fixme: Should this analysis use all wells, or only deep wells? Currently on all wells. Would need to move after well depth cutoff to do deep wells.
 
 #Compute the Nugget Effect for points in the same spatial location.
 #Make a data frame to store the locations, average nugget, number of nuggets calculated, min, max, and sd of the nugget
+#Note: This provides the same result as using the PlotFinal, as done below.
 LocsNugs2 = matrix(0, ncol=9, nrow=1)
 colnames(LocsNugs2) = c('RowID_', 'POINT_X', 'POINT_Y', 'Nugget', 'Max', 'Min', 'Sd', 'PtPairs', 'NumPts')
 count=0
@@ -489,14 +521,39 @@ rm(i, j, Indxs, Test, Nug, VarioPts)
 
 write.csv(LocsNugs, 'NuggetLocations_2018.csv')
 
+#Using PlotFinal data
+LocsNugs_Deeper1km = matrix(0, ncol=9, nrow=length(unique(PlotFinal$SameSpot)))
+colnames(LocsNugs_Deeper1km) = c('RowID_', 'POINT_X', 'POINT_Y', 'Nugget', 'Max', 'Min', 'Sd', 'PtPairs', 'NumPts')
+for (i in 1:nrow(LocsNugs_Deeper1km)){
+  #Gather all well indicies with the same spatial location.
+  Indxs = which(PlotFinal$SameSpot == unique(PlotFinal$SameSpot)[i])
+  #Check if at least 2 points are deeper than 1 km
+  if (length(which(PlotFinal$WellDepth[Indxs] >= 1000)) > 1){
+    #Get the surface heat flow for these wells in the same location
+    Test = PlotFinal$Qs[Indxs][PlotFinal$WellDepth[Indxs] >= 1000]
+    #Compute nugget
+    VarioPts = matrix(0, nrow=length(Test), ncol=length(Test))
+    for (j in 1:length(Test)){
+      VarioPts[j,] = ((Test - Test[j]))^2/2
+    }
+    Nug = VarioPts[lower.tri(VarioPts)]
+    #Store spatial location of point and nugget information. Take only first index
+    LocsNugs_Deeper1km[i,] = c(PlotFinal$RowID_[Indxs[1]], PlotFinal@coords[Indxs[1],1], PlotFinal@coords[Indxs[1],2], mean(Nug), max(Nug), min(Nug), sd(Nug), length(Nug), length(Test))
+  }
+}
+LocsNugs_Deeper1km = LocsNugs_Deeper1km[LocsNugs_Deeper1km[,1] != 0,]
+rm(i, j, Indxs, Test, Nug, VarioPts)
+
+write.csv(LocsNugs_Deeper1km, 'NuggetLocations_Deeper1km_2018.csv')
+
 #Add interpolation section to the nugget locations
 LocsNugs = as.data.frame(LocsNugs)
 coordinates(LocsNugs) = c('POINT_X', 'POINT_Y')
 proj4string(LocsNugs) = CRS('+init=epsg:4326')
 
-LocsNugs2 = as.data.frame(LocsNugs2)
-coordinates(LocsNugs2) = c('POINT_X', 'POINT_Y')
-proj4string(LocsNugs2) = CRS('+init=epsg:4326')
+LocsNugs_Deeper1km = as.data.frame(LocsNugs_Deeper1km)
+coordinates(LocsNugs_Deeper1km) = c('POINT_X', 'POINT_Y')
+proj4string(LocsNugs_Deeper1km) = CRS('+init=epsg:4326')
 
 LocsNugs$Reg = NA
 LocsNugs$Reg[as.numeric(rownames(LocsNugs[InterpRegs[1,],]@data))] = InterpRegs$Name[1]
@@ -510,14 +567,43 @@ LocsNugs$Reg[as.numeric(rownames(LocsNugs[MT_Bounded,]@data))] = InterpRegs$Name
 LocsNugs$Reg[as.numeric(rownames(LocsNugs[CWV_Bounded,]@data))] = InterpRegs$Name[7]
 LocsNugs$Reg[as.numeric(rownames(LocsNugs[VR_Bounded,]@data))] = 'VR'
 
+LocsNugs_Deeper1km$Reg = NA
+LocsNugs_Deeper1km$Reg[as.numeric(rownames(LocsNugs_Deeper1km[InterpRegs[1,],]@data))] = InterpRegs$Name[1]
+LocsNugs_Deeper1km$Reg[as.numeric(rownames(LocsNugs_Deeper1km[InterpRegs[2,],]@data))] = InterpRegs$Name[2]
+LocsNugs_Deeper1km$Reg[as.numeric(rownames(LocsNugs_Deeper1km[InterpRegs[3,],]@data))] = InterpRegs$Name[3]
+LocsNugs_Deeper1km$Reg[as.numeric(rownames(LocsNugs_Deeper1km[InterpRegs[5,],]@data))] = InterpRegs$Name[5]
+LocsNugs_Deeper1km$Reg[as.numeric(rownames(LocsNugs_Deeper1km[InterpRegs[6,],]@data))] = InterpRegs$Name[6]
+LocsNugs_Deeper1km$Reg[as.numeric(rownames(LocsNugs_Deeper1km[InterpRegs[8,],]@data))] = InterpRegs$Name[8]
+LocsNugs_Deeper1km$Reg[as.numeric(rownames(LocsNugs_Deeper1km[InterpRegs[9,],]@data))] = InterpRegs$Name[9]
+LocsNugs_Deeper1km$Reg[as.numeric(rownames(LocsNugs_Deeper1km[MT_Bounded,]@data))] = InterpRegs$Name[4]
+LocsNugs_Deeper1km$Reg[as.numeric(rownames(LocsNugs_Deeper1km[CWV_Bounded,]@data))] = InterpRegs$Name[7]
+LocsNugs_Deeper1km$Reg[as.numeric(rownames(LocsNugs_Deeper1km[VR_Bounded,]@data))] = 'VR'
+
+
 #One point is not in the interpolation regions. Will not be used in plots.
 LocsNugs = LocsNugs[is.na(LocsNugs$Reg) == FALSE,]
 
 #Make boxplots for each of the interpolation sections
 png('NuggetWellsDistributions_2018.png', res=600, width=12, height=6, units='in')
 par(mar=c(5,5,2,2), yaxt='n')
-#Fixme: Some boxes have only 3 points. They should not be boxes.
 boxplot(Nugget ~ Reg, data = LocsNugs, at=c(4, 1, 8, 5, 6, 3, 7, 9, 2), varwidth = TRUE, col=c('green', 'red', 'purple', 'springgreen', 'skyblue', 'yellow', 'blue', 'grey', 'orange'), pch=16, cex.axis=1.5, cex.lab=1.5, ylab=expression('Sample Nugget Semivariance' ~ (mW/m^2)^2), xlab='Interpolation Region', log='y')
+par(yaxt='s')
+at.y <- outer(1:9, 10^(-7:7))
+lab.y <- ifelse(log10(at.y) %% 1 == 0, sapply(log10(at.y), function(i) as.expression(bquote(10^ .(i)))), NA)
+par(tcl = -0.2)
+axis(side=2, at=at.y, labels=lab.y, cex.axis=1.5, las=1)
+par(tcl = -0.5)
+at.y <- 10^(-7:7)
+axis(side=2, at=at.y, labels=FALSE, cex.axis=1.5, las=1)
+dev.off()
+
+png('NuggetWellsDistributions_Deeper1km_2018.png', res=600, width=12, height=6, units='in')
+par(mar=c(5,5,2,2), yaxt='n')
+boxplot(Nugget ~ Reg, data = LocsNugs_Deeper1km, at=c(4, 1, 8, 5, 6, 3, 7, 9, 2), varwidth = TRUE, col=c('green', 'red', 'white', 'springgreen', 'skyblue', 'yellow', 'white', 'grey', 'orange'), pch=16, cex.axis=1.5, cex.lab=1.5, ylab=expression('Sample Nugget Semivariance' ~ (mW/m^2)^2), xlab='Interpolation Region', log='y', ylim = c(0.00001,3000), xlim = c(0.5,9.5))
+par(new=TRUE)
+plot(x = c(7,7,7,7), y = LocsNugs_Deeper1km$Nugget[LocsNugs_Deeper1km$Reg == 'SWPA'], ylim = c(0.00001,3000), xlim = c(0.5,9.5), log='y', col = 'blue', pch = 16, axes = FALSE, ylab = '', xlab = '')
+par(new=TRUE)
+plot(x = c(8,8), y = LocsNugs_Deeper1km$Nugget[LocsNugs_Deeper1km$Reg == 'CWV'], ylim = c(0.00001,3000), xlim = c(0.5,9.5), log='y', col = 'purple', pch = 16, axes = FALSE, ylab = '', xlab = '')
 par(yaxt='s')
 at.y <- outer(1:9, 10^(-7:7))
 lab.y <- ifelse(log10(at.y) %% 1 == 0, sapply(log10(at.y), function(i) as.expression(bquote(10^ .(i)))), NA)
@@ -575,32 +661,16 @@ degAxis(side = 3, seq(-70, -86, -1), labels = FALSE)
 degAxis(side = 1, seq(-70, -86, -1), labels = FALSE)
 dev.off()
 
-NuggetWells = readOGR(dsn=getwd(), layer='Nugget_Locations_Sections')
-png('NuggetWellsDistributions.png', res=600, width=12, height=6, units='in')
-par(mar=c(5,5,2,2), yaxt='n')
-#Fixme: Some boxes have only 3 points. They should not be boxes.
-boxplot(Nugget ~ Id, data = NuggetWells, at=c(9, 2, 7, 3, 6, 8, 1, 4, 5), varwidth = TRUE, col=c('gray', 'orange', 'blue', 'yellow', 'skyblue', 'purple', 'red', 'green', 'springgreen'), names=c('VR', 'WPA', 'SWPA', 'NWPANY', 'ENYPA', 'CWV', 'CT', 'CNY', 'ENY'), pch=16, cex.axis=1.5, cex.lab=1.5, ylab=expression('Sample Nugget Semivariance' ~ (mW/m^2)^2), xlab='Interpolation Region', log='y')
-par(yaxt='s')
-at.y <- outer(1:9, 10^(-7:7))
-lab.y <- ifelse(log10(at.y) %% 1 == 0, sapply(log10(at.y), function(i) as.expression(bquote(10^ .(i)))), NA)
-par(tcl = -0.2)
-axis(side=2, at=at.y, labels=lab.y, cex.axis=1.5, las=1)
-par(tcl = -0.5)
-at.y <- 10^(-7:7)
-axis(side=2, at=at.y, labels=FALSE, cex.axis=1.5, las=1)
-dev.off()
-
-# With a map next to the boxplot
-pin = par("pin")
-dxy = apply(rbind(c(-82.64474, -74.5), c(36.75, 43.6)), 1, diff)
-ratio = dxy[1]/dxy[2]
-pin[1] = 3 #Modifying for margin space
-png('NuggetWellsDistributions_Boxplot&Map_edit.png', res=600, width=11.2, height=4.2, units='in')
+png('NuggetWellsDistributions_Boxplot&Map_edit_Deeper1km_2018.png', res=600, width=11.2, height=4.2, units='in')
 layout(cbind(1,1,2))
 par(mar=c(4.1,5,0.5,0), yaxt='n')
-boxplot(Nugget ~ Id, data = NuggetWells, at=c(9, 2, 7, 3, 6, 8, 1, 4, 5), varwidth = TRUE, col=c('gray', 'orange', 'blue', 'yellow', 'skyblue', 'purple', 'red', 'green', 'springgreen'), names=c('VR', 'WPA', 'SWPA', 'NWPANY', 'ENYPA', 'CWV', 'CT', 'CNY', 'ENY'), pch=16, cex.axis=1.5, cex.lab=1.5, ylab=expression('Average Sample Nugget Semivariance' ~ (mW/m^2)^2), xlab='Geologic Region', log='y')
+boxplot(Nugget ~ Reg, data = LocsNugs_Deeper1km, at=c(4, 1, 8, 5, 6, 3, 7, 9, 2), varwidth = TRUE, col=c('green', 'red', 'white', 'springgreen', 'skyblue', 'yellow', 'white', 'grey', 'orange'), pch=16, cex.axis=1.5, cex.lab=1.5, ylab=expression('Sample Nugget Semivariance' ~ (mW/m^2)^2), xlab='Interpolation Region', log='y', ylim = c(0.00001,3000))
+par(new=TRUE)
+plot(x = c(7,7,7,7), y = LocsNugs_Deeper1km$Nugget[LocsNugs_Deeper1km$Reg == 'SWPA'], ylim = c(0.00001,3000), xlim = c(0.5,9.5), log='y', col = 'blue', pch = 16, axes = FALSE, ylab = '', xlab = '')
+par(new=TRUE)
+plot(x = c(8,8), y = LocsNugs_Deeper1km$Nugget[LocsNugs_Deeper1km$Reg == 'CWV'], ylim = c(0.00001,3000), xlim = c(0.5,9.5), log='y', col = 'purple', pch = 16, axes = FALSE, ylab = '', xlab = '')
 par(yaxt='s')
-at.y <- outer(1:9, 10^(-5:3))
+at.y <- outer(1:9, 10^(-5:4))
 lab.y <- ifelse(log10(at.y) %% 1 == 0, sapply(log10(at.y),function(i) as.expression(bquote(10^ .(i)))), NA)
 par(tcl = -0.2)
 axis(side=2, at=at.y, labels=lab.y, cex.axis=1.5, las=1)
@@ -627,7 +697,7 @@ plot(WV, lwd = 2, add=TRUE)
 plot(MD, lwd = 2, add=TRUE)
 plot(KY, lwd = 2, add=TRUE)
 plot(VA, lwd = 2, add=TRUE)
-plot(NuggetWells, pch = 16, cex = 0.5, add = TRUE)
+plot(LocsNugs_Deeper1km, pch = 16, cex = 0.5, add = TRUE)
 north.arrow(-75, 37, 0.1, lab = 'N', col='black', cex = 1.5)
 degAxis(side = 2, seq(34, 46, 2), cex.axis = 1.5)
 degAxis(side = 2, seq(34, 46, 1), labels = FALSE)
@@ -637,12 +707,14 @@ degAxis(side = 3, seq(-70, -86, -1), labels = FALSE)
 degAxis(side = 1, seq(-70, -86, -1), labels = FALSE)
 dev.off()
 
-# ESDA for the well database ----
+rm(at.y, dxy, lab.y, pin, ratio)
 
-#Wells must be checked for negatives before this analysis.
-#Plots for all data - No Map or Histogram. Can use the wells in the same spatial location.
+# ESDA for the well database ----
+#Wells must be checked for negatives and being in the same spot before this analysis.
+
+#Plots for all data - No Map or Histogram
 sets = rbind(c(1,2,7,7), c(3,4,7,7), c(5,6,7,7))
-png("HeatFlowEDA_Thesis_SplitAll.png", width=9, height=9, units="in", res=600)
+png("HeatFlowEDA_SplitAll_2018.png", width=9, height=9, units="in", res=600)
 layout(sets)
 EDAPlots = function(DataAll, Var, Unit, ymin, ymax){
   plot(DataAll$WellDepth[which(DataAll$State == "MD")], DataAll@data[Var][,1][which(DataAll$State == "MD")], col = "orange", pch=16, xlim=c(0,7000), ylim=c(ymin,ymax), ylab='', xlab='Depth of BHT (m)', main='Maryland', cex.main=2, cex.axis=1.5, cex.lab=1.5)
@@ -698,14 +770,9 @@ lines(c(1000,1000),c(-1000,1700))
 lines(c(600,600),c(-1000,1700), lty=2)
 legend('topright', legend=c("New York", "Pennsylvania", "West Virginia", "Kentucky", "Maryland", "Virginia"), pch=16, col=c("blue", "red", "green", "purple","orange","yellow"), cex=2)
 dev.off()
+rm(EDAPlots)
 
-#Color function parameters for plotting the heat flow data map
-colPal = colorRampPalette(colors = rev(c('red', 'orange', 'yellow', 'green', 'blue')))
-scaleRange = c(30,80)
-scaleBy = 10
-Pal = colPal((scaleRange[2] - scaleRange[1])/scaleBy + 1)
-
-#Calculate the deviation from the local median and the local average surface heat flow.
+#  Local Median and Local Average Deviation----
 #Uses the well data that has been sorted for unique spatial locations.
 DataTab = QsDev(Data = SortData$Sorted@data, Var = 'Qs', xName = 'coords_x1', yName = 'coords_x2', rad = 10000, max_pts = 25)
 #Add information to the original data
@@ -715,9 +782,15 @@ WellsSort = SortData$Sorted
 
 #These figures should be made with a dataset that has unique spatial locations, as completed above.
 
+#Color function parameters for plotting the heat flow data map
+colPal = colorRampPalette(colors = rev(c('red', 'orange', 'yellow', 'green', 'blue')))
+scaleRange = c(30,80)
+scaleBy = 10
+Pal = colPal((scaleRange[2] - scaleRange[1])/scaleBy + 1)
+
 #With map
 sets = rbind(c(1,2,7,7), c(3,4,7,7), c(5,6,8,8), c(9,9,8,8))
-png("HeatFlowEDA_Thesis_SplitAll_Map_Log_WellDepthSort_MedDiff_DeepWells_Box.png", width=10, height=10, units="in", res=600)
+png("HeatFlowEDA_SplitAll_Map_Log_WellDepthSort_MedDiff_DeepWells_Box.png", width=10, height=10, units="in", res=600)
 layout(sets)
 EDAPlots = function(DataAll, Var, Unit, ymin, ymax){
   plot(DataAll$WellDepth[which(DataAll$State == "MD")], DataAll@data[Var][,1][which(DataAll$State == "MD")], col = "orange", pch=16, xlim=c(0,7000), ylim=c(ymin,ymax), ylab='', xlab='Depth of BHT (m)', main='Maryland', cex.main=2, cex.axis=1.5, cex.lab=1.5, log = 'y', axes=FALSE)
@@ -835,7 +908,7 @@ par(xpd = TRUE)
 text(x = -800, y = 625, expression(bold('C')), cex = 2)
 par(xpd = FALSE)
 par(mar = c(2,2.5,1.2,1), xaxs = 'i', yaxs = 'i')
-plot(WellsSort, pch = 16, col = "white", cex = 0.5)
+plot(WellsSort, pch = 16, col = "white", cex = 0.2)
 plot(NY, lwd = 2, add=TRUE)
 plot(PA, lwd = 2, add=TRUE)
 plot(WV, lwd = 2, add=TRUE)
@@ -844,7 +917,7 @@ plot(KY, lwd = 2, add=TRUE)
 plot(VA, lwd = 2, add=TRUE)
 plot(Counties[which(Counties$STATEFP == 42 | Counties$STATEFP == 36 | Counties$STATEFP == 54 | Counties$STATEFP == 51| Counties$STATEFP == 24| Counties$STATEFP == 21),], add=TRUE)
 #plot(WellsSort[order(WellsSort$Qs),], pch = 16, col = colFun(WellsSort$Qs[order(WellsSort$Qs)]), cex = 0.5, add = TRUE)
-plot(WellsSort[order(WellsSort$WellDepth, decreasing = FALSE),], pch = 16, col = colFun(WellsSort$Qs[order(WellsSort$WellDepth, decreasing = FALSE)]), cex = 0.5, add = TRUE)
+plot(WellsSort[order(WellsSort$WellDepth, decreasing = FALSE),], pch = 16, col = colFun(WellsSort$Qs[order(WellsSort$WellDepth, decreasing = FALSE)]), cex = 0.3, add = TRUE)
 #plot(WellsSort, pch = 16, col = colFun(WellsSort$Qs), cex = 0.5)
 #plot(WellsSort[order(WellsSort$WellDepth),], pch = 16, col = colFun(WellsSort$Qs[order(WellsSort$WellDepth)]), cex = 0.5)
 north.arrow(-75, 37.5, 0.1, lab = 'N', col='black', cex = 1.5)
@@ -978,7 +1051,7 @@ lines(c(600,600),c(-1000,2000), lty=2, lwd = 3)
 legend('topright', legend=c("New York", "Pennsylvania", "West Virginia", "Kentucky", "Maryland", "Virginia", "600 m", "1000 m"), pch=c(rep(16, 6),NA,NA), lty = c(rep(NA, 6), 2,1), lwd = 3, col=c("blue", "red", "green", "purple","orange","yellow","black", "black"), cex=1.7)
 dev.off()
 
-# Changepoint detection for minimum BHT well depth----
+#   Changepoint detection for minimum BHT well depth----
 #Sort the well database by the well depth
 OrderedWells = WellsSort[order(WellsSort$WellDepth),]
 
@@ -987,14 +1060,13 @@ cpt.mean((OrderedWells$Qs - OrderedWells$RegMed)[-which(is.na(OrderedWells$Qs - 
 #767 m is changepoint detected depth with AMOC
 OrderedWells$WellDepth[3855]
 
-# Add shallow data back into dataset for PA region ----
+#   Add shallow data back into dataset for PA region ----
 WellsSort$LatDeg = WellsSort@coords[,2]
 WellsSort$LngDegr = WellsSort@coords[,1]
   
 #Northwestern PA - All constraints are to focus on only the region of interest, and excludes all other wells in these counties.
 sets = rbind(c(1,2,8,8), c(3,4,7,7), c(5,6,7,7))
-layout(sets)
-png('NWPennsylvaniaShallowerWells_DeepWells.png', width=9, height=9, units="in", res=600)
+png('NWPennsylvaniaShallowerWells_DeepWells_2018.png', width=9, height=9, units="in", res=600)
 layout(sets)
 EDAPlots = function(DataAll, Var, Unit, ymin, ymax){
   plot(DataAll$WellDepth[which(DataAll$State == "PA" & DataAll$County == "MC KEAN")], DataAll@data[Var][,1][which(DataAll$State == "PA" & DataAll$County == "MC KEAN")], col = "red", pch=16, xlim=c(0,2500), ylim=c(ymin,ymax), ylab='', xlab='Depth of BHT (m)', main='Mc Kean', cex.main=2, cex.axis=1.5, cex.lab=1.5)
@@ -1051,6 +1123,65 @@ plot(Counties[which(Counties$STATEFP == 42 & Counties$NAME == "Jefferson"),], co
 plot(Counties[which(Counties$STATEFP == 42 & Counties$NAME == "Clarion"),], col='yellow', add=TRUE)
 dev.off()
 
+#Using local median deviation results
+sets = rbind(c(1,2,8,8), c(3,4,7,7), c(5,6,7,7))
+png('NWPennsylvaniaShallowerWells_DeepWells_LocMed_2018.png', width=9, height=9, units="in", res=600)
+layout(sets)
+EDAPlots = function(DataAll, Var, Unit, ymin, ymax){
+  plot(DataAll$WellDepth[which(DataAll$State == "PA" & DataAll$County == "MC KEAN")], DataAll@data[Var][,1][which(DataAll$State == "PA" & DataAll$County == "MC KEAN")], col = "red", pch=16, xlim=c(0,2500), ylim=c(ymin,ymax), ylab='', xlab='Depth of BHT (m)', main='Mc Kean', cex.main=2, cex.axis=1.5, cex.lab=1.5)
+  axis(side=2, at=seq(25,175,50),labels=FALSE)
+  lines(c(600,600),c(-1000,1700), lty=2)
+  lines(c(750,750),c(-1000,1700), lty=1)
+  plot(DataAll$WellDepth[which(DataAll$State == "PA" & DataAll$County == "FOREST" & DataAll$WellDepth < 1600)], DataAll@data[Var][,1][which(DataAll$State == "PA" & DataAll$County == "FOREST" & DataAll$WellDepth < 1600)], col = "green", pch=16, xlim=c(0,2500), ylim=c(ymin,ymax), ylab='', xlab='Depth of BHT (m)', main='Forest', cex.main=2, cex.axis=1.5, cex.lab=1.5)
+  axis(side=2, at=seq(25,175,50),labels=FALSE)
+  lines(c(600,600),c(-1000,1700), lty=2)
+  lines(c(750,750),c(-1000,1700), lty=1)
+  plot(DataAll$WellDepth[which(DataAll$State == "PA" & DataAll$County == "ELK")], DataAll@data[Var][,1][which(DataAll$State == "PA" & DataAll$County == "ELK")], col = "blue", pch=16, xlim=c(0,2500), ylim=c(ymin,ymax), ylab=Unit, xlab='Depth of BHT (m)', main='Elk', cex.main=2, cex.axis=1.5, cex.lab=1.5)
+  axis(side=2, at=seq(25,175,50),labels=FALSE)
+  lines(c(600,600),c(-1000,1700), lty=2)
+  lines(c(750,750),c(-1000,1700), lty=1)
+  plot(DataAll$WellDepth[which(DataAll$State == "PA" & DataAll$County == "WARREN" & DataAll$WellDepth < 1000)], DataAll@data[Var][,1][which(DataAll$State == "PA" & DataAll$County == "WARREN" & DataAll$WellDepth < 1000)], col = "purple", pch=16, xlim=c(0,2500), ylim=c(ymin,ymax), ylab=Unit, xlab='Depth of BHT (m)', main='Warren', cex.main=2, cex.axis=1.5, cex.lab=1.5)
+  axis(side=2, at=seq(25,175,50),labels=FALSE)
+  lines(c(600,600),c(-1000,1700), lty=2)
+  lines(c(750,750),c(-1000,1700), lty=1)
+  plot(DataAll$WellDepth[which(DataAll$State == "PA" & DataAll$County == "JEFFERSON" & DataAll$LatDeg >= 41.16776)], DataAll@data[Var][,1][which(DataAll$State == "PA" & DataAll$County == "JEFFERSON" & DataAll$LatDeg >= 41.16776)], col = "orange", pch=16, xlim=c(0,2500), ylim=c(ymin,ymax), ylab='', xlab='Depth of BHT (m)', main='Jefferson', cex.main=2, cex.axis=1.5, cex.lab=1.5)
+  axis(side=2, at=seq(25,175,50),labels=FALSE)
+  lines(c(600,600),c(-1000,1700), lty=2)
+  lines(c(750,750),c(-1000,1700), lty=1)
+  plot(DataAll$WellDepth[which(DataAll$State == "PA" & DataAll$County == "CLARION" & DataAll$LatDeg >= 41.3)], DataAll@data[Var][,1][which(DataAll$State == "PA" & DataAll$County == "CLARION" & DataAll$LatDeg >= 41.3)], col = "yellow", pch=16, xlim=c(0,2500), ylim=c(ymin,ymax), ylab='', xlab='Depth of BHT (m)', main='Clarion', cex.main=2, cex.axis=1.5, cex.lab=1.5)
+  axis(side=2, at=seq(25,175,50),labels=FALSE)
+  lines(c(600,600),c(-1000,1700), lty=2)
+  lines(c(750,750),c(-1000,1700), lty=1)
+}
+par(mar=c(4,5.5,3,2))
+EDAPlots(WellsSort, "Qs", Unit=expression("Surface Heat Flow" ~ (mW/m^2)), ymin = 0, ymax = 200)
+EDAPlots = function(DataAll, Var, Unit, ymin, ymax){
+  plot(DataAll$WellDepth[which(DataAll$State == "PA" & DataAll$County == "FOREST" & DataAll$WellDepth < 1000)], DataAll@data[Var][,1][which(DataAll$State == "PA" & DataAll$County == "FOREST" & DataAll$WellDepth < 1000)] - DataAll@data['RegMed'][,1][which(DataAll$State == "PA" & DataAll$County == "FOREST" & DataAll$WellDepth < 1000)], col = "green", pch=16, xlim=c(0,2500), ylim=c(ymin,ymax), ylab=Unit, xlab='Depth of BHT (m)', main='All Counties', cex.main=2, cex.axis=1.5, cex.lab=1.5)
+  par(new=T)
+  plot(DataAll$WellDepth[which(DataAll$State == "PA" & DataAll$County == "MC KEAN")], DataAll@data[Var][,1][which(DataAll$State == "PA" & DataAll$County == "MC KEAN")] - DataAll@data['RegMed'][,1][which(DataAll$State == "PA" & DataAll$County == "MC KEAN")], col = "red", pch=16, xlim=c(0,2500), ylim=c(ymin,ymax), ylab='', xlab='', main='', axes=FALSE)
+  par(new=T)
+  plot(DataAll$WellDepth[which(DataAll$State == "PA" & DataAll$County == "ELK")], DataAll@data[Var][,1][which(DataAll$State == "PA" & DataAll$County == "ELK")] - DataAll@data['RegMed'][,1][which(DataAll$State == "PA" & DataAll$County == "ELK")], col = "blue", pch=16, xlim=c(0,2500), ylim=c(ymin,ymax), ylab='', xlab='', main='', axes=FALSE)
+  par(new=T)
+  plot(DataAll$WellDepth[which(DataAll$State == "PA" & DataAll$County == "WARREN" & DataAll$WellDepth < 1000)], DataAll@data[Var][,1][which(DataAll$State == "PA" & DataAll$County == "WARREN" & DataAll$WellDepth < 1000)] - DataAll@data['RegMed'][,1][which(DataAll$State == "PA" & DataAll$County == "WARREN" & DataAll$WellDepth < 1000)], col = "purple", pch=16, xlim=c(0,2500), ylim=c(ymin,ymax), ylab='', xlab='', main='', axes=FALSE)
+  par(new=T)
+  plot(DataAll$WellDepth[which(DataAll$State == "PA" & DataAll$County == "JEFFERSON" & DataAll$LatDegr >= 41.16776)], DataAll@data[Var][,1][which(DataAll$State == "PA" & DataAll$County == "JEFFERSON" & DataAll$LatDegr >= 41.16776)] - DataAll@data['RegMed'][,1][which(DataAll$State == "PA" & DataAll$County == "JEFFERSON" & DataAll$LatDegr >= 41.16776)], col = "orange", pch=16, xlim=c(0,2500), ylim=c(ymin,ymax), ylab='', xlab='', main='', axes=FALSE)
+  par(new=T)
+  plot(DataAll$WellDepth[which(DataAll$State == "PA" & DataAll$County == "CLARION" & DataAll$LatDegr >= 41.3)], DataAll@data[Var][,1][which(DataAll$State == "PA" & DataAll$County == "CLARION" & DataAll$LatDegr >= 41.3)] - DataAll@data['RegMed'][,1][which(DataAll$State == "PA" & DataAll$County == "CLARION" & DataAll$LatDegr >= 41.3)], col = "yellow", pch=16, xlim=c(0,2500), ylim=c(ymin,ymax), ylab='', xlab='', main='', axes=FALSE)
+}
+EDAPlots(WellsSort, "Qs", Unit=expression(paste("Local Median Deviation ", "(mW/m"^2, ")")),-50, 200)
+axis(side=2, at=seq(-25,175,50),labels=FALSE)
+lines(c(600,600),c(-1000,1700), lty=2)
+lines(c(750,750),c(-1000,1700), lty=1)
+plot(PA)
+plot(Counties[which(Counties$STATEFP == 42),], add=TRUE)
+plot(Counties[which(Counties$STATEFP == 42 & Counties$NAME == "McKean"),], col='red', add=TRUE)
+plot(Counties[which(Counties$STATEFP == 42 & Counties$NAME == "Forest"),], col='green', add=TRUE)
+plot(Counties[which(Counties$STATEFP == 42 & Counties$NAME == "Elk"),], col='blue', add=TRUE)
+plot(Counties[which(Counties$STATEFP == 42 & Counties$NAME == "Warren"),], col='purple', add=TRUE)
+plot(Counties[which(Counties$STATEFP == 42 & Counties$NAME == "Jefferson"),], col='orange', add=TRUE)
+plot(Counties[which(Counties$STATEFP == 42 & Counties$NAME == "Clarion"),], col='yellow', add=TRUE)
+dev.off()
+
 #Remove all wells with depths less than 1000 m
 WellsDeep = WellsSort[-which(WellsSort$WellDepth < 1000),]
 #Then add back the PA wells.
@@ -1074,8 +1205,9 @@ plot(KY, add=TRUE)
 plot(VA, add=TRUE)
 dev.off()
 
-# Spatial Outlier Detection ----
-#This should be run after points have been reduced to unique locations, and negative gradient values have been taken care of.
+rm(sets, Pal, scaleBy, scaleRange)
+#  Spatial Outlier Detection ----
+#This should be run after points have been reduced to unique locations and negative gradient values have been removed or corrected.
 
 #Data must have a column of UTM coordinates in m for this to work because it relies on Euclidian distances.
 WellsDeep = spTransform(WellsDeep, CRS('+init=epsg:26917'))
@@ -1145,14 +1277,14 @@ NoOuts_min2k = spTransform(TestedOutliers_HeatFlow_min2k$NotOutliers, CRS = CRS(
 Outs_max2k = spTransform(TestedOutliers_HeatFlow_max2k$Outliers, CRS = CRS("+init=epsg:4326"))
 NoOuts_max2k = spTransform(TestedOutliers_HeatFlow_max2k$NotOutliers, CRS = CRS("+init=epsg:4326"))
 
-# Map of outliers----
+#   Map of outliers----
 #Colors
 colPal = colorRampPalette(colors = rev(c('red', 'orange', 'yellow', 'green', 'blue')))
 scaleRange = c(10,90)
 scaleBy = 20
 Pal = colPal((scaleRange[2] - scaleRange[1])/scaleBy + 1)
 
-#Wells in NAD83 UTM17N
+#Wells in NAD83 WGS84
 WellsDeepWGS = spTransform(WellsDeep, CRSobj = CRS('+init=epsg:4326'))
 NotOutliersWGS = spTransform(TestedOutliers_HeatFlow$NotOutliers, CRSobj = CRS('+init=epsg:4326'))
 OutliersWGS = spTransform(TestedOutliers_HeatFlow$Outliers, CRSobj = CRS('+init=epsg:4326'))
@@ -1203,12 +1335,7 @@ degAxis(side = 1, seq(-70, -86, -1), labels = FALSE)
 legend('topleft', title = expression(paste('Q'[s], ' (mW/m'^2, ')')), legend = c('< 30', '30 - 50', '50 - 70', '70 - 90', '>= 90', 'Not Tested', 'Not Outlier'), col = c(colFun(c(20,40,60,80,100)), 'purple', 'black'), pch = c(16,16,16,16,16,17,16))
 dev.off()
 
-
-
-# Outliers vs. Depth----
-plot(OutliersWGS$WellDepth, OutliersWGS$Qs)
-
-# Map of the depth ranks of outliers ----
+#   Map of the depth ranks of outliers ----
 scaleRange = c(1,25)
 scaleBy = 5
 colPal = colorRampPalette(colors = rev(c('red', 'orange', 'yellow', 'green', 'blue')))
@@ -1270,7 +1397,7 @@ degAxis(side = 1, seq(-70, -86, -1), labels = FALSE)
 legend('topleft', title = 'Depth Rank', legend = c('1 - 5', '6 - 10', '11 - 15', '16 - 20', '21 - 25'), pch = 16, cex = 1.5, col = colFun(c(1, 7, 12, 17, 22)), bty = 'n')
 dev.off()
 
-# Depth Rank Empircal CDFs for KS Test ----
+#   Depth Rank Empircal CDFs and KS Test ----
 png('LowOutliers_wUniform.png', res = 300, units = 'in', width = 6, height = 6)
 hist(Outs$out_loc_drank[which(Outs$out_loc_lo == 1)]*25, breaks = seq(0,25,1), main = 'Low Outliers Depth Rank', xlab = 'Depth Rank', cex.lab = 1.5, cex.main=2, cex.axis = 1.5, ylim = c(0,35))
 lines(c(0,25), c(length(Outs$out_loc_drank[which(Outs$out_loc_lo == 1)])/25,length(Outs$out_loc_drank[which(Outs$out_loc_lo == 1)])/25), lwd = 2, col='blue')
@@ -1321,7 +1448,7 @@ KSLo = ks.test(x = Outs$out_loc_drank[which(Outs$out_loc_lo == 1)], y = UnifFun,
 Kuiper_StatHi = abs(max(0, HiFun(knots(HiFun)) - UnifFun(knots(UnifFun)))) + abs(min(0, HiFun(knots(HiFun)) - UnifFun(knots(UnifFun))))
 Kuiper_StatLo = abs(max(0, LoFun(knots(LoFun)) - UnifFun(knots(UnifFun)))) + abs(min(0, LoFun(knots(LoFun)) - UnifFun(knots(UnifFun))))
 
-# Poisson Test for Depth Bins ----
+#   Poisson Test for Depth Bins ----
 #Arrival rate in outliers per well
 #lambda = nrow(Outs)/nrow(AllData) 
 
@@ -1334,7 +1461,7 @@ Kuiper_StatLo = abs(max(0, LoFun(knots(LoFun)) - UnifFun(knots(UnifFun)))) + abs
 #nu = lambda*DatBins
 #dpois(OutBins, nu)
 
-# Binomial and Chi-Squared Test for Depth Bins ----
+#   Binomial and Chi-Squared Test for Depth Bins ----
 #Better than Poisson - Less Contamination in estimation of lambda
 
 #Total number of outliers per bin based on number of samples in the bin
@@ -1386,8 +1513,8 @@ ChiSq_2k = sum(abs((OutBins[c(7,8)] - PerfBins[c(7,8)]) - 0.5)^2/PerfBins[c(7,8)
 dfChiSq_2k = length(OutBins[c(7,8)]) - 1
 pVal_2k = 1-pchisq(ChiSq_2k, dfChiSq_2k)
 
-CramerV = sqrt(ChiSq_LowHigh/length(which(AllData$out_loc_error == 0 & AllData$WellDepth >= 2000 & AllData$WellDepth < 2400))/min(1,1))
-BiasCorrV = sqrt(max(0, ChiSq_LowHigh/length(which(AllData$out_loc_error == 0 & AllData$WellDepth >= 2000 & AllData$WellDepth < 2400)) - 1/(length(which(AllData$out_loc_error == 0 & AllData$WellDepth >= 2000 & AllData$WellDepth < 2400)) - 1))/
+CramerV = sqrt(ChiSq_2k/length(which(AllData$out_loc_error == 0 & AllData$WellDepth >= 2000 & AllData$WellDepth < 2400))/min(1,1))
+BiasCorrV = sqrt(max(0, ChiSq_2k/length(which(AllData$out_loc_error == 0 & AllData$WellDepth >= 2000 & AllData$WellDepth < 2400)) - 1/(length(which(AllData$out_loc_error == 0 & AllData$WellDepth >= 2000 & AllData$WellDepth < 2400)) - 1))/
                    min(2 - 1/(length(which(AllData$out_loc_error == 0 & AllData$WellDepth >= 2000 & AllData$WellDepth < 2400)) - 1) - 1, 2 - 1/(length(which(AllData$out_loc_error == 0 & AllData$WellDepth >= 2000 & AllData$WellDepth < 2400)) - 1) - 1))
 
 
@@ -1412,7 +1539,7 @@ barplot(height = hist(AllData$WellDepth[-which(AllData$out_loc_error == 1)], bre
 legend('topright', legend=c('All Data', 'Expected Allocation', 'Actual Allocation'), col = c('grey', 'green', 'red'), pch = 15, cex = 1.5)
 dev.off()
 
-# Maps of the depth slices for outliers ----
+#   Maps of the depth slices for outliers ----
 
 #See if these are primarily high or low outliers in the significantly different depth slice
 hist(Outs$out_loc_lo[which(Outs$WellDepth >= 2000 & Outs$WellDepth < 2400)])
@@ -1442,17 +1569,17 @@ layout(sets)
 par(xaxs = 'i', yaxs = 'i', mar = c(2,2.5,1,1))
 #Data from 750 - 1000 - 4 low outliers that are not clustered. Not problematic.
 plot(AllData, col = 'white')
-plot(Counties[which(Counties$STATEFP == 42 | Counties$STATEFP == 36 | Counties$STATEFP == 54 | Counties$STATEFP == 51| Counties$STATEFP == 24| Counties$STATEFP == 21),], lwd = 1, add = TRUE)
+plot(Counties[which(Counties$STATEFP == 42 | Counties$STATEFP == 36 | Counties$STATEFP == 54 | Counties$STATEFP == 51| Counties$STATEFP == 24| Counties$STATEFP == 21),], lwd = 1, add = TRUE, border='grey')
 plot(NY, add = TRUE, lwd = 2)
 plot(PA, add = TRUE, lwd = 2)
 plot(WV, add = TRUE, lwd = 2)
 plot(MD, lwd = 2, add=TRUE)
 plot(KY, lwd = 2, add=TRUE)
 plot(VA, lwd = 2, add=TRUE)
-plot(NoOuts[which(NoOuts$WellDepth >= 750 & NoOuts$WellDepth < 1000 & NoOuts$out_loc_error == 0),], pch = 16, add = TRUE)
-plot(Outs[which(Outs$WellDepth >= 750 & Outs$WellDepth < 1000 & Outs$out_loc_lo == 1),], pch = 16, add = TRUE, col = 'blue')
-plot(Outs[which(Outs$WellDepth >= 750 & Outs$WellDepth < 1000 & Outs$out_loc_lo == 0),], pch = 16, add = TRUE, col = 'red')
-plot(NoOuts[which(NoOuts$WellDepth >= 750 & NoOuts$WellDepth < 1000 & NoOuts$out_loc_error == 1),], pch = 17, add = TRUE, col = 'purple')
+plot(NoOuts[which(NoOuts$WellDepth >= 750 & NoOuts$WellDepth < 1000 & NoOuts$out_loc_error == 0),], pch = 16, add = TRUE, cex = 0.7)
+plot(Outs[which(Outs$WellDepth >= 750 & Outs$WellDepth < 1000 & Outs$out_loc_lo == 1),], pch = 16, add = TRUE, col = 'blue', cex = 0.7)
+plot(Outs[which(Outs$WellDepth >= 750 & Outs$WellDepth < 1000 & Outs$out_loc_lo == 0),], pch = 16, add = TRUE, col = 'red', cex = 0.7)
+plot(NoOuts[which(NoOuts$WellDepth >= 750 & NoOuts$WellDepth < 1000 & NoOuts$out_loc_error == 1),], pch = 17, add = TRUE, col = 'purple', cex = 0.7)
 north.arrow(-75, 37.5, 0.1, lab = 'N', col='black', cex = 1.5)
 degAxis(side = 2, seq(34, 46, 2), cex.axis = 1.5)
 degAxis(side = 2, seq(34, 46, 1), labels = FALSE)
@@ -1465,17 +1592,17 @@ legend('topleft', title = ' ', legend = c('Not Outlier', 'Low Outlier', 'High Ou
 
 #Data from 1000 - 1200
 plot(AllData, col = 'white')
-plot(Counties[which(Counties$STATEFP == 42 | Counties$STATEFP == 36 | Counties$STATEFP == 54 | Counties$STATEFP == 51| Counties$STATEFP == 24| Counties$STATEFP == 21),], lwd = 1, add = TRUE)
+plot(Counties[which(Counties$STATEFP == 42 | Counties$STATEFP == 36 | Counties$STATEFP == 54 | Counties$STATEFP == 51| Counties$STATEFP == 24| Counties$STATEFP == 21),], lwd = 1, add = TRUE, border = 'grey')
 plot(NY, add = TRUE, lwd = 2)
 plot(PA, add = TRUE, lwd = 2)
 plot(WV, add = TRUE, lwd = 2)
 plot(MD, lwd = 2, add=TRUE)
 plot(KY, lwd = 2, add=TRUE)
 plot(VA, lwd = 2, add=TRUE)
-plot(NoOuts[which(NoOuts$WellDepth >= 1000 & NoOuts$WellDepth < 1200 & NoOuts$out_loc_error == 0),], pch = 16, add = TRUE)
-plot(Outs[which(Outs$WellDepth >= 1000 & Outs$WellDepth < 1200 & Outs$out_loc_lo == 1),], pch = 16, add = TRUE, col = 'blue')
-plot(Outs[which(Outs$WellDepth >= 1000 & Outs$WellDepth < 1200 & Outs$out_loc_lo == 0),], pch = 16, add = TRUE, col = 'red')
-plot(NoOuts[which(NoOuts$WellDepth >= 1000 & NoOuts$WellDepth < 1200 & NoOuts$out_loc_error == 1),], pch = 17, add = TRUE, col = 'purple')
+plot(NoOuts[which(NoOuts$WellDepth >= 1000 & NoOuts$WellDepth < 1200 & NoOuts$out_loc_error == 0),], pch = 16, add = TRUE, cex = 0.7)
+plot(Outs[which(Outs$WellDepth >= 1000 & Outs$WellDepth < 1200 & Outs$out_loc_lo == 1),], pch = 16, add = TRUE, col = 'blue', cex = 0.7)
+plot(Outs[which(Outs$WellDepth >= 1000 & Outs$WellDepth < 1200 & Outs$out_loc_lo == 0),], pch = 16, add = TRUE, col = 'red', cex = 0.7)
+plot(NoOuts[which(NoOuts$WellDepth >= 1000 & NoOuts$WellDepth < 1200 & NoOuts$out_loc_error == 1),], pch = 17, add = TRUE, col = 'purple', cex = 0.7)
 north.arrow(-75, 37.5, 0.1, lab = 'N', col='black', cex = 1.5)
 degAxis(side = 2, seq(34, 46, 2), cex.axis = 1.5)
 degAxis(side = 2, seq(34, 46, 1), labels = FALSE)
@@ -1488,17 +1615,17 @@ legend('topleft', title = ' ', legend = c('Not Outlier', 'Low Outlier', 'High Ou
 
 #Data from 1200 - 1400
 plot(AllData, col = 'white')
-plot(Counties[which(Counties$STATEFP == 42 | Counties$STATEFP == 36 | Counties$STATEFP == 54 | Counties$STATEFP == 51| Counties$STATEFP == 24| Counties$STATEFP == 21),], lwd = 1, add = TRUE)
+plot(Counties[which(Counties$STATEFP == 42 | Counties$STATEFP == 36 | Counties$STATEFP == 54 | Counties$STATEFP == 51| Counties$STATEFP == 24| Counties$STATEFP == 21),], lwd = 1, add = TRUE, border = 'grey')
 plot(NY, add = TRUE, lwd = 2)
 plot(PA, add = TRUE, lwd = 2)
 plot(WV, add = TRUE, lwd = 2)
 plot(MD, lwd = 2, add=TRUE)
 plot(KY, lwd = 2, add=TRUE)
 plot(VA, lwd = 2, add=TRUE)
-plot(NoOuts[which(NoOuts$WellDepth >= 1200 & NoOuts$WellDepth < 1400 & NoOuts$out_loc_error == 0),], pch = 16, add = TRUE)
-plot(Outs[which(Outs$WellDepth >= 1200 & Outs$WellDepth < 1400 & Outs$out_loc_lo == 1),], pch = 16, add = TRUE, col = 'blue')
-plot(Outs[which(Outs$WellDepth >= 1200 & Outs$WellDepth < 1400 & Outs$out_loc_lo == 0),], pch = 16, add = TRUE, col = 'red')
-plot(NoOuts[which(NoOuts$WellDepth >= 1200 & NoOuts$WellDepth < 1400 & NoOuts$out_loc_error == 1),], pch = 17, add = TRUE, col = 'purple')
+plot(NoOuts[which(NoOuts$WellDepth >= 1200 & NoOuts$WellDepth < 1400 & NoOuts$out_loc_error == 0),], pch = 16, add = TRUE, cex = 0.7)
+plot(Outs[which(Outs$WellDepth >= 1200 & Outs$WellDepth < 1400 & Outs$out_loc_lo == 1),], pch = 16, add = TRUE, col = 'blue', cex = 0.7)
+plot(Outs[which(Outs$WellDepth >= 1200 & Outs$WellDepth < 1400 & Outs$out_loc_lo == 0),], pch = 16, add = TRUE, col = 'red', cex = 0.7)
+plot(NoOuts[which(NoOuts$WellDepth >= 1200 & NoOuts$WellDepth < 1400 & NoOuts$out_loc_error == 1),], pch = 17, add = TRUE, col = 'purple', cex = 0.7)
 north.arrow(-75, 37.5, 0.1, lab = 'N', col='black', cex = 1.5)
 degAxis(side = 2, seq(34, 46, 2), cex.axis = 1.5)
 degAxis(side = 2, seq(34, 46, 1), labels = FALSE)
@@ -1511,17 +1638,17 @@ legend('topleft', title = ' ', legend = c('Not Outlier', 'Low Outlier', 'High Ou
 
 #Data from 1400 - 1600
 plot(AllData, col = 'white')
-plot(Counties[which(Counties$STATEFP == 42 | Counties$STATEFP == 36 | Counties$STATEFP == 54 | Counties$STATEFP == 51| Counties$STATEFP == 24| Counties$STATEFP == 21),], lwd = 1, add = TRUE)
+plot(Counties[which(Counties$STATEFP == 42 | Counties$STATEFP == 36 | Counties$STATEFP == 54 | Counties$STATEFP == 51| Counties$STATEFP == 24| Counties$STATEFP == 21),], lwd = 1, add = TRUE, border = 'grey')
 plot(NY, add = TRUE, lwd = 2)
 plot(PA, add = TRUE, lwd = 2)
 plot(WV, add = TRUE, lwd = 2)
 plot(MD, lwd = 2, add=TRUE)
 plot(KY, lwd = 2, add=TRUE)
 plot(VA, lwd = 2, add=TRUE)
-plot(NoOuts[which(NoOuts$WellDepth >= 1400 & NoOuts$WellDepth < 1600 & NoOuts$out_loc_error == 0),], pch = 16, add = TRUE)
-plot(Outs[which(Outs$WellDepth >= 1400 & Outs$WellDepth < 1600 & Outs$out_loc_lo == 1),], pch = 16, add = TRUE, col = 'blue')
-plot(Outs[which(Outs$WellDepth >= 1400 & Outs$WellDepth < 1600 & Outs$out_loc_lo == 0),], pch = 16, add = TRUE, col = 'red')
-plot(NoOuts[which(NoOuts$WellDepth >= 1400 & NoOuts$WellDepth < 1600 & NoOuts$out_loc_error == 1),], pch = 17, add = TRUE, col = 'purple')
+plot(NoOuts[which(NoOuts$WellDepth >= 1400 & NoOuts$WellDepth < 1600 & NoOuts$out_loc_error == 0),], pch = 16, add = TRUE, cex = 0.7)
+plot(Outs[which(Outs$WellDepth >= 1400 & Outs$WellDepth < 1600 & Outs$out_loc_lo == 1),], pch = 16, add = TRUE, col = 'blue', cex = 0.7)
+plot(Outs[which(Outs$WellDepth >= 1400 & Outs$WellDepth < 1600 & Outs$out_loc_lo == 0),], pch = 16, add = TRUE, col = 'red', cex = 0.7)
+plot(NoOuts[which(NoOuts$WellDepth >= 1400 & NoOuts$WellDepth < 1600 & NoOuts$out_loc_error == 1),], pch = 17, add = TRUE, col = 'purple', cex = 0.7)
 north.arrow(-75, 37.5, 0.1, lab = 'N', col='black', cex = 1.5)
 degAxis(side = 2, seq(34, 46, 2), cex.axis = 1.5)
 degAxis(side = 2, seq(34, 46, 1), labels = FALSE)
@@ -1534,17 +1661,17 @@ legend('topleft', title = ' ', legend = c('Not Outlier', 'Low Outlier', 'High Ou
 
 #Data from 1600 - 2000
 plot(AllData, col = 'white')
-plot(Counties[which(Counties$STATEFP == 42 | Counties$STATEFP == 36 | Counties$STATEFP == 54 | Counties$STATEFP == 51| Counties$STATEFP == 24| Counties$STATEFP == 21),], lwd = 1, add = TRUE)
+plot(Counties[which(Counties$STATEFP == 42 | Counties$STATEFP == 36 | Counties$STATEFP == 54 | Counties$STATEFP == 51| Counties$STATEFP == 24| Counties$STATEFP == 21),], lwd = 1, add = TRUE, border = 'grey')
 plot(NY, add = TRUE, lwd = 2)
 plot(PA, add = TRUE, lwd = 2)
 plot(WV, add = TRUE, lwd = 2)
 plot(MD, lwd = 2, add=TRUE)
 plot(KY, lwd = 2, add=TRUE)
 plot(VA, lwd = 2, add=TRUE)
-plot(NoOuts[which(NoOuts$WellDepth >= 1600 & NoOuts$WellDepth < 2000 & NoOuts$out_loc_error == 0),], pch = 16, add = TRUE)
-plot(Outs[which(Outs$WellDepth >= 1600 & Outs$WellDepth < 2000 & Outs$out_loc_lo == 1),], pch = 16, add = TRUE, col = 'blue')
-plot(Outs[which(Outs$WellDepth >= 1600 & Outs$WellDepth < 2000 & Outs$out_loc_lo == 0),], pch = 16, add = TRUE, col = 'red')
-plot(NoOuts[which(NoOuts$WellDepth >= 1600 & NoOuts$WellDepth < 2000 & NoOuts$out_loc_error == 1),], pch = 17, add = TRUE, col = 'purple')
+plot(NoOuts[which(NoOuts$WellDepth >= 1600 & NoOuts$WellDepth < 2000 & NoOuts$out_loc_error == 0),], pch = 16, add = TRUE, cex = 0.7)
+plot(Outs[which(Outs$WellDepth >= 1600 & Outs$WellDepth < 2000 & Outs$out_loc_lo == 1),], pch = 16, add = TRUE, col = 'blue', cex = 0.7)
+plot(Outs[which(Outs$WellDepth >= 1600 & Outs$WellDepth < 2000 & Outs$out_loc_lo == 0),], pch = 16, add = TRUE, col = 'red', cex = 0.7)
+plot(NoOuts[which(NoOuts$WellDepth >= 1600 & NoOuts$WellDepth < 2000 & NoOuts$out_loc_error == 1),], pch = 17, add = TRUE, col = 'purple', cex = 0.7)
 north.arrow(-75, 37.5, 0.1, lab = 'N', col='black', cex = 1.5)
 degAxis(side = 2, seq(34, 46, 2), cex.axis = 1.5)
 degAxis(side = 2, seq(34, 46, 1), labels = FALSE)
@@ -1557,17 +1684,17 @@ legend('topleft', title = ' ', legend = c('Not Outlier', 'Low Outlier', 'High Ou
 
 #Data from 2000 - 2400
 plot(AllData, col = 'white')
-plot(Counties[which(Counties$STATEFP == 42 | Counties$STATEFP == 36 | Counties$STATEFP == 54 | Counties$STATEFP == 51| Counties$STATEFP == 24| Counties$STATEFP == 21),], lwd = 1, add = TRUE)
+plot(Counties[which(Counties$STATEFP == 42 | Counties$STATEFP == 36 | Counties$STATEFP == 54 | Counties$STATEFP == 51| Counties$STATEFP == 24| Counties$STATEFP == 21),], lwd = 1, add = TRUE, border = 'grey')
 plot(NY, add = TRUE, lwd = 2)
 plot(PA, add = TRUE, lwd = 2)
 plot(WV, add = TRUE, lwd = 2)
 plot(MD, lwd = 2, add=TRUE)
 plot(KY, lwd = 2, add=TRUE)
 plot(VA, lwd = 2, add=TRUE)
-plot(NoOuts[which(NoOuts$WellDepth >= 2000 & NoOuts$WellDepth < 2400 & NoOuts$out_loc_error == 0),], pch = 16, add = TRUE)
-plot(Outs[which(Outs$WellDepth >= 2000 & Outs$WellDepth < 2400 & Outs$out_loc_lo == 1),], pch = 16, add = TRUE, col = 'blue')
-plot(Outs[which(Outs$WellDepth >= 2000 & Outs$WellDepth < 2400 & Outs$out_loc_lo == 0),], pch = 16, add = TRUE, col = 'red')
-plot(NoOuts[which(NoOuts$WellDepth >= 2000 & NoOuts$WellDepth < 2400 & NoOuts$out_loc_error == 1),], pch = 17, add = TRUE, col = 'purple')
+plot(NoOuts[which(NoOuts$WellDepth >= 2000 & NoOuts$WellDepth < 2400 & NoOuts$out_loc_error == 0),], pch = 16, add = TRUE, cex = 0.7)
+plot(Outs[which(Outs$WellDepth >= 2000 & Outs$WellDepth < 2400 & Outs$out_loc_lo == 1),], pch = 16, add = TRUE, col = 'blue', cex = 0.7)
+plot(Outs[which(Outs$WellDepth >= 2000 & Outs$WellDepth < 2400 & Outs$out_loc_lo == 0),], pch = 16, add = TRUE, col = 'red', cex = 0.7)
+plot(NoOuts[which(NoOuts$WellDepth >= 2000 & NoOuts$WellDepth < 2400 & NoOuts$out_loc_error == 1),], pch = 17, add = TRUE, col = 'purple', cex = 0.7)
 north.arrow(-75, 37.5, 0.1, lab = 'N', col='black', cex = 1.5)
 degAxis(side = 2, seq(34, 46, 2), cex.axis = 1.5)
 degAxis(side = 2, seq(34, 46, 1), labels = FALSE)
@@ -1580,17 +1707,17 @@ legend('topleft', title = ' ', legend = c('Not Outlier', 'Low Outlier', 'High Ou
 
 #Data from 2400 - 3000
 plot(AllData, col = 'white')
-plot(Counties[which(Counties$STATEFP == 42 | Counties$STATEFP == 36 | Counties$STATEFP == 54 | Counties$STATEFP == 51| Counties$STATEFP == 24| Counties$STATEFP == 21),], lwd = 1, add = TRUE)
+plot(Counties[which(Counties$STATEFP == 42 | Counties$STATEFP == 36 | Counties$STATEFP == 54 | Counties$STATEFP == 51| Counties$STATEFP == 24| Counties$STATEFP == 21),], lwd = 1, add = TRUE, border = 'grey')
 plot(NY, add = TRUE, lwd = 2)
 plot(PA, add = TRUE, lwd = 2)
 plot(WV, add = TRUE, lwd = 2)
 plot(MD, lwd = 2, add=TRUE)
 plot(KY, lwd = 2, add=TRUE)
 plot(VA, lwd = 2, add=TRUE)
-plot(NoOuts[which(NoOuts$WellDepth >= 2400 & NoOuts$WellDepth < 3000 & NoOuts$out_loc_error == 0),], pch = 16, add = TRUE)
-plot(Outs[which(Outs$WellDepth >= 2400 & Outs$WellDepth < 3000 & Outs$out_loc_lo == 1),], pch = 16, add = TRUE, col = 'blue')
-plot(Outs[which(Outs$WellDepth >= 2400 & Outs$WellDepth < 3000 & Outs$out_loc_lo == 0),], pch = 16, add = TRUE, col = 'red')
-plot(NoOuts[which(NoOuts$WellDepth >= 2400 & NoOuts$WellDepth < 3000 & NoOuts$out_loc_error == 1),], pch = 17, add = TRUE, col = 'purple')
+plot(NoOuts[which(NoOuts$WellDepth >= 2400 & NoOuts$WellDepth < 3000 & NoOuts$out_loc_error == 0),], pch = 16, add = TRUE, cex = 0.7)
+plot(Outs[which(Outs$WellDepth >= 2400 & Outs$WellDepth < 3000 & Outs$out_loc_lo == 1),], pch = 16, add = TRUE, col = 'blue', cex = 0.7)
+plot(Outs[which(Outs$WellDepth >= 2400 & Outs$WellDepth < 3000 & Outs$out_loc_lo == 0),], pch = 16, add = TRUE, col = 'red', cex = 0.7)
+plot(NoOuts[which(NoOuts$WellDepth >= 2400 & NoOuts$WellDepth < 3000 & NoOuts$out_loc_error == 1),], pch = 17, add = TRUE, col = 'purple', cex = 0.7)
 north.arrow(-75, 37.5, 0.1, lab = 'N', col='black', cex = 1.5)
 degAxis(side = 2, seq(34, 46, 2), cex.axis = 1.5)
 degAxis(side = 2, seq(34, 46, 1), labels = FALSE)
@@ -1604,17 +1731,17 @@ legend('topleft', title = ' ', legend = c('Not Outlier', 'Low Outlier', 'High Ou
 #Data deeper than 3000 m are 86% in New York (Not really clustered)
 nrow(AllData[which(AllData$WellDepth >= 3000 & AllData$WellDepth < 6600 & AllData$State == 'NY'),])/nrow(AllData[which(AllData$WellDepth >= 3000 & AllData$WellDepth < 6600),])
 plot(AllData, col = 'white')
-plot(Counties[which(Counties$STATEFP == 42 | Counties$STATEFP == 36 | Counties$STATEFP == 54 | Counties$STATEFP == 51| Counties$STATEFP == 24| Counties$STATEFP == 21),], lwd = 1, add = TRUE)
+plot(Counties[which(Counties$STATEFP == 42 | Counties$STATEFP == 36 | Counties$STATEFP == 54 | Counties$STATEFP == 51| Counties$STATEFP == 24| Counties$STATEFP == 21),], lwd = 1, add = TRUE, border = 'grey')
 plot(NY, add = TRUE, lwd = 2)
 plot(PA, add = TRUE, lwd = 2)
 plot(WV, add = TRUE, lwd = 2)
 plot(MD, lwd = 2, add=TRUE)
 plot(KY, lwd = 2, add=TRUE)
 plot(VA, lwd = 2, add=TRUE)
-plot(NoOuts[which(NoOuts$WellDepth >= 3000 & NoOuts$WellDepth < 6600 & NoOuts$out_loc_error == 0),], pch = 16, add = TRUE)
-plot(Outs[which(Outs$WellDepth >= 3000 & Outs$WellDepth < 6600 & Outs$out_loc_lo == 1),], pch = 16, add = TRUE, col = 'blue')
-plot(Outs[which(Outs$WellDepth >= 3000 & Outs$WellDepth < 6600 & Outs$out_loc_lo == 0),], pch = 16, add = TRUE, col = 'red')
-plot(NoOuts[which(NoOuts$WellDepth >= 3000 & NoOuts$WellDepth < 6600 & NoOuts$out_loc_error == 1),], pch = 17, add = TRUE, col = 'purple')
+plot(NoOuts[which(NoOuts$WellDepth >= 3000 & NoOuts$WellDepth < 6600 & NoOuts$out_loc_error == 0),], pch = 16, add = TRUE, cex = 0.7)
+plot(Outs[which(Outs$WellDepth >= 3000 & Outs$WellDepth < 6600 & Outs$out_loc_lo == 1),], pch = 16, add = TRUE, col = 'blue', cex = 0.7)
+plot(Outs[which(Outs$WellDepth >= 3000 & Outs$WellDepth < 6600 & Outs$out_loc_lo == 0),], pch = 16, add = TRUE, col = 'red', cex = 0.7)
+plot(NoOuts[which(NoOuts$WellDepth >= 3000 & NoOuts$WellDepth < 6600 & NoOuts$out_loc_error == 1),], pch = 17, add = TRUE, col = 'purple', cex = 0.7)
 north.arrow(-75, 37.5, 0.1, lab = 'N', col='black', cex = 1.5)
 degAxis(side = 2, seq(34, 46, 2), cex.axis = 1.5)
 degAxis(side = 2, seq(34, 46, 1), labels = FALSE)
@@ -1651,68 +1778,68 @@ plot(Counties, add = TRUE)
 # plot(VA, lwd = 2, add=TRUE)
 
 
-# Q-Q plot for the points that are not outliers ----
-#Fixme: Do the clip in R with 2018 Data
-##Well point file load, spatially referenced. Needs to be in NAD83 UTM17N coordinates
-CT = readOGR(dsn=paste(getwd(), '/BaseCorrWells', sep=''), layer="WellsCT")
-CNY = readOGR(dsn=paste(getwd(), '/BaseCorrWells', sep=''), layer="WellsCNY")
-CWV = readOGR(dsn=paste(getwd(), '/BaseCorrWells', sep=''), layer="WellsCWV")
-ENY = readOGR(dsn=paste(getwd(), '/BaseCorrWells', sep=''), layer="WellsENY")
-ENYPA = readOGR(dsn=paste(getwd(), '/BaseCorrWells', sep=''), layer="WellsENYPA")
-MT = readOGR(dsn=paste(getwd(), '/BaseCorrWells', sep=''), layer="WellsMT")
-NWPANY = readOGR(dsn=paste(getwd(), '/BaseCorrWells', sep=''), layer="WellsNWPANY")  
-SWPA = readOGR(dsn=paste(getwd(), '/BaseCorrWells', sep=''), layer="WellsSWPA")
-WPA = readOGR(dsn=paste(getwd(), '/BaseCorrWells', sep=''), layer="WellsWPA")
-FL = readOGR(dsn=paste(getwd(), '/BaseCorrWells',sep=''), layer="WellsAll")
+#   Q-Q plot for the points that are not outliers ----
+#Clip points that are not outliers to geologic regions
+CT = NotOutliersWGS[InterpRegs[InterpRegs$Name == 'CT',],]
+CNY = NotOutliersWGS[InterpRegs[InterpRegs$Name == 'CNY',],]
+CWV = NotOutliersWGS[CWV_Bounded,]
+ENY = NotOutliersWGS[InterpRegs[InterpRegs$Name == 'ENY',],]
+ENYPA = NotOutliersWGS[InterpRegs[InterpRegs$Name == 'ENYPA',],]
+MT = NotOutliersWGS[MT_Bounded,]
+NWPANY = NotOutliersWGS[InterpRegs[InterpRegs$Name == 'NWPANY',],]
+SWPA = NotOutliersWGS[InterpRegs[InterpRegs$Name == 'SWPA',],]
+WPA = NotOutliersWGS[InterpRegs[InterpRegs$Name == 'WPA',],]
+VR = NotOutliersWGS[VR_Bounded,]
+FL = rbind(CT, CWV, CNY, ENY, ENYPA, MT, NWPANY, SWPA, WPA, VR)
 
 #Q-Q plots for data in each interpolation region
 #Unique axes
 sets = rbind(c(1,2,3), c(4,5,6),c(7,8,9))
-png('QQPlotHeatFlow_BeforeCorr_NotOutTest.png', res=600, units='in', width=10, height=10)
+png('QQPlotHeatFlow_NotTestedOuts.png', res=600, units='in', width=10, height=10)
 layout(sets)
 par(mar=c(4,5,3,2))
 qqnorm(CT@data$Qs, cex.axis=1.5, cex.lab=1.5, main='Chautauqua, NY', ylab=expression('Sample Quantiles' ~ (mW/m^2)), cex.main=2, col='red')
 qqline(CT@data$Qs)
 qqnorm(WPA@data$Qs, cex.axis=1.5, cex.lab=1.5, main='Western PA', ylab=expression('Sample Quantiles' ~ (mW/m^2)), cex.main=2, col='orange', xlim = c(-3.5,3.5), ylim = c(10,70))
 qqline(WPA@data$Qs)
-temp = qqnorm(WPA@data$Qs, plot.it = FALSE)$x[which(WPA@data$ot_lc_rr == 1)]
+temp = qqnorm(WPA@data$Qs, plot.it = FALSE)$x[which(WPA@data$out_loc_error == 1)]
 par(new = TRUE)
-plot(x = temp, y = WPA@data$Qs[which(WPA@data$ot_lc_rr == 1)], col = 'black', pch = 16, xlab = '', ylab = '', axes = FALSE, xlim = c(-3.5,3.5), ylim = c(10,70))
+plot(x = temp, y = WPA@data$Qs[which(WPA@data$out_loc_error == 1)], col = 'black', pch = 16, xlab = '', ylab = '', axes = FALSE, xlim = c(-3.5,3.5), ylim = c(10,70))
 qqnorm(NWPANY@data$Qs, cex.axis=1.5, cex.lab=1.5, main='Northwestern NY and PA', ylab=expression('Sample Quantiles' ~ (mW/m^2)), cex.main=2, col='yellow', xlim = c(-3,3), ylim = c(5,75))
 qqline(NWPANY@data$Qs)
-temp = qqnorm(NWPANY@data$Qs, plot.it = FALSE)$x[which(NWPANY@data$ot_lc_rr == 1)]
+temp = qqnorm(NWPANY@data$Qs, plot.it = FALSE)$x[which(NWPANY@data$out_loc_error == 1)]
 par(new = TRUE)
-plot(x = temp, y = NWPANY@data$Qs[which(NWPANY@data$ot_lc_rr == 1)], col = 'black', pch = 16, xlab = '', ylab = '', axes = FALSE, xlim = c(-3,3), ylim = c(5,75))
+plot(x = temp, y = NWPANY@data$Qs[which(NWPANY@data$out_loc_error == 1)], col = 'black', pch = 16, xlab = '', ylab = '', axes = FALSE, xlim = c(-3,3), ylim = c(5,75))
 qqnorm(CNY@data$Qs, cex.axis=1.5, cex.lab=1.5, main='Central NY', ylab=expression('Sample Quantiles' ~ (mW/m^2)), cex.main=2, col='green', xlim = c(-2.75,2.75), ylim = c(35,65))
 qqline(CNY@data$Qs)
-temp = qqnorm(CNY@data$Qs, plot.it = FALSE)$x[which(CNY@data$ot_lc_rr == 1)]
+temp = qqnorm(CNY@data$Qs, plot.it = FALSE)$x[which(CNY@data$out_loc_error == 1)]
 par(new = TRUE)
-plot(x = temp, y = CNY@data$Qs[which(CNY@data$ot_lc_rr == 1)], col = 'black', pch = 16, xlab = '', ylab = '', axes = FALSE, xlim = c(-2.75,2.75), ylim = c(35,65))
+plot(x = temp, y = CNY@data$Qs[which(CNY@data$out_loc_error == 1)], col = 'black', pch = 16, xlab = '', ylab = '', axes = FALSE, xlim = c(-2.75,2.75), ylim = c(35,65))
 qqnorm(ENY@data$Qs, cex.axis=1.5, cex.lab=1.5, main='Eastern NY', ylab=expression('Sample Quantiles' ~ (mW/m^2)), cex.main=2, col='springgreen', xlim = c(-3,3), ylim = c(30,75))
 qqline(ENY@data$Qs)
-temp = qqnorm(ENY@data$Qs, plot.it = FALSE)$x[which(ENY@data$ot_lc_rr == 1)]
+temp = qqnorm(ENY@data$Qs, plot.it = FALSE)$x[which(ENY@data$out_loc_error == 1)]
 par(new = TRUE)
-plot(x = temp, y = ENY@data$Qs[which(ENY@data$ot_lc_rr == 1)], col = 'black', pch = 16, xlab = '', ylab = '', axes = FALSE, xlim = c(-3,3), ylim = c(30,75))
+plot(x = temp, y = ENY@data$Qs[which(ENY@data$out_loc_error == 1)], col = 'black', pch = 16, xlab = '', ylab = '', axes = FALSE, xlim = c(-3,3), ylim = c(30,75))
 qqnorm(ENYPA@data$Qs, cex.axis=1.5, cex.lab=1.5, main='Eastern NY and PA', ylab=expression('Sample Quantiles' ~ (mW/m^2)), cex.main=2, col='skyblue', xlim = c(-3,3), ylim = c(10,110))
 qqline(ENYPA@data$Qs)
-temp = qqnorm(ENYPA@data$Qs, plot.it = FALSE)$x[which(ENYPA@data$ot_lc_rr == 1)]
+temp = qqnorm(ENYPA@data$Qs, plot.it = FALSE)$x[which(ENYPA@data$out_loc_error == 1)]
 par(new = TRUE)
-plot(x = temp, y = ENYPA@data$Qs[which(ENYPA@data$ot_lc_rr == 1)], col = 'black', pch = 16, xlab = '', ylab = '', axes = FALSE, xlim = c(-3,3), ylim = c(10,110))
+plot(x = temp, y = ENYPA@data$Qs[which(ENYPA@data$out_loc_error == 1)], col = 'black', pch = 16, xlab = '', ylab = '', axes = FALSE, xlim = c(-3,3), ylim = c(10,110))
 qqnorm(SWPA@data$Qs, cex.axis=1.5, cex.lab=1.5, main='Southwestern PA', ylab=expression('Sample Quantiles' ~ (mW/m^2)), cex.main=2, col='blue', xlim = c(-4,4), ylim = c(5,110))
 qqline(SWPA@data$Qs)
-temp = qqnorm(SWPA@data$Qs, plot.it = FALSE)$x[which(SWPA@data$ot_lc_rr == 1)]
+temp = qqnorm(SWPA@data$Qs, plot.it = FALSE)$x[which(SWPA@data$out_loc_error == 1)]
 par(new = TRUE)
-plot(x = temp, y = SWPA@data$Qs[which(SWPA@data$ot_lc_rr == 1)], col = 'black', pch = 16, xlab = '', ylab = '', axes = FALSE, xlim = c(-4,4), ylim = c(5,110))
+plot(x = temp, y = SWPA@data$Qs[which(SWPA@data$out_loc_error == 1)], col = 'black', pch = 16, xlab = '', ylab = '', axes = FALSE, xlim = c(-4,4), ylim = c(5,110))
 qqnorm(CWV@data$Qs, cex.axis=1.5, cex.lab=1.5, main='Central WV', ylab=expression('Sample Quantiles' ~ (mW/m^2)), cex.main=2, col='purple', xlim = c(-4,4), ylim = c(5,120))
 qqline(CWV@data$Qs)
-temp = qqnorm(CWV@data$Qs, plot.it = FALSE)$x[which(CWV@data$ot_lc_rr == 1)]
+temp = qqnorm(CWV@data$Qs, plot.it = FALSE)$x[which(CWV@data$out_loc_error == 1)]
 par(new = TRUE)
-plot(x = temp, y = CWV@data$Qs[which(CWV@data$ot_lc_rr == 1)], col = 'black', pch = 16, xlab = '', ylab = '', axes = FALSE, xlim = c(-4,4), ylim = c(5,120))
+plot(x = temp, y = CWV@data$Qs[which(CWV@data$out_loc_error == 1)], col = 'black', pch = 16, xlab = '', ylab = '', axes = FALSE, xlim = c(-4,4), ylim = c(5,120))
 qqnorm(MT@data$Qs, cex.axis=1.5, cex.lab=1.5, main='Western WV', ylab=expression('Sample Quantiles' ~ (mW/m^2)), cex.main=2, col='violet', xlim = c(-3.5,3.5), ylim = c(5,120))
 qqline(MT@data$Qs)
-temp = qqnorm(MT@data$Qs, plot.it = FALSE)$x[which(MT@data$ot_lc_rr == 1)]
+temp = qqnorm(MT@data$Qs, plot.it = FALSE)$x[which(MT@data$out_loc_error == 1)]
 par(new = TRUE)
-plot(x = temp, y = MT@data$Qs[which(MT@data$ot_lc_rr == 1)], col = 'black', pch = 16, xlab = '', ylab = '', axes = FALSE, xlim = c(-3.5,3.5), ylim = c(5,120))
+plot(x = temp, y = MT@data$Qs[which(MT@data$out_loc_error == 1)], col = 'black', pch = 16, xlab = '', ylab = '', axes = FALSE, xlim = c(-3.5,3.5), ylim = c(5,120))
 dev.off()
 
 #QQ-Student t3 - May not be great.
@@ -1723,96 +1850,101 @@ dev.off()
 # qqline(CT@data$Qs)
 # qqplot(qt(ppoints(WPA@data$Qs), df = 3), y = WPA@data$Qs, cex.axis=1.5, cex.lab=1.5, main='Western PA', ylab=expression('Sample Quantiles' ~ (mW/m^2)), cex.main=2, col='orange', xlim = c(-15,15), ylim = c(10,70))
 # qqline(WPA@data$Qs)
-# temp = qqplot(qt(ppoints(WPA@data$Qs), df = 3), y = WPA@data$Qs, plot.it = FALSE)$x[which(WPA@data$ot_lc_rr == 1)]
+# temp = qqplot(qt(ppoints(WPA@data$Qs), df = 3), y = WPA@data$Qs, plot.it = FALSE)$x[which(WPA@data$out_loc_error == 1)]
 # par(new = TRUE)
-# plot(x = temp, y = WPA@data$Qs[which(WPA@data$ot_lc_rr == 1)], col = 'black', pch = 16, xlab = '', ylab = '', axes = FALSE, xlim = c(-15,15), ylim = c(10,70))
+# plot(x = temp, y = WPA@data$Qs[which(WPA@data$out_loc_error == 1)], col = 'black', pch = 16, xlab = '', ylab = '', axes = FALSE, xlim = c(-15,15), ylim = c(10,70))
 # qqnorm(NWPANY@data$Qs, cex.axis=1.5, cex.lab=1.5, main='Northwestern NY and PA', ylab=expression('Sample Quantiles' ~ (mW/m^2)), cex.main=2, col='yellow', xlim = c(-3,3), ylim = c(5,75))
 # qqline(NWPANY@data$Qs)
-# temp = qqnorm(NWPANY@data$Qs, plot.it = FALSE)$x[which(NWPANY@data$ot_lc_rr == 1)]
+# temp = qqnorm(NWPANY@data$Qs, plot.it = FALSE)$x[which(NWPANY@data$out_loc_error == 1)]
 # par(new = TRUE)
-# plot(x = temp, y = NWPANY@data$Qs[which(NWPANY@data$ot_lc_rr == 1)], col = 'black', pch = 16, xlab = '', ylab = '', axes = FALSE, xlim = c(-3,3), ylim = c(5,75))
+# plot(x = temp, y = NWPANY@data$Qs[which(NWPANY@data$out_loc_error == 1)], col = 'black', pch = 16, xlab = '', ylab = '', axes = FALSE, xlim = c(-3,3), ylim = c(5,75))
 # qqnorm(CNY@data$Qs, cex.axis=1.5, cex.lab=1.5, main='Central NY', ylab=expression('Sample Quantiles' ~ (mW/m^2)), cex.main=2, col='green', xlim = c(-2.75,2.75), ylim = c(35,65))
 # qqline(CNY@data$Qs)
-# temp = qqnorm(CNY@data$Qs, plot.it = FALSE)$x[which(CNY@data$ot_lc_rr == 1)]
+# temp = qqnorm(CNY@data$Qs, plot.it = FALSE)$x[which(CNY@data$out_loc_error == 1)]
 # par(new = TRUE)
-# plot(x = temp, y = CNY@data$Qs[which(CNY@data$ot_lc_rr == 1)], col = 'black', pch = 16, xlab = '', ylab = '', axes = FALSE, xlim = c(-2.75,2.75), ylim = c(35,65))
+# plot(x = temp, y = CNY@data$Qs[which(CNY@data$out_loc_error == 1)], col = 'black', pch = 16, xlab = '', ylab = '', axes = FALSE, xlim = c(-2.75,2.75), ylim = c(35,65))
 # qqnorm(ENY@data$Qs, cex.axis=1.5, cex.lab=1.5, main='Eastern NY', ylab=expression('Sample Quantiles' ~ (mW/m^2)), cex.main=2, col='springgreen', xlim = c(-3,3), ylim = c(30,75))
 # qqline(ENY@data$Qs)
-# temp = qqnorm(ENY@data$Qs, plot.it = FALSE)$x[which(ENY@data$ot_lc_rr == 1)]
+# temp = qqnorm(ENY@data$Qs, plot.it = FALSE)$x[which(ENY@data$out_loc_error == 1)]
 # par(new = TRUE)
-# plot(x = temp, y = ENY@data$Qs[which(ENY@data$ot_lc_rr == 1)], col = 'black', pch = 16, xlab = '', ylab = '', axes = FALSE, xlim = c(-3,3), ylim = c(30,75))
+# plot(x = temp, y = ENY@data$Qs[which(ENY@data$out_loc_error == 1)], col = 'black', pch = 16, xlab = '', ylab = '', axes = FALSE, xlim = c(-3,3), ylim = c(30,75))
 # qqnorm(ENYPA@data$Qs, cex.axis=1.5, cex.lab=1.5, main='Eastern NY and PA', ylab=expression('Sample Quantiles' ~ (mW/m^2)), cex.main=2, col='skyblue', xlim = c(-3,3), ylim = c(10,110))
 # qqline(ENYPA@data$Qs)
-# temp = qqnorm(ENYPA@data$Qs, plot.it = FALSE)$x[which(ENYPA@data$ot_lc_rr == 1)]
+# temp = qqnorm(ENYPA@data$Qs, plot.it = FALSE)$x[which(ENYPA@data$out_loc_error == 1)]
 # par(new = TRUE)
-# plot(x = temp, y = ENYPA@data$Qs[which(ENYPA@data$ot_lc_rr == 1)], col = 'black', pch = 16, xlab = '', ylab = '', axes = FALSE, xlim = c(-3,3), ylim = c(10,110))
+# plot(x = temp, y = ENYPA@data$Qs[which(ENYPA@data$out_loc_error == 1)], col = 'black', pch = 16, xlab = '', ylab = '', axes = FALSE, xlim = c(-3,3), ylim = c(10,110))
 # qqnorm(SWPA@data$Qs, cex.axis=1.5, cex.lab=1.5, main='Southwestern PA', ylab=expression('Sample Quantiles' ~ (mW/m^2)), cex.main=2, col='blue', xlim = c(-4,4), ylim = c(5,110))
 # qqline(SWPA@data$Qs)
-# temp = qqnorm(SWPA@data$Qs, plot.it = FALSE)$x[which(SWPA@data$ot_lc_rr == 1)]
+# temp = qqnorm(SWPA@data$Qs, plot.it = FALSE)$x[which(SWPA@data$out_loc_error == 1)]
 # par(new = TRUE)
-# plot(x = temp, y = SWPA@data$Qs[which(SWPA@data$ot_lc_rr == 1)], col = 'black', pch = 16, xlab = '', ylab = '', axes = FALSE, xlim = c(-4,4), ylim = c(5,110))
+# plot(x = temp, y = SWPA@data$Qs[which(SWPA@data$out_loc_error == 1)], col = 'black', pch = 16, xlab = '', ylab = '', axes = FALSE, xlim = c(-4,4), ylim = c(5,110))
 # qqnorm(CWV@data$Qs, cex.axis=1.5, cex.lab=1.5, main='Central WV', ylab=expression('Sample Quantiles' ~ (mW/m^2)), cex.main=2, col='purple', xlim = c(-4,4), ylim = c(5,120))
 # qqline(CWV@data$Qs)
-# temp = qqnorm(CWV@data$Qs, plot.it = FALSE)$x[which(CWV@data$ot_lc_rr == 1)]
+# temp = qqnorm(CWV@data$Qs, plot.it = FALSE)$x[which(CWV@data$out_loc_error == 1)]
 # par(new = TRUE)
-# plot(x = temp, y = CWV@data$Qs[which(CWV@data$ot_lc_rr == 1)], col = 'black', pch = 16, xlab = '', ylab = '', axes = FALSE, xlim = c(-4,4), ylim = c(5,120))
+# plot(x = temp, y = CWV@data$Qs[which(CWV@data$out_loc_error == 1)], col = 'black', pch = 16, xlab = '', ylab = '', axes = FALSE, xlim = c(-4,4), ylim = c(5,120))
 # qqnorm(MT@data$Qs, cex.axis=1.5, cex.lab=1.5, main='Western WV', ylab=expression('Sample Quantiles' ~ (mW/m^2)), cex.main=2, col='violet', xlim = c(-3.5,3.5), ylim = c(5,120))
 # qqline(MT@data$Qs)
-# temp = qqnorm(MT@data$Qs, plot.it = FALSE)$x[which(MT@data$ot_lc_rr == 1)]
+# temp = qqnorm(MT@data$Qs, plot.it = FALSE)$x[which(MT@data$out_loc_error == 1)]
 # par(new = TRUE)
-# plot(x = temp, y = MT@data$Qs[which(MT@data$ot_lc_rr == 1)], col = 'black', pch = 16, xlab = '', ylab = '', axes = FALSE, xlim = c(-3.5,3.5), ylim = c(5,120))
+# plot(x = temp, y = MT@data$Qs[which(MT@data$out_loc_error == 1)], col = 'black', pch = 16, xlab = '', ylab = '', axes = FALSE, xlim = c(-3.5,3.5), ylim = c(5,120))
 # dev.off()
 
 #With Map
-sets = rbind(c(1,2,3,4), c(5,6,7,8),c(9,10,10,10))
-png('QQPlotHeatFlow_BeforeCorr_NotOutTest_Map.png', res=600, units='in', width=13, height=10)
+sets = rbind(c(1,2,3,4), c(5,6,7,8),c(9,10,11,11))
+png('QQPlotHeatFlow_NotTestedOuts_Map.png', res=600, units='in', width=13, height=10)
 layout(sets)
 par(mar=c(4,5,3,2))
 qqnorm(CT@data$Qs, cex.axis=1.5, cex.lab=1.5, main='Chautauqua, NY', ylab=expression('Sample Quantiles' ~ (mW/m^2)), cex.main=2, col='red')
 qqline(CT@data$Qs)
 qqnorm(WPA@data$Qs, cex.axis=1.5, cex.lab=1.5, main='Western PA', ylab=expression('Sample Quantiles' ~ (mW/m^2)), cex.main=2, col='orange', xlim = c(-3.5,3.5), ylim = c(10,70))
 qqline(WPA@data$Qs)
-temp = qqnorm(WPA@data$Qs, plot.it = FALSE)$x[which(WPA@data$ot_lc_rr == 1)]
+temp = qqnorm(WPA@data$Qs, plot.it = FALSE)$x[which(WPA@data$out_loc_error == 1)]
 par(new = TRUE)
-plot(x = temp, y = WPA@data$Qs[which(WPA@data$ot_lc_rr == 1)], col = 'black', pch = 16, xlab = '', ylab = '', axes = FALSE, xlim = c(-3.5,3.5), ylim = c(10,70))
+plot(x = temp, y = WPA@data$Qs[which(WPA@data$out_loc_error == 1)], col = 'black', pch = 16, xlab = '', ylab = '', axes = FALSE, xlim = c(-3.5,3.5), ylim = c(10,70))
 qqnorm(NWPANY@data$Qs, cex.axis=1.5, cex.lab=1.5, main='Northwestern NY and PA', ylab=expression('Sample Quantiles' ~ (mW/m^2)), cex.main=2, col='yellow', xlim = c(-3,3), ylim = c(5,75))
 qqline(NWPANY@data$Qs)
-temp = qqnorm(NWPANY@data$Qs, plot.it = FALSE)$x[which(NWPANY@data$ot_lc_rr == 1)]
+temp = qqnorm(NWPANY@data$Qs, plot.it = FALSE)$x[which(NWPANY@data$out_loc_error == 1)]
 par(new = TRUE)
-plot(x = temp, y = NWPANY@data$Qs[which(NWPANY@data$ot_lc_rr == 1)], col = 'black', pch = 16, xlab = '', ylab = '', axes = FALSE, xlim = c(-3,3), ylim = c(5,75))
+plot(x = temp, y = NWPANY@data$Qs[which(NWPANY@data$out_loc_error == 1)], col = 'black', pch = 16, xlab = '', ylab = '', axes = FALSE, xlim = c(-3,3), ylim = c(5,75))
 qqnorm(CNY@data$Qs, cex.axis=1.5, cex.lab=1.5, main='Central NY', ylab=expression('Sample Quantiles' ~ (mW/m^2)), cex.main=2, col='green', xlim = c(-2.75,2.75), ylim = c(35,65))
 qqline(CNY@data$Qs)
-temp = qqnorm(CNY@data$Qs, plot.it = FALSE)$x[which(CNY@data$ot_lc_rr == 1)]
+temp = qqnorm(CNY@data$Qs, plot.it = FALSE)$x[which(CNY@data$out_loc_error == 1)]
 par(new = TRUE)
-plot(x = temp, y = CNY@data$Qs[which(CNY@data$ot_lc_rr == 1)], col = 'black', pch = 16, xlab = '', ylab = '', axes = FALSE, xlim = c(-2.75,2.75), ylim = c(35,65))
+plot(x = temp, y = CNY@data$Qs[which(CNY@data$out_loc_error == 1)], col = 'black', pch = 16, xlab = '', ylab = '', axes = FALSE, xlim = c(-2.75,2.75), ylim = c(35,65))
 qqnorm(ENY@data$Qs, cex.axis=1.5, cex.lab=1.5, main='Eastern NY', ylab=expression('Sample Quantiles' ~ (mW/m^2)), cex.main=2, col='springgreen', xlim = c(-3,3), ylim = c(30,75))
 qqline(ENY@data$Qs)
-temp = qqnorm(ENY@data$Qs, plot.it = FALSE)$x[which(ENY@data$ot_lc_rr == 1)]
+temp = qqnorm(ENY@data$Qs, plot.it = FALSE)$x[which(ENY@data$out_loc_error == 1)]
 par(new = TRUE)
-plot(x = temp, y = ENY@data$Qs[which(ENY@data$ot_lc_rr == 1)], col = 'black', pch = 16, xlab = '', ylab = '', axes = FALSE, xlim = c(-3,3), ylim = c(30,75))
+plot(x = temp, y = ENY@data$Qs[which(ENY@data$out_loc_error == 1)], col = 'black', pch = 16, xlab = '', ylab = '', axes = FALSE, xlim = c(-3,3), ylim = c(30,75))
 qqnorm(ENYPA@data$Qs, cex.axis=1.5, cex.lab=1.5, main='Eastern NY and PA', ylab=expression('Sample Quantiles' ~ (mW/m^2)), cex.main=2, col='skyblue', xlim = c(-3,3), ylim = c(10,110))
 qqline(ENYPA@data$Qs)
-temp = qqnorm(ENYPA@data$Qs, plot.it = FALSE)$x[which(ENYPA@data$ot_lc_rr == 1)]
+temp = qqnorm(ENYPA@data$Qs, plot.it = FALSE)$x[which(ENYPA@data$out_loc_error == 1)]
 par(new = TRUE)
-plot(x = temp, y = ENYPA@data$Qs[which(ENYPA@data$ot_lc_rr == 1)], col = 'black', pch = 16, xlab = '', ylab = '', axes = FALSE, xlim = c(-3,3), ylim = c(10,110))
+plot(x = temp, y = ENYPA@data$Qs[which(ENYPA@data$out_loc_error == 1)], col = 'black', pch = 16, xlab = '', ylab = '', axes = FALSE, xlim = c(-3,3), ylim = c(10,110))
 qqnorm(SWPA@data$Qs, cex.axis=1.5, cex.lab=1.5, main='Southwestern PA', ylab=expression('Sample Quantiles' ~ (mW/m^2)), cex.main=2, col='blue', xlim = c(-4,4), ylim = c(5,110))
 qqline(SWPA@data$Qs)
-temp = qqnorm(SWPA@data$Qs, plot.it = FALSE)$x[which(SWPA@data$ot_lc_rr == 1)]
+temp = qqnorm(SWPA@data$Qs, plot.it = FALSE)$x[which(SWPA@data$out_loc_error == 1)]
 par(new = TRUE)
-plot(x = temp, y = SWPA@data$Qs[which(SWPA@data$ot_lc_rr == 1)], col = 'black', pch = 16, xlab = '', ylab = '', axes = FALSE, xlim = c(-4,4), ylim = c(5,110))
+plot(x = temp, y = SWPA@data$Qs[which(SWPA@data$out_loc_error == 1)], col = 'black', pch = 16, xlab = '', ylab = '', axes = FALSE, xlim = c(-4,4), ylim = c(5,110))
 qqnorm(CWV@data$Qs, cex.axis=1.5, cex.lab=1.5, main='Central WV', ylab=expression('Sample Quantiles' ~ (mW/m^2)), cex.main=2, col='purple', xlim = c(-4,4), ylim = c(5,120))
 qqline(CWV@data$Qs)
-temp = qqnorm(CWV@data$Qs, plot.it = FALSE)$x[which(CWV@data$ot_lc_rr == 1)]
+temp = qqnorm(CWV@data$Qs, plot.it = FALSE)$x[which(CWV@data$out_loc_error == 1)]
 par(new = TRUE)
-plot(x = temp, y = CWV@data$Qs[which(CWV@data$ot_lc_rr == 1)], col = 'black', pch = 16, xlab = '', ylab = '', axes = FALSE, xlim = c(-4,4), ylim = c(5,120))
+plot(x = temp, y = CWV@data$Qs[which(CWV@data$out_loc_error == 1)], col = 'black', pch = 16, xlab = '', ylab = '', axes = FALSE, xlim = c(-4,4), ylim = c(5,120))
 qqnorm(MT@data$Qs, cex.axis=1.5, cex.lab=1.5, main='Western WV', ylab=expression('Sample Quantiles' ~ (mW/m^2)), cex.main=2, col='violet', xlim = c(-3.5,3.5), ylim = c(5,120))
 qqline(MT@data$Qs)
-temp = qqnorm(MT@data$Qs, plot.it = FALSE)$x[which(MT@data$ot_lc_rr == 1)]
+temp = qqnorm(MT@data$Qs, plot.it = FALSE)$x[which(MT@data$out_loc_error == 1)]
 par(new = TRUE)
-plot(x = temp, y = MT@data$Qs[which(MT@data$ot_lc_rr == 1)], col = 'black', pch = 16, xlab = '', ylab = '', axes = FALSE, xlim = c(-3.5,3.5), ylim = c(5,120))
+plot(x = temp, y = MT@data$Qs[which(MT@data$out_loc_error == 1)], col = 'black', pch = 16, xlab = '', ylab = '', axes = FALSE, xlim = c(-3.5,3.5), ylim = c(5,120))
+qqnorm(VR@data$Qs, cex.axis=1.5, cex.lab=1.5, main='Valley and Ridge', ylab=expression('Sample Quantiles' ~ (mW/m^2)), cex.main=2, col='grey', xlim = c(-3.5,3.5), ylim = c(5,120))
+qqline(VR@data$Qs)
+temp = qqnorm(VR@data$Qs, plot.it = FALSE)$x[which(VR@data$out_loc_error == 1)]
+par(new = TRUE)
+plot(x = temp, y = VR@data$Qs[which(VR@data$out_loc_error == 1)], col = 'black', pch = 16, xlab = '', ylab = '', axes = FALSE, xlim = c(-3.5,3.5), ylim = c(5,120))
 
 #Map
-par(xaxs = 'i', yaxs = 'i', mar = c(2,20,2,20))
+par(xaxs = 'i', yaxs = 'i', mar = c(2,10,2,10))
 #par(pin = c(par('pin')[1], ratio*par('pin')[1]))
 plot(InterpRegs, xlim = c(-82.64474, -74.5), ylim = c(36.75, 43.4))
 plot(InterpRegs[which(InterpRegs$Name == "CT"),], col = 'red', add = TRUE)
@@ -1839,4 +1971,370 @@ degAxis(side = 1, seq(-70, -86, -2), cex.axis = 1.5)
 degAxis(side = 3, seq(-70, -86, -1), labels = FALSE)
 degAxis(side = 1, seq(-70, -86, -1), labels = FALSE)
 box()
+dev.off()
+
+rm(temp)
+
+#    Label points as outliers and switch geologic region ownership for one point----
+#Heatflow
+qqnorm(CT@data$Qs)
+qqline(CT@data$Qs)
+qqnorm(CNY@data$Qs)
+qqline(CNY@data$Qs)
+qqnorm(CWV@data$Qs) #The one point above 100 mW/m^2 should probably be in MT, but it is not a spatial outlier. Place in MT and remove from CWV
+qqline(CWV@data$Qs)
+MT = rbind(MT, CWV[which(CWV$Qs > 110),])
+CWV = CWV[which(CWV$Qs < 110),]
+qqnorm(CWV@data$Qs)
+qqline(CWV@data$Qs)
+qqnorm(ENY@data$Qs)#Based on points that were not tested as outliers, RowID_12690 appears too high on the map based on surrounding points. It is also in the upper tail.
+qqline(ENY@data$Qs)
+ENY = ENY[-which(ENY$RowID_ == 12690),]
+FL = FL[-which(FL$RowID_ == 12690),]
+qqnorm(ENYPA@data$Qs) #Definite outlier that did not get removed is in here. 30 mW/m^3 greater than others. Remove it from ENYPA and FL.
+FL = FL[-which(FL$RowID_ == 19770),]
+ENYPA = ENYPA[which(ENYPA$Qs < 100),]
+qqnorm(ENYPA@data$Qs)
+qqline(ENYPA@data$Qs)
+qqnorm(MT@data$Qs)
+qqline(MT@data$Qs)
+qqnorm(NWPANY@data$Qs) #The low heat flow of 7 was not tested for outliers. It should be removed.
+FL = FL[-which(FL$RowID_ == 29908),]
+NWPANY = NWPANY[which(NWPANY$Qs > 10),]
+qqnorm(NWPANY@data$Qs)
+qqline(NWPANY@data$Qs)
+qqnorm(SWPA@data$Qs)
+qqline(SWPA@data$Qs)
+qqnorm(WPA@data$Qs)
+qqline(WPA@data$Qs)
+qqnorm(VR@data$Qs)
+qqline(VR@data$Qs)
+qqnorm(FL@data$Qs) #Only the ENYPA, ENY, and NWPANY points are removed.
+qqline(FL@data$Qs)
+
+#Check that the number of wells in FL equals the total in all other regions
+if (nrow(FL) - nrow(CT) - nrow(CNY) - nrow(CWV) - nrow(ENY) - nrow(ENYPA) - nrow(SWPA) - nrow(NWPANY) - nrow(WPA) - nrow(MT) - nrow(VR) != 0){
+  print('Number of wells in FL is different than the total in other regions.')
+}
+
+#QQ Plot Figure - corrected point locations
+sets = rbind(c(1,2,3), c(4,5,6),c(7,8,9))
+png('QQPlotHeatFlow_corrPoints_2018.png', res=300, units='in', width=10, height=10)
+layout(sets)
+par(mar=c(4,5,3,2))
+qqnorm(CT@data$Qs, cex.axis=1.5, cex.lab=1.5, main='Chautauqua, NY', ylab=expression('Sample Quantiles' ~ (mW/m^2)), cex.main=2, col='red')
+qqline(CT@data$Qs)
+qqnorm(WPA@data$Qs, cex.axis=1.5, cex.lab=1.5, main='Western PA', ylab=expression('Sample Quantiles' ~ (mW/m^2)), cex.main=2, col='orange')
+qqline(WPA@data$Qs)
+qqnorm(NWPANY@data$Qs, cex.axis=1.5, cex.lab=1.5, main='Northwestern NY and PA', ylab=expression('Sample Quantiles' ~ (mW/m^2)), cex.main=2, col='yellow')
+qqline(NWPANY@data$Qs)
+qqnorm(CNY@data$Qs, cex.axis=1.5, cex.lab=1.5, main='Central NY', ylab=expression('Sample Quantiles' ~ (mW/m^2)), cex.main=2, col='green')
+qqline(CNY@data$Qs)
+qqnorm(ENY@data$Qs, cex.axis=1.5, cex.lab=1.5, main='Eastern NY', ylab=expression('Sample Quantiles' ~ (mW/m^2)), cex.main=2, col='springgreen')
+qqline(ENY@data$Qs)
+qqnorm(ENYPA@data$Qs, cex.axis=1.5, cex.lab=1.5, main='Eastern NY and PA', ylab=expression('Sample Quantiles' ~ (mW/m^2)), cex.main=2, col='skyblue')
+qqline(ENYPA@data$Qs)
+qqnorm(SWPA@data$Qs, cex.axis=1.5, cex.lab=1.5, main='Southwestern PA', ylab=expression('Sample Quantiles' ~ (mW/m^2)), cex.main=2, col='blue')
+qqline(SWPA@data$Qs)
+qqnorm(CWV@data$Qs, cex.axis=1.5, cex.lab=1.5, main='Central WV', ylab=expression('Sample Quantiles' ~ (mW/m^2)), cex.main=2, col='purple')
+qqline(CWV@data$Qs)
+qqnorm(MT@data$Qs, cex.axis=1.5, cex.lab=1.5, main='Western WV', ylab=expression('Sample Quantiles' ~ (mW/m^2)), cex.main=2, col='violet')
+qqline(MT@data$Qs)
+dev.off()
+
+qqnorm(FL@data$Qs, cex.axis=1.5, cex.lab=1.5, main='Full Region', ylab=expression('Sample Quantiles' ~ (mW/m^2)), cex.main=2, ylim=c(0,120), xlim=c(-4,4))
+qqline(FL@data$Qs)
+
+
+#  Post analysis of local median deviation----
+FL_NAD = spTransform(FL, CRSobj = CRS('+init=epsg:26917'))
+DataTab_Post = QsDev(Data = FL_NAD@data, Var = 'Qs', xName = 'coords_x1', yName = 'coords_x2', rad = 10000, max_pts = 25)
+#Add information to the original data
+FL_NAD@data = DataTab_Post
+
+#Color function parameters for plotting the heat flow data map
+colPal = colorRampPalette(colors = rev(c('red', 'orange', 'yellow', 'green', 'blue')))
+scaleRange = c(30,80)
+scaleBy = 10
+Pal = colPal((scaleRange[2] - scaleRange[1])/scaleBy + 1)
+
+#With map
+FL_WGS = spTransform(FL_NAD, CRS('+init=epsg:4326'))
+sets = rbind(c(1,2,7,7), c(3,4,7,7), c(5,6,8,8), c(9,9,8,8))
+png("HeatFlowEDA_SplitAll_Map_Log_WellDepthSort_MedDiff_DeepWells_Box_Post.png", width=10, height=10, units="in", res=600)
+layout(sets)
+EDAPlots = function(DataAll, Var, Unit, ymin, ymax){
+  plot(DataAll$WellDepth[which(DataAll$State == "MD")], DataAll@data[Var][,1][which(DataAll$State == "MD")], col = "orange", pch=16, xlim=c(0,7000), ylim=c(ymin,ymax), ylab='', xlab='Depth of BHT (m)', main='Maryland', cex.main=2, cex.axis=1.5, cex.lab=1.5, log = 'y', axes=FALSE)
+  par(tck = -0.03)
+  axis(side = 1, at = seq(0,7000,1000), labels = TRUE, cex.axis = 1.2)
+  axis(side = 2, at = 10^seq(0,4,1), labels=expression("10"^0, "10"^1, "10"^2, "10"^3, "10"^4), cex.axis=1.5, las = 1)
+  par(tck = -0.015)
+  axis(side = 2, at = c(seq(.2,.9,.1),seq(2,9,1),seq(20,90,10),seq(200,900,100), seq(2000,9000,1000)), labels = FALSE)
+  lines(c(1000,1000),c(0.001,2000))
+  lines(c(600,600),c(0.001,2000), lty=2)
+  par(xpd = TRUE)
+  text(x = -2000, y = 5000, expression(bold('A')), cex = 2)
+  par(xpd = FALSE)
+  plot(DataAll$WellDepth[which(DataAll$State == "KY")], DataAll@data[Var][,1][which(DataAll$State == "KY")], col = "purple", pch=16, xlim=c(0,7000), ylim=c(ymin,ymax), ylab='', xlab='Depth of BHT (m)', main='Kentucky', cex.main=2, cex.axis=1.5, cex.lab=1.5, log = 'y', axes=FALSE)
+  par(tck = -0.03)
+  axis(side = 1, at = seq(0,7000,1000), labels = TRUE, cex.axis = 1.2)
+  axis(side = 2, at = 10^seq(0,4,1), labels=expression("10"^0, "10"^1, "10"^2, "10"^3, "10"^4), cex.axis=1.5, las = 1)
+  par(tck = -0.015)
+  axis(side = 2, at = c(seq(.2,.9,.1),seq(2,9,1),seq(20,90,10),seq(200,900,100), seq(2000,9000,1000)), labels = FALSE)
+  lines(c(1000,1000),c(0.001,2000))
+  lines(c(600,600),c(0.001,2000), lty=2)
+  plot(DataAll$WellDepth[which(DataAll$State == "VA")], DataAll@data[Var][,1][which(DataAll$State == "VA")], col = "yellow", pch=16, xlim=c(0,7000), ylim=c(ymin,ymax), ylab=Unit, xlab='Depth of BHT (m)', main='Virginia', cex.main=2, cex.axis=1.5, cex.lab=1.5, log = 'y', axes=FALSE)
+  par(tck = -0.03)
+  axis(side = 1, at = seq(0,7000,1000), labels = TRUE, cex.axis = 1.2)
+  axis(side = 2, at = 10^seq(0,4,1), labels=expression("10"^0, "10"^1, "10"^2, "10"^3, "10"^4), cex.axis=1.5, las = 1)
+  par(tck = -0.015)
+  axis(side = 2, at = c(seq(.2,.9,.1),seq(2,9,1),seq(20,90,10),seq(200,900,100), seq(2000,9000,1000)), labels = FALSE)
+  lines(c(1000,1000),c(0.001,2000))
+  lines(c(600,600),c(0.001,2000), lty=2)
+  plot(DataAll$WellDepth[which(DataAll$State == "WV")], DataAll@data[Var][,1][which(DataAll$State == "WV")], col = "green", pch=16, xlim=c(0,7000), ylim=c(ymin,ymax), ylab='', xlab='Depth of BHT (m)', main='West Virginia', cex.main=2, cex.axis=1.5, cex.lab=1.5, log = 'y', axes=FALSE)
+  par(tck = -0.03)
+  axis(side = 1, at = seq(0,7000,1000), labels = TRUE, cex.axis = 1.2)
+  axis(side = 2, at = 10^seq(0,4,1), labels=expression("10"^0, "10"^1, "10"^2, "10"^3, "10"^4), cex.axis=1.5, las = 1)
+  par(tck = -0.015)
+  axis(side = 2, at = c(seq(.2,.9,.1),seq(2,9,1),seq(20,90,10),seq(200,900,100), seq(2000,9000,1000)), labels = FALSE)
+  lines(c(1000,1000),c(0.001,2000))
+  lines(c(600,600),c(0.001,2000), lty=2)
+  plot(DataAll$WellDepth[which(DataAll$State == "PA")], DataAll@data[Var][,1][which(DataAll$State == "PA")], col = "red", pch=16, xlim=c(0,7000), ylim=c(ymin,ymax), ylab='', xlab='Depth of BHT (m)', main='Pennsylvania', cex.main=2, cex.axis=1.5, cex.lab=1.5, log = 'y', axes=FALSE)
+  par(tck = -0.03)
+  axis(side = 1, at = seq(0,7000,1000), labels = TRUE, cex.axis = 1.2)
+  axis(side = 2, at = 10^seq(0,4,1), labels=expression("10"^0, "10"^1, "10"^2, "10"^3, "10"^4), cex.axis=1.5, las = 1)
+  par(tck = -0.015)
+  axis(side = 2, at = c(seq(.2,.9,.1),seq(2,9,1),seq(20,90,10),seq(200,900,100), seq(2000,9000,1000)), labels = FALSE)
+  lines(c(1000,1000),c(0.001,2000))
+  lines(c(600,600),c(0.001,2000), lty=2)
+  plot(DataAll$WellDepth[which(DataAll$State == "NY")], DataAll@data[Var][,1][which(DataAll$State == "NY")], col = "blue", pch=16, xlim=c(0,7000), ylim=c(ymin,ymax), ylab='', xlab='Depth of BHT (m)', main='New York', cex.main=2, cex.axis=1.5, cex.lab=1.5, log = 'y', axes=FALSE)
+  par(tck = -0.03)
+  axis(side = 1, at = seq(0,7000,1000), labels = TRUE, cex.axis = 1.2)
+  axis(side = 2, at = 10^seq(0,4,1), labels=expression("10"^0, "10"^1, "10"^2, "10"^3, "10"^4), cex.axis=1.5, las = 1)
+  par(tck = -0.015)
+  axis(side = 2, at = c(seq(.2,.9,.1),seq(2,9,1),seq(20,90,10),seq(200,900,100), seq(2000,9000,1000)), labels = FALSE)
+  lines(c(1000,1000),c(0.001,2000))
+  lines(c(600,600),c(0.001,2000), lty=2)
+}
+par(mar=c(4,5.5,3,2), xaxs = 'i', yaxs = 'i')
+EDAPlots(FL_WGS, "Qs", Unit=expression("Surface Heat Flow" ~ (mW/m^2)),.5, 2000)
+par(tck = NA)
+EDAPlotsMed = function(DataAll, Var, Unit, ymin, ymax){
+  plot(DataAll$WellDepth[which(DataAll$State == "NY" & DataAll$RegMed > -9999)], DataAll@data[which(DataAll$State == "NY" & DataAll$RegMed > -9999), Var] - DataAll@data[which(DataAll$State == "NY" & DataAll$RegMed > -9999), 'RegMed'], col = "blue", pch=16, xlim=c(0,7000), ylim=c(ymin,ymax), ylab=Unit, xlab='Depth of BHT (m)', main='Deviation from Local Median Heat Flow', cex.main=2, cex.axis=1.5, cex.lab=1.5, axes = FALSE)
+  par(new=T)
+  plot(DataAll$WellDepth[which(DataAll$State == "WV" & DataAll$RegMed > -9999)], DataAll@data[which(DataAll$State == "WV" & DataAll$RegMed > -9999), Var] - DataAll@data[which(DataAll$State == "WV" & DataAll$RegMed > -9999), 'RegMed'], col = "green", pch=16, xlim=c(0,7000), ylim=c(ymin,ymax), ylab='', xlab='', main='', axes=FALSE)
+  par(new=T)
+  plot(DataAll$WellDepth[which(DataAll$State == "PA" & DataAll$RegMed > -9999)], DataAll@data[which(DataAll$State == "PA" & DataAll$RegMed > -9999), Var] - DataAll@data[which(DataAll$State == "PA" & DataAll$RegMed > -9999), 'RegMed'], col = "red", pch=16, xlim=c(0,7000), ylim=c(ymin,ymax), ylab='', xlab='', main='', axes=FALSE)
+  par(new=T)
+  plot(DataAll$WellDepth[which(DataAll$State == "KY" & DataAll$RegMed > -9999)], DataAll@data[which(DataAll$State == "KY" & DataAll$RegMed > -9999), Var] - DataAll@data[which(DataAll$State == "KY" & DataAll$RegMed > -9999), 'RegMed'], col = "purple", pch=16, xlim=c(0,7000), ylim=c(ymin,ymax), ylab='', xlab='', main='', axes=FALSE)
+  par(new=T)
+  plot(DataAll$WellDepth[which(DataAll$State == "VA" & DataAll$RegMed > -9999)], DataAll@data[which(DataAll$State == "VA" & DataAll$RegMed > -9999), Var] - DataAll@data[which(DataAll$State == "VA" & DataAll$RegMed > -9999), 'RegMed'], col = "yellow", pch=16, xlim=c(0,7000), ylim=c(ymin,ymax), ylab='', xlab='', main='', axes=FALSE)
+  par(new=T)
+  plot(DataAll$WellDepth[which(DataAll$State == "MD" & DataAll$RegMed > -9999)], DataAll@data[which(DataAll$State == "MD" & DataAll$RegMed > -9999), Var] - DataAll@data[which(DataAll$State == "MD" & DataAll$RegMed > -9999), 'RegMed'], col = "orange", pch=16, xlim=c(0,7000), ylim=c(ymin,ymax), ylab='', xlab='', main='', axes=FALSE)
+}
+EDAPlotsMed(FL_WGS, "Qs", Unit=expression(paste("Site Q"['s'], " - Local Median Q"['s'], " (mW/m"^2, ")")),-100, 100)
+axis(side = 1, at = seq(0,7000,1000), labels = TRUE, cex.axis = 1.5)
+axis(side = 2, at = seq(-200,1300,50), labels=TRUE, cex.axis=1.5)
+minor.tick(nx = 5, ny = 1)
+lines(c(-100,10000), c(0,0))
+legend('topright', legend=c("New York", "Pennsylvania", "West Virginia", "Kentucky", "Maryland", "Virginia"), pch=16, col=c("blue", "red", "green", "purple","orange","yellow"), cex=2)
+box(which = 'figure', lwd = 2)
+par(xpd = TRUE)
+text(x = -800, y = 625, expression(bold('C')), cex = 2)
+par(xpd = FALSE)
+par(mar = c(2,2.5,1.2,1), xaxs = 'i', yaxs = 'i')
+plot(FL_WGS, pch = 16, col = "white", cex = 0.2)
+plot(NY, lwd = 2, add=TRUE)
+plot(PA, lwd = 2, add=TRUE)
+plot(WV, lwd = 2, add=TRUE)
+plot(MD, lwd = 2, add=TRUE)
+plot(KY, lwd = 2, add=TRUE)
+plot(VA, lwd = 2, add=TRUE)
+plot(Counties[which(Counties$STATEFP == 42 | Counties$STATEFP == 36 | Counties$STATEFP == 54 | Counties$STATEFP == 51| Counties$STATEFP == 24| Counties$STATEFP == 21),], add=TRUE)
+plot(FL_WGS[order(FL_WGS$WellDepth, decreasing = FALSE),], pch = 16, col = colFun(FL_WGS$Qs[order(FL_WGS$WellDepth, decreasing = FALSE)]), cex = 0.3, add = TRUE)
+north.arrow(-75, 37.5, 0.1, lab = 'N', col='black', cex = 1.5)
+degAxis(side = 2, seq(34, 46, 2), cex.axis = 1.5)
+degAxis(side = 2, seq(34, 46, 1), labels = FALSE)
+degAxis(side = 4, seq(34, 46, 1), labels = FALSE)
+degAxis(side = 1, seq(-70, -86, -2), cex.axis = 1.5)
+degAxis(side = 3, seq(-70, -86, -1), labels = FALSE)
+degAxis(side = 1, seq(-70, -86, -1), labels = FALSE)
+legend('topleft', title = expression(paste('Q'['s'], ' (mW/m'^2,')' )), legend = c('<40', '40 - 50', '50 - 60', '60 - 70', '70 - 80', '>80'), pch = 16, cex = 1.8, col = colFun(c(30, 45, 55, 65, 75, 90)))
+box(which = 'figure', lwd = 2)
+par(xpd = TRUE)
+text(x = -83.5, y = 43.5, expression(bold('D')), cex = 2)
+par(mar=c(4,5.5,3,2), xpd = FALSE)
+hist(FL_WGS$Qs, breaks = seq(0, 1500, 5), freq = TRUE, xlim = c(0,120), ylim = c(0,4000), xlab = expression(paste('Surface Heat Flow (mW/m'^2,')')), cex.lab = 1.5, cex.axis = 1.5, main = 'Histogram of All Data', cex.main = 2)
+box(which = 'figure', lwd = 2)
+par(xpd = TRUE)
+text(x = -15, y = 5500, expression(bold('B')), cex = 2)
+dev.off()
+
+#  Post analysis of variograms in each geologic region pre and post
+#Transform to NAD UTM17N
+CT = spTransform(CT, CRS('+init=epsg:26917'))
+CNY = spTransform(CNY, CRS('+init=epsg:26917'))
+CWV = spTransform(CWV, CRS('+init=epsg:26917'))
+ENY = spTransform(ENY, CRS('+init=epsg:26917'))
+ENYPA = spTransform(ENYPA, CRS('+init=epsg:26917'))
+MT = spTransform(MT, CRS('+init=epsg:26917'))
+NWPANY = spTransform(NWPANY, CRS('+init=epsg:26917'))
+SWPA = spTransform(SWPA, CRS('+init=epsg:26917'))
+WPA = spTransform(WPA, CRS('+init=epsg:26917'))
+VR = spTransform(VR, CRS('+init=epsg:26917'))
+FL = spTransform(FL, CRS('+init=epsg:26917'))
+
+#Using oringal dataset for points without negative gradients, and no points in same spatial location
+PreCT = spTransform(WellsSort[InterpRegs[InterpRegs$Name == 'CT',],], CRS('+init=epsg:26917'))
+PreCNY = spTransform(WellsSort[InterpRegs[InterpRegs$Name == 'CNY',],], CRS('+init=epsg:26917'))
+PreCWV = spTransform(WellsSort[CWV_Bounded,], CRS('+init=epsg:26917'))
+PreENY = spTransform(WellsSort[InterpRegs[InterpRegs$Name == 'ENY',],], CRS('+init=epsg:26917'))
+PreENYPA = spTransform(WellsSort[InterpRegs[InterpRegs$Name == 'ENYPA',],], CRS('+init=epsg:26917'))
+PreMT = spTransform(WellsSort[MT_Bounded,], CRS('+init=epsg:26917'))
+PreNWPANY = spTransform(WellsSort[InterpRegs[InterpRegs$Name == 'NWPANY',],], CRS('+init=epsg:26917'))
+PreSWPA = spTransform(WellsSort[InterpRegs[InterpRegs$Name == 'SWPA',],], CRS('+init=epsg:26917'))
+PreWPA = spTransform(WellsSort[InterpRegs[InterpRegs$Name == 'WPA',],], CRS('+init=epsg:26917'))
+PreVR = spTransform(WellsSort[VR_Bounded,], CRS('+init=epsg:26917'))
+PreFL = rbind(PreCT, PreCWV, PreCNY, PreENY, PreENYPA, PreMT, PreNWPANY, PreSWPA, PreWPA, PreVR)
+
+#Using oringal dataset for points without negative gradients, and no points in same spatial location
+DeepCT = spTransform(WellsDeepWGS[InterpRegs[InterpRegs$Name == 'CT',],], CRS('+init=epsg:26917'))
+DeepCNY = spTransform(WellsDeepWGS[InterpRegs[InterpRegs$Name == 'CNY',],], CRS('+init=epsg:26917'))
+DeepCWV = spTransform(WellsDeepWGS[CWV_Bounded,], CRS('+init=epsg:26917'))
+DeepENY = spTransform(WellsDeepWGS[InterpRegs[InterpRegs$Name == 'ENY',],], CRS('+init=epsg:26917'))
+DeepENYPA = spTransform(WellsDeepWGS[InterpRegs[InterpRegs$Name == 'ENYPA',],], CRS('+init=epsg:26917'))
+DeepMT = spTransform(WellsDeepWGS[MT_Bounded,], CRS('+init=epsg:26917'))
+DeepNWPANY = spTransform(WellsDeepWGS[InterpRegs[InterpRegs$Name == 'NWPANY',],], CRS('+init=epsg:26917'))
+DeepSWPA = spTransform(WellsDeepWGS[InterpRegs[InterpRegs$Name == 'SWPA',],], CRS('+init=epsg:26917'))
+DeepWPA = spTransform(WellsDeepWGS[InterpRegs[InterpRegs$Name == 'WPA',],], CRS('+init=epsg:26917'))
+DeepVR = spTransform(WellsDeepWGS[VR_Bounded,], CRS('+init=epsg:26917'))
+DeepFL = rbind(DeepCT, DeepCWV, DeepCNY, DeepENY, DeepENYPA, DeepMT, DeepNWPANY, DeepSWPA, DeepWPA, DeepVR)
+
+#Compute variograms - All data, Data deeper than 1 km, Data that have been fully proessed. Plot all on same plot
+v.CT <- variogram(Qs~1, CT, cutoff=60000, width=60000/150) 
+v.CNY <- variogram(Qs~1, CNY, cutoff=60000, width=60000/10) 
+v.CWV <- variogram(Qs~1, CWV, cutoff=60000, width=60000/350)
+v.ENY <- variogram(Qs~1, ENY, cutoff=60000, width=60000/10)
+v.ENYPA <- variogram(Qs~1, ENYPA, cutoff=40000, width=40000/120)
+v.MT <- variogram(Qs~1, MT, cutoff=40000, width=40000/200)
+v.NWPANY <- variogram(Qs~1, NWPANY, cutoff=60000, width=60000/20) 
+v.SWPA <- variogram(Qs~1, SWPA, cutoff=60000, width=60000/200) 
+v.WPA <- variogram(Qs~1, WPA, cutoff=60000, width=60000/50) 
+v.VR <- variogram(Qs~1, VR, cutoff=60000, width=60000/50) 
+v.FL <- variogram(Qs~1, FL, cutoff=60000, width=60000/200)
+
+v.PreCT <- variogram(Qs~1, PreCT, cutoff=60000, width=60000/150) 
+v.PreCNY <- variogram(Qs~1, PreCNY, cutoff=60000, width=60000/10) 
+v.PreCWV <- variogram(Qs~1, PreCWV, cutoff=60000, width=60000/350)
+v.PreENY <- variogram(Qs~1, PreENY, cutoff=60000, width=60000/10)
+v.PreENYPA <- variogram(Qs~1, PreENYPA, cutoff=40000, width=40000/120)
+v.PreMT <- variogram(Qs~1, PreMT, cutoff=40000, width=40000/200)
+v.PreNWPANY <- variogram(Qs~1, PreNWPANY, cutoff=60000, width=60000/20) 
+v.PreSWPA <- variogram(Qs~1, PreSWPA, cutoff=60000, width=60000/200) 
+v.PreWPA <- variogram(Qs~1, PreWPA, cutoff=60000, width=60000/50) 
+v.PreVR <- variogram(Qs~1, PreVR, cutoff=60000, width=60000/50) 
+v.PreFL <- variogram(Qs~1, PreFL, cutoff=60000, width=60000/200)
+
+v.DeepCT <- variogram(Qs~1, DeepCT, cutoff=60000, width=60000/150) 
+v.DeepCNY <- variogram(Qs~1, DeepCNY, cutoff=60000, width=60000/10) 
+v.DeepCWV <- variogram(Qs~1, DeepCWV, cutoff=60000, width=60000/350)
+v.DeepENY <- variogram(Qs~1, DeepENY, cutoff=60000, width=60000/10)
+v.DeepENYPA <- variogram(Qs~1, DeepENYPA, cutoff=40000, width=40000/120)
+v.DeepMT <- variogram(Qs~1, DeepMT, cutoff=40000, width=40000/200)
+v.DeepNWPANY <- variogram(Qs~1, DeepNWPANY, cutoff=60000, width=60000/20) 
+v.DeepSWPA <- variogram(Qs~1, DeepSWPA, cutoff=60000, width=60000/200) 
+v.DeepWPA <- variogram(Qs~1, DeepWPA, cutoff=60000, width=60000/50) 
+v.DeepVR <- variogram(Qs~1, DeepVR, cutoff=60000, width=60000/50) 
+v.DeepFL <- variogram(Qs~1, DeepFL, cutoff=60000, width=60000/200)
+
+p1 = plot(v.CT, plot.numbers=F, ylab=expression(Semivariance ~ (mW/m^2)^2), main="Chautauqua, NY", xlab = 'Separation Distance (m)', pch = 16, ylim = c(0,50), col = 'red', xlim = c(0,60000), cex=0.5)
+p2 = plot(v.CNY,plot.numbers=F, ylab=expression(Semivariance ~ (mW/m^2)^2), main="Central NY", xlab = 'Separation Distance (m)', pch = 16, ylim = c(0,1500), col = 'red', xlim = c(0,60000), cex=0.5)
+p9 = plot(v.CWV, plot.numbers=F, ylab=expression(Semivariance ~ (mW/m^2)^2), main="Central WV", xlab = 'Separation Distance (m)', pch = 16, col = 'red', ylim = c(0,1200), xlim = c(0,60000), cex=0.5)
+p3 = plot(v.ENY, plot.numbers=F, ylab=expression(Semivariance ~ (mW/m^2)^2), main="Eastern NY", xlab = 'Separation Distance (m)', pch = 16, col = 'red', ylim = c(0,1500), xlim = c(0,60000), cex=0.5)
+p4 = plot(v.ENYPA, plot.numbers=F, ylab=expression(Semivariance ~ (mW/m^2)^2), main="Eastern NY & PA", xlab = 'Separation Distance (m)', pch = 16, col = 'red', xlim = c(0,60000), ylim = c(0,400), cex=0.5)
+p8 = plot(v.MT, plot.numbers=F, ylab=expression(Semivariance ~ (mW/m^2)^2), main="Western WV", xlab = 'Separation Distance (m)', pch = 16, col = 'red', xlim = c(0,60000), ylim = c(0,700), cex=0.5)
+p5 = plot(v.NWPANY, plot.numbers=F, ylab=expression(Semivariance ~ (mW/m^2)^2), main="Northwestern PA & NY", xlab = 'Separation Distance (m)', pch = 16, col = 'red', xlim = c(0,60000), ylim = c(0,500), cex=0.5)
+p6 = plot(v.SWPA, plot.numbers=F, ylab=expression(Semivariance ~ (mW/m^2)^2), main="Southwestern PA", xlab = 'Separation Distance (m)', pch = 16, col = 'red', xlim = c(0,60000), ylim = c(0,850), cex=0.5)
+p6z = plot(v.SWPA, plot.numbers=F, ylab=expression(Semivariance ~ (mW/m^2)^2), main="Southwestern PA Zoom", xlab = 'Separation Distance (m)', pch = 16, col = 'red', xlim = c(0,60000), ylim = c(0,60), cex=0.5)
+p10 = plot(v.VR, plot.numbers=F, ylab=expression(Semivariance ~ (mW/m^2)^2), main="Valley and Ridge", xlab = 'Separation Distance (m)', pch = 16, col = 'red', xlim = c(0,60000), ylim = c(0,11000), cex=0.5)
+p10z = plot(v.VR, plot.numbers=F, ylab=expression(Semivariance ~ (mW/m^2)^2), main="Valley and Ridge Zoom", xlab = 'Separation Distance (m)', pch = 16, col = 'red', xlim = c(0,60000), ylim = c(0,300), cex=0.5)
+p7 = plot(v.WPA, plot.numbers=F, ylab=expression(Semivariance ~ (mW/m^2)^2), main="Western PA", xlab = 'Separation Distance (m)', pch = 16, col = 'red', xlim = c(0,60000), ylim = c(0,700), cex=0.5)
+p7z = plot(v.WPA, plot.numbers=F, ylab=expression(Semivariance ~ (mW/m^2)^2), main="Western PA Zoom", xlab = 'Separation Distance (m)', pch = 16, col = 'red', xlim = c(0,60000), ylim = c(0,50), cex=0.5)
+p11 = plot(v.FL, plot.numbers=F, ylab=expression(Semivariance ~ (mW/m^2)^2), main="Full Region", xlab = 'Separation Distance (m)', pch = 16, col = 'red', xlim = c(0,60000), ylim = c(0,1000), cex=0.5)
+
+p1p = plot(v.PreCT, plot.numbers=F, ylab=expression(Semivariance ~ (mW/m^2)^2), main="Chautauqua, NY", xlab = 'Separation Distance (m)', pch = 16, ylim = c(0,50), col = 'black', xlim = c(0,60000), cex=0.5)
+p2p = plot(v.PreCNY,plot.numbers=F, ylab=expression(Semivariance ~ (mW/m^2)^2), main="Central NY", xlab = 'Separation Distance (m)', pch = 16, col = 'black', ylim = c(0,1500), xlim = c(0,60000), cex=0.5)
+p9p = plot(v.PreCWV, plot.numbers=F, ylab=expression(Semivariance ~ (mW/m^2)^2), main="Central WV", xlab = 'Separation Distance (m)', pch = 16, col = 'black', ylim = c(0,1200), xlim = c(0,60000), cex=0.5)
+p3p = plot(v.PreENY, plot.numbers=F, ylab=expression(Semivariance ~ (mW/m^2)^2), main="Eastern NY", xlab = 'Separation Distance (m)', pch = 16, col = 'black', ylim = c(0,1500), xlim = c(0,60000), cex=0.5)
+p4p = plot(v.PreENYPA, plot.numbers=F, ylab=expression(Semivariance ~ (mW/m^2)^2), main="Eastern NY & PA", xlab = 'Separation Distance (m)', pch = 16, col = 'black', xlim = c(0,60000), ylim = c(0,400), cex=0.5)
+p8p = plot(v.PreMT, plot.numbers=F, ylab=expression(Semivariance ~ (mW/m^2)^2), main="Western WV", xlab = 'Separation Distance (m)', pch = 16, col = 'black', xlim = c(0,60000), ylim = c(0,700), cex=0.5)
+p5p = plot(v.PreNWPANY, plot.numbers=F, ylab=expression(Semivariance ~ (mW/m^2)^2), main="Northwestern PA & NY", xlab = 'Separation Distance (m)', pch = 16, col = 'black', xlim = c(0,60000), ylim = c(0,500), cex=0.5)
+p6p = plot(v.PreSWPA, plot.numbers=F, ylab=expression(Semivariance ~ (mW/m^2)^2), main="Southwestern PA", xlab = 'Separation Distance (m)', pch = 16, col = 'black', xlim = c(0,60000), ylim = c(0,850), cex=0.5)
+p10p = plot(v.PreVR, plot.numbers=F, ylab=expression(Semivariance ~ (mW/m^2)^2), main="Valley and Ridge", xlab = 'Separation Distance (m)', pch = 16, col = 'black', xlim = c(0,60000), ylim = c(0,11000), cex=0.5)
+p7p = plot(v.PreWPA, plot.numbers=F, ylab=expression(Semivariance ~ (mW/m^2)^2), main="Western PA", xlab = 'Separation Distance (m)', pch = 16, col = 'black', xlim = c(0,60000), ylim = c(0,700), cex=0.5)
+p11p = plot(v.PreFL, plot.numbers=F, ylab=expression(Semivariance ~ (mW/m^2)^2), main="Full Region", xlab = 'Separation Distance (m)', pch = 16, col = 'black', xlim = c(0,60000), ylim = c(0,1000), cex=0.5)
+
+p1d = plot(v.DeepCT, plot.numbers=F, ylab=expression(Semivariance ~ (mW/m^2)^2), main="Chautauqua, NY", xlab = 'Separation Distance (m)', pch = 16, ylim = c(0,50), col = 'blue', xlim = c(0,60000), cex=0.5)
+p2d = plot(v.DeepCNY,plot.numbers=F, ylab=expression(Semivariance ~ (mW/m^2)^2), main="Central NY", xlab = 'Separation Distance (m)', pch = 16, col = 'blue', ylim = c(0,1500), xlim = c(0,60000), cex=0.5)
+p9d = plot(v.DeepCWV, plot.numbers=F, ylab=expression(Semivariance ~ (mW/m^2)^2), main="Central WV", xlab = 'Separation Distance (m)', pch = 16, col = 'blue', ylim = c(0,1200), xlim = c(0,60000), cex=0.5)
+p3d = plot(v.DeepENY, plot.numbers=F, ylab=expression(Semivariance ~ (mW/m^2)^2), main="Eastern NY", xlab = 'Separation Distance (m)', pch = 16, col = 'blue', ylim = c(0,1500), xlim = c(0,60000), cex=0.5)
+p4d = plot(v.DeepENYPA, plot.numbers=F, ylab=expression(Semivariance ~ (mW/m^2)^2), main="Eastern NY & PA", xlab = 'Separation Distance (m)', pch = 16, col = 'blue', xlim = c(0,60000), ylim = c(0,400), cex=0.5)
+p8d = plot(v.DeepMT, plot.numbers=F, ylab=expression(Semivariance ~ (mW/m^2)^2), main="Western WV", xlab = 'Separation Distance (m)', pch = 16, col = 'blue', xlim = c(0,60000), ylim = c(0,700), cex=0.5)
+p5d = plot(v.DeepNWPANY, plot.numbers=F, ylab=expression(Semivariance ~ (mW/m^2)^2), main="Northwestern PA & NY", xlab = 'Separation Distance (m)', pch = 16, col = 'blue', xlim = c(0,60000), ylim = c(0,500), cex=0.5)
+p6d = plot(v.DeepSWPA, plot.numbers=F, ylab=expression(Semivariance ~ (mW/m^2)^2), main="Southwestern PA", xlab = 'Separation Distance (m)', pch = 16, col = 'blue', xlim = c(0,60000), ylim = c(0,850), cex=0.5)
+p6dz = plot(v.DeepSWPA, plot.numbers=F, ylab=expression(Semivariance ~ (mW/m^2)^2), main="Southwestern PA Zoom", xlab = 'Separation Distance (m)', pch = 16, col = 'blue', xlim = c(0,60000), ylim = c(0,60), cex=0.5)
+p10d = plot(v.DeepVR, plot.numbers=F, ylab=expression(Semivariance ~ (mW/m^2)^2), main="Valley and Ridge", xlab = 'Separation Distance (m)', pch = 16, col = 'blue', xlim = c(0,60000), ylim = c(0,11000), cex=0.5)
+p10dz = plot(v.DeepVR, plot.numbers=F, ylab=expression(Semivariance ~ (mW/m^2)^2), main="Valley and Ridge Zoom", xlab = 'Separation Distance (m)', pch = 16, col = 'blue', xlim = c(0,60000), ylim = c(0,300), cex=0.5)
+p7d = plot(v.DeepWPA, plot.numbers=F, ylab=expression(Semivariance ~ (mW/m^2)^2), main="Western PA", xlab = 'Separation Distance (m)', pch = 16, col = 'blue', xlim = c(0,60000), ylim = c(0,700), cex=0.5)
+p7dz = plot(v.DeepWPA, plot.numbers=F, ylab=expression(Semivariance ~ (mW/m^2)^2), main="Western PA Zoom", xlab = 'Separation Distance (m)', pch = 16, col = 'blue', xlim = c(0,60000), ylim = c(0,50), cex=0.5)
+p11d = plot(v.DeepFL, plot.numbers=F, ylab=expression(Semivariance ~ (mW/m^2)^2), main="Full Region", xlab = 'Separation Distance (m)', pch = 16, col = 'blue', xlim = c(0,60000), ylim = c(0,1000), cex=0.5)
+
+
+png("Variograms_UniqueYAxis_CompareESDA.png", width=13, height=10, units="in", res=300)
+plot(p1p, split=c(1,1,4,3), more=T)
+plot(p1d, split=c(1,1,4,3), more=T)
+plot(p1, split = c(1,1,4,3), more=T)
+
+plot(p2p, split=c(4,1,4,3), more=T)
+plot(p2d, split=c(4,1,4,3), more=T)
+plot(p2, split = c(4,1,4,3), more=T)
+
+plot(p3p, split=c(1,2,4,3), more=T)
+plot(p3d, split=c(1,2,4,3), more=T)
+plot(p3, split = c(1,2,4,3), more=T)
+
+plot(p4p, split=c(2,2,4,3), more=T)
+plot(p4d, split=c(2,2,4,3), more=T)
+plot(p4, split = c(2,2,4,3), more=T)
+
+plot(p5p, split=c(3,1,4,3), more=T)
+plot(p5d, split=c(3,1,4,3), more=T)
+plot(p5, split = c(3,1,4,3), more=T)
+
+plot(p6p, split=c(3,2,4,3), more=T)
+plot(p6d, split=c(3,2,4,3), more=T)
+plot(p6, split = c(3,2,4,3), more=T)
+
+plot(p7p, split=c(2,1,4,3), more=T)
+plot(p7d, split=c(2,1,4,3), more=T)
+plot(p7, split = c(2,1,4,3), more=T)
+
+plot(p8p, split=c(1,3,4,3), more=T)
+plot(p8d, split=c(1,3,4,3), more=T)
+plot(p8, split = c(1,3,4,3), more=T)
+
+plot(p9p, split=c(4,2,4,3), more=T)
+plot(p9d, split=c(4,2,4,3), more=T)
+plot(p9, split = c(4,2,4,3), more=T)
+
+plot(p10p, split=c(2,3,4,3), more=T)
+plot(p10d, split=c(2,3,4,3), more=T)
+plot(p10, split = c(2,3,4,3), more=T)
+
+plot(p6dz, split=c(3,3,4,3), more=T)
+plot(p6z, split = c(3,3,4,3), more=T)
+
+plot(p7dz, split=c(4,3,4,3), more=T)
+plot(p7z, split = c(4,3,4,3), more=F)
+
 dev.off()
