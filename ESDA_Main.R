@@ -36,6 +36,22 @@ Wells = read.csv('EDAWells_AllTempsThicksConds_BaseCorr_2018.csv', stringsAsFact
 coordinates(Wells) = c('LongDgr', 'LatDegr')
 proj4string(Wells) = CRS("+init=epsg:4326")
 
+#Operator data from original spreadsheet
+Operator = read.csv('Operators.csv', stringsAsFactors = FALSE)
+#Waco operator APIs
+Wacos = read.csv('WacoOperator.csv', stringsAsFactors = FALSE)
+#WV APIs to match the Waco data
+APIWV = read.csv('WV_APIs.csv', stringsAsFactors = FALSE)
+
+#Get the state ID for each API and place in Waco
+Wacos$StateID = ''
+APIWV$APInum = as.numeric(strsplit(APIWV$API, split = '0000a', fixed = TRUE))
+for (i in 1:nrow(Wacos)){
+  if (length(which(APIWV$APInum == Wacos$API[i])) > 0){
+    Wacos$StateID[i] = APIWV$StateID[APIWV$APInum == Wacos$API[i]]
+  }
+}
+
 #Spicer equilibrium well temperature profiles
 setwd('C:\\Users\\jsmif\\Documents\\Cornell\\Research\\Publications\\ESDA')
 Spicer = read_xlsx(path = paste0(getwd(), '/EquilibriumTempProfiles.xlsx'), sheet = 'Spicers')
@@ -458,7 +474,6 @@ hist(Diff, breaks = 300)
 #  Nugget Effect for wells in the same spatial location ----
 
 #Fixme: Add nugget for equilibrium wells. 
-#Fixme: Should this analysis use all wells, or only deep wells? Currently on all wells. Would need to move after well depth cutoff to do deep wells.
 
 #Compute the Nugget Effect for points in the same spatial location.
 #Make a data frame to store the locations, average nugget, number of nuggets calculated, min, max, and sd of the nugget
@@ -2046,6 +2061,8 @@ qqnorm(FL@data$Qs, cex.axis=1.5, cex.lab=1.5, main='Full Region', ylab=expressio
 qqline(FL@data$Qs)
 
 
+#  Fixme: Post analysis of spatial correlation of outlier depth ranks----
+
 #  Post analysis of local median deviation----
 FL_NAD = spTransform(FL, CRSobj = CRS('+init=epsg:26917'))
 DataTab_Post = QsDev(Data = FL_NAD@data, Var = 'Qs', xName = 'coords_x1', yName = 'coords_x2', rad = 10000, max_pts = 25)
@@ -2170,7 +2187,7 @@ par(xpd = TRUE)
 text(x = -15, y = 5500, expression(bold('B')), cex = 2)
 dev.off()
 
-#  Post analysis of variograms in each geologic region pre and post
+#  Post analysis of variograms in each geologic region pre and post----
 #Transform to NAD UTM17N
 CT = spTransform(CT, CRS('+init=epsg:26917'))
 CNY = spTransform(CNY, CRS('+init=epsg:26917'))
@@ -2211,40 +2228,44 @@ DeepVR = spTransform(WellsDeepWGS[VR_Bounded,], CRS('+init=epsg:26917'))
 DeepFL = rbind(DeepCT, DeepCWV, DeepCNY, DeepENY, DeepENYPA, DeepMT, DeepNWPANY, DeepSWPA, DeepWPA, DeepVR)
 
 #Compute variograms - All data, Data deeper than 1 km, Data that have been fully proessed. Plot all on same plot
-v.CT <- variogram(Qs~1, CT, cutoff=60000, width=60000/150) 
-v.CNY <- variogram(Qs~1, CNY, cutoff=60000, width=60000/10) 
-v.CWV <- variogram(Qs~1, CWV, cutoff=60000, width=60000/350)
-v.ENY <- variogram(Qs~1, ENY, cutoff=60000, width=60000/10)
-v.ENYPA <- variogram(Qs~1, ENYPA, cutoff=40000, width=40000/120)
-v.MT <- variogram(Qs~1, MT, cutoff=40000, width=40000/200)
+#Use universal with Basement Depth for CT and WPA. Out to 30 km, not necessary to use universal for WPA.
+#MT, CNY, SWPA do not need universal. NWPANY pobably not
+#ENY universal with Basement Depth and COSUNA_ID. COSUNA is indicative of issues with local strat columns
+#ENYPA with coordinates and Basement depth
+v.CT <- variogram(Qs~1, CT, cutoff=60000, width=60000/50)
+v.CNY <- variogram(Qs~1, CNY, cutoff=60000, width=60000/15)
+v.CWV <- variogram(Qs~1, CWV, cutoff=60000, width=60000/50)
+v.ENY <- variogram(Qs~1, ENY, cutoff=60000, width=60000/15)
+v.ENYPA <- variogram(Qs~1, ENYPA, cutoff=60000, width=60000/40)
+v.MT <- variogram(Qs~1, MT, cutoff=60000, width=60000/50)
 v.NWPANY <- variogram(Qs~1, NWPANY, cutoff=60000, width=60000/20) 
-v.SWPA <- variogram(Qs~1, SWPA, cutoff=60000, width=60000/200) 
+v.SWPA <- variogram(Qs~1, SWPA, cutoff=60000, width=60000/50) 
 v.WPA <- variogram(Qs~1, WPA, cutoff=60000, width=60000/50) 
-v.VR <- variogram(Qs~1, VR, cutoff=60000, width=60000/50) 
+v.VR <- variogram(Qs~1, VR, cutoff=60000, width=60000/20) 
 v.FL <- variogram(Qs~1, FL, cutoff=60000, width=60000/200)
 
-v.PreCT <- variogram(Qs~1, PreCT, cutoff=60000, width=60000/150) 
-v.PreCNY <- variogram(Qs~1, PreCNY, cutoff=60000, width=60000/10) 
-v.PreCWV <- variogram(Qs~1, PreCWV, cutoff=60000, width=60000/350)
-v.PreENY <- variogram(Qs~1, PreENY, cutoff=60000, width=60000/10)
-v.PreENYPA <- variogram(Qs~1, PreENYPA, cutoff=40000, width=40000/120)
-v.PreMT <- variogram(Qs~1, PreMT, cutoff=40000, width=40000/200)
+v.PreCT <- variogram(Qs~1, PreCT, cutoff=60000, width=60000/50) 
+v.PreCNY <- variogram(Qs~1, PreCNY, cutoff=60000, width=60000/15) 
+v.PreCWV <- variogram(Qs~1, PreCWV, cutoff=60000, width=60000/50)
+v.PreENY <- variogram(Qs~1, PreENY, cutoff=60000, width=60000/15)
+v.PreENYPA <- variogram(Qs~1, PreENYPA, cutoff=60000, width=60000/40)
+v.PreMT <- variogram(Qs~1, PreMT, cutoff=60000, width=60000/50)
 v.PreNWPANY <- variogram(Qs~1, PreNWPANY, cutoff=60000, width=60000/20) 
-v.PreSWPA <- variogram(Qs~1, PreSWPA, cutoff=60000, width=60000/200) 
+v.PreSWPA <- variogram(Qs~1, PreSWPA, cutoff=60000, width=60000/50) 
 v.PreWPA <- variogram(Qs~1, PreWPA, cutoff=60000, width=60000/50) 
-v.PreVR <- variogram(Qs~1, PreVR, cutoff=60000, width=60000/50) 
+v.PreVR <- variogram(Qs~1, PreVR, cutoff=60000, width=60000/20) 
 v.PreFL <- variogram(Qs~1, PreFL, cutoff=60000, width=60000/200)
 
-v.DeepCT <- variogram(Qs~1, DeepCT, cutoff=60000, width=60000/150) 
-v.DeepCNY <- variogram(Qs~1, DeepCNY, cutoff=60000, width=60000/10) 
-v.DeepCWV <- variogram(Qs~1, DeepCWV, cutoff=60000, width=60000/350)
-v.DeepENY <- variogram(Qs~1, DeepENY, cutoff=60000, width=60000/10)
-v.DeepENYPA <- variogram(Qs~1, DeepENYPA, cutoff=40000, width=40000/120)
-v.DeepMT <- variogram(Qs~1, DeepMT, cutoff=40000, width=40000/200)
+v.DeepCT <- variogram(Qs~1, DeepCT, cutoff=60000, width=60000/50) 
+v.DeepCNY <- variogram(Qs~1, DeepCNY, cutoff=60000, width=60000/15) 
+v.DeepCWV <- variogram(Qs~1, DeepCWV, cutoff=60000, width=60000/50)
+v.DeepENY <- variogram(Qs~1, DeepENY, cutoff=60000, width=60000/15)
+v.DeepENYPA <- variogram(Qs~1, DeepENYPA, cutoff=60000, width=60000/40)
+v.DeepMT <- variogram(Qs~1, DeepMT, cutoff=60000, width=60000/50)
 v.DeepNWPANY <- variogram(Qs~1, DeepNWPANY, cutoff=60000, width=60000/20) 
-v.DeepSWPA <- variogram(Qs~1, DeepSWPA, cutoff=60000, width=60000/200) 
+v.DeepSWPA <- variogram(Qs~1, DeepSWPA, cutoff=60000, width=60000/50) 
 v.DeepWPA <- variogram(Qs~1, DeepWPA, cutoff=60000, width=60000/50) 
-v.DeepVR <- variogram(Qs~1, DeepVR, cutoff=60000, width=60000/50) 
+v.DeepVR <- variogram(Qs~1, DeepVR, cutoff=60000, width=60000/20) 
 v.DeepFL <- variogram(Qs~1, DeepFL, cutoff=60000, width=60000/200)
 
 p1 = plot(v.CT, plot.numbers=F, ylab=expression(Semivariance ~ (mW/m^2)^2), main="Chautauqua, NY", xlab = 'Separation Distance (m)', pch = 16, ylim = c(0,50), col = 'red', xlim = c(0,60000), cex=0.5)
@@ -2338,3 +2359,69 @@ plot(p7dz, split=c(4,3,4,3), more=T)
 plot(p7z, split = c(4,3,4,3), more=F)
 
 dev.off()
+
+#  Operator data----
+#Wow! This region becomes manageable with its variogram by removing these points
+#Add operators and Waco drilled wells to the dataset
+MT@data$Operator = ''
+MT@data$Waco = 0
+for (i in 1:nrow(MT)){
+  MT@data$Operator[i] = Operator$Operator[Operator$StateID == MT@data$StateID[i]]
+  if (length(which(MT$StateID[i] %in% Wacos$StateID)) > 0){
+    MT@data$Waco[i] = 1
+  }
+}
+MT$Waco[MT$StateID == 'WV1336'] = 1
+rm(i)
+
+CWV@data$Operator = ''
+CWV@data$Waco = 0
+for (i in 1:nrow(CWV)){
+  CWV@data$Operator[i] = Operator$Operator[Operator$StateID == CWV@data$StateID[i]]
+  if (length(which(CWV$StateID[i] %in% Wacos$StateID)) > 0){
+    CWV@data$Waco[i] = 1
+  }
+}
+rm(i)
+
+
+#Map - the region with these wells still has data.
+plot(MT, pch = 16, cex = 0.1)
+plot(MT[-which(MT$Operator == 'Waco Oil & Gas Co., Inc.'),], col = 'red', add = T, pch = 16, cex = 0.2 )
+plot(MT[-which(MT$Waco == 1),], col = 'purple', add = T, pch = 16, cex = 0.2 )
+
+#Variogram cloud for Western West Virgiia region
+plot(variogram(Qs~1, MT[-which(MT$Operator == 'Waco Oil & Gas Co., Inc.'),], cutoff=60000, cloud = TRUE))
+plot(variogram(Qs~1, MT[-which(MT$Waco == 1),], cutoff=60000, cloud = TRUE))
+
+test = plot(variogram(Qs~1, MT[-which(MT$Operator == 'Waco Oil & Gas Co., Inc.'),], cutoff=60000, cloud = TRUE), digitize = TRUE)
+
+test = plot(variogram(Qs~1, MT[-which(MT$Operator == 'Waco Oil & Gas Co., Inc.'),][-248,][-246,][-245,], cutoff=60000, cloud = TRUE), digitize = TRUE)
+hist(c(test$head, test$tail), breaks = 100000)
+mode(c(test$head, test$tail))
+251
+MT[-which(MT$Operator == 'Waco Oil & Gas Co., Inc.'),][-248,][-246,][-245,][251,]
+
+p8 = plot(variogram(Qs~1, MT, cutoff=30000, width=30000/70), plot.numbers=F, ylab=expression(Semivariance ~ (mW/m^2)^2), main="Western WV", xlab = 'Separation Distance (m)', pch = 16, col = 'red', cex=0.5)
+plot(p8)
+p8 = plot(variogram(Qs~1, MT[-which(MT$Operator == 'Waco Oil & Gas Co., Inc.'),][-248,][-246,][-245,][-251,], cutoff=30000, width=30000/70), plot.numbers=F, ylab=expression(Semivariance ~ (mW/m^2)^2), main="Western WV", xlab = 'Separation Distance (m)', pch = 16, col = 'red', cex=0.5)
+plot(p8)
+p8 = plot(variogram(Qs~1, MT[-which(MT$Operator == 'Waco Oil & Gas Co., Inc.'),][-248,][-246,][-245,][-251,], cutoff=1000, width=1000/50, cloud = TRUE), plot.numbers=F, ylab=expression(Semivariance ~ (mW/m^2)^2), main="Western WV", xlab = 'Separation Distance (m)', pch = 16, col = 'red', cex=0.5)
+plot(p8)
+
+p9 = plot(variogram(Qs~1, CWV, cutoff=60000, width=60000/500), plot.numbers=F, ylab=expression(Semivariance ~ (mW/m^2)^2), main="Western WV", xlab = 'Separation Distance (m)', pch = 16, col = 'red', cex=0.5)
+plot(p9)
+p9 = plot(variogram(Qs~1, CWV[-which(CWV$Operator == 'Waco Oil & Gas Co., Inc.'),], cutoff=60000, width=60000/500), plot.numbers=F, ylab=expression(Semivariance ~ (mW/m^2)^2), main="Western WV", xlab = 'Separation Distance (m)', pch = 16, col = 'red', cex=0.5)
+plot(p9)
+
+png('VariogramMT_WacoOperatorRemoved.png', res = 300, height = 5, width = 5, units = 'in')
+plot(p8p, more=T)
+plot(p8d, more=T)
+plot(p8, more=T)
+plot(plot(variogram(Qs~1, MT[-which(MT$Waco == 1),], cutoff=60000, width = 60000/50), plot.numbers=F, ylab=expression(Semivariance ~ (mW/m^2)^2), main="Western WV", xlab = 'Separation Distance (m)', ylim = c(0,700), xlim = c(0,60000), col = 'green', pch = 16, cex = 0.5), more=F)
+dev.off()
+
+# Fixme: Variogram point cloud for outlier analysis----
+#  Uses dataset that is deeper than 1 km, and all points have unique spatial locations.
+#  Analysis only for points within geologic regions
+test = plot(variogram(Qs~1, ENY, cutoff=60000, cloud = TRUE))
