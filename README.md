@@ -1,13 +1,15 @@
 # Geothermal_ESDA
-This repository contains exploratory data analysis (EDA) and exploratory spatial data analysis (ESDA) functions and scripts, which may be useful for cleaning geothermal datasets and other spatial datasets.
+This repository contains exploratory spatial data analysis (ESDA) functions and scripts that were used in Smith et al. (2019) "Exploratory Spatial Data Analysis for Geothermal Datasets: An Appalachian Basin Case Study"
+
+These functions are developed for ESDA on geothermal spatial datasets and should be applicable to other spatial datasets.
 
 This repository depends on functions located in the following repositories:
 
-calvinwhealton -> geothermal_pfa -> combining_metrics_2016 branch -> outliers
+calvinwhealton -> geothermal_pfa -> outliers
 
 jds485 -> Geothermal_DataAnalysis_CrossSections
 
-The methods of EDA and ESDA used in ESDA_Main.R include:
+The methods used in ESDA_Main.R include:
 
 0) Identification and processing of data in the same spatial location
   i) Nugget semi-variance for data in same location
@@ -21,7 +23,7 @@ The methods of EDA and ESDA used in ESDA_Main.R include:
 3) Q-Q plots
 
 4) Nonparametric Local Outlier Analysis
-  i) KS test on depth rank distribution in local neighborhoods
+  i) KS test on depth rank distribution of outliers in local neighborhoods
   ii) Chi-squared test for depth bins
 
 Additional Contributions:
