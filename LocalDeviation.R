@@ -53,8 +53,9 @@ QsDev = function(Data,    # The unprojected dataset
       Data$RegPts[i] = length(Neighbors)
       
       #Calculate the mean and median of these points, and add it to the database
-      Data$RegMean[i] = mean(Data[Neighbors, Var])
-      Data$RegMed[i] = median(Data[Neighbors, Var])
+      #Neighbors is in reference to the dataset without i included.
+      Data$RegMean[i] = mean(Data[-i,][Neighbors, Var])
+      Data$RegMed[i] = median(Data[-i,][Neighbors, Var])
     }
   }
   return(Data)

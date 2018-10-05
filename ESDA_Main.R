@@ -52,6 +52,8 @@ for (i in 1:nrow(Wacos)){
   }
 }
 
+#Fixme: horizontal and deviated wells for NY, PA, WV
+
 #Spicer equilibrium well temperature profiles
 setwd('C:\\Users\\jsmif\\Documents\\Cornell\\Research\\Publications\\ESDA')
 Spicer = read_xlsx(path = paste0(getwd(), '/EquilibriumTempProfiles.xlsx'), sheet = 'Spicers')
@@ -116,6 +118,30 @@ degAxis(side = 3, seq(-70, -86, -1), labels = FALSE)
 degAxis(side = 1, seq(-70, -86, -1), labels = FALSE)
 legend('topleft', legend = c('Negative Gradient', 'Other'), col = c('red', 'black'), pch = 16)
 dev.off()
+
+#Map that identifies the wells listed in Table 1 that were inspected in detail
+NegGradInspected = c('WV2003', 'WV3625', 'WV3621', 'WV3627', 'WV3647', 'WV2179', 'WV2181', 'WV907', 'WV66', 'NY3797', 'NY860', 'NY1001', 'NY5198', 'PA2814')
+png('WellsNegativeGradients.png', res = 300, height = 5, width = 5, units = 'in')
+par(mar = c(2,3,2,2))
+plot(Wells, pch=16, col='black', cex = 0.3)
+plot(NY, add=TRUE)
+plot(PA, add=TRUE)
+plot(WV, add=TRUE)
+plot(MD, add=TRUE)
+plot(KY, add=TRUE)
+plot(VA, add=TRUE)
+plot(NegsAll, pch=16, col='red', add=TRUE, cex = 0.3)
+plot(Wells[Wells$StateID %in% NegGradInspected,], pch=16, col='blue', add=TRUE, cex = 0.3)
+north.arrow(-75, 39, 0.1, lab = 'N', col='black', cex = 1.5)
+degAxis(side = 2, seq(34, 46, 2), cex.axis = 1.5)
+degAxis(side = 2, seq(34, 46, 1), labels = FALSE)
+degAxis(side = 4, seq(34, 46, 1), labels = FALSE)
+degAxis(side = 1, seq(-70, -86, -2), cex.axis = 1.5)
+degAxis(side = 3, seq(-70, -86, -1), labels = FALSE)
+degAxis(side = 1, seq(-70, -86, -1), labels = FALSE)
+legend('bottomright', legend = c('Gradient < 0', 'Gradient < 0 Source Checked', 'Gradient > 0'), col = c('red', 'blue', 'black'), pch = 16)
+dev.off()
+
 
 #Remove the negative gradient wells before the sorting of wells in the same spatial locations:
 Wells_PosGrad = Wells[-which(Wells$Gradient <= 0),]
@@ -297,7 +323,7 @@ png('SameSpotWells_QsVsDepth_colrev.png', res = 600, units = 'in', width = 7, he
 par(mar = c(4.5, 5, 1.5, 1.5), xaxs='i', yaxs='i')
 for (i in 1:length(unique(PlotFinal$SameSpot))){
   if (i == 1){
-    plot(PlotFinal$WellDepth[which(PlotFinal$SameSpot == PlotFinal$SameSpot[length(unique(PlotFinal$SameSpot)) + 1 - i])], PlotFinal$Qs[which(PlotFinal$SameSpot == PlotFinal$SameSpot[length(unique(PlotFinal$SameSpot)) + 1 - i])], type = 'o', col = cols[length(unique(PlotFinal$SameSpot)) + 1 - i], pch = 16, xlim = c(0,3500), ylim = c(0,250), xlab = 'Well Depth (m)', ylab = expression('Surface Heat Flow' ~ (mW/m^2)), cex.axis = 1.5, cex.lab = 1.5)
+    plot(PlotFinal$WellDepth[which(PlotFinal$SameSpot == PlotFinal$SameSpot[length(unique(PlotFinal$SameSpot)) + 1 - i])], PlotFinal$Qs[which(PlotFinal$SameSpot == PlotFinal$SameSpot[length(unique(PlotFinal$SameSpot)) + 1 - i])], type = 'o', col = cols[length(unique(PlotFinal$SameSpot)) + 1 - i], pch = 16, xlim = c(0,3500), ylim = c(0,250), xlab = 'BHT Depth (m)', ylab = expression('Surface Heat Flow' ~ (mW/m^2)), cex.axis = 1.5, cex.lab = 1.5)
   }else{
     plot(PlotFinal$WellDepth[which(PlotFinal$SameSpot == PlotFinal$SameSpot[length(unique(PlotFinal$SameSpot)) + 1 - i])], PlotFinal$Qs[which(PlotFinal$SameSpot == PlotFinal$SameSpot[length(unique(PlotFinal$SameSpot)) + 1 - i])], type = 'o', col = cols[length(unique(PlotFinal$SameSpot)) + 1 - i], pch = 16, xlim = c(0,3500), ylim = c(0,250), axes = FALSE, xlab = '', ylab = '')
   }
@@ -305,7 +331,7 @@ for (i in 1:length(unique(PlotFinal$SameSpot))){
 }
 par(new = FALSE)
 minor.tick(nx=5,ny=5)
-legend('topright', legend = c('Shallowest Well is Shallow', '', '', 'Shallowest Well is Deep'), col = c('red', 'yellow', 'green', 'purple'), pch = 16, lty = 1)
+legend('topright', legend = c('Shallowest BHT for Location is Shallow', '', '', 'Shallowest BHT for Location is Deep'), col = c('red', 'yellow', 'green', 'purple'), pch = 16, lty = 1)
 dev.off()
 rm(PlotColPal, cols)
 
@@ -1073,7 +1099,7 @@ OrderedWells = WellsSort[order(WellsSort$WellDepth),]
 #Compute the changepoint as a depth series. Remove NA values from points with too few neighbors to be tested.
 cpt.mean((OrderedWells$Qs - OrderedWells$RegMed)[-which(is.na(OrderedWells$Qs - OrderedWells$RegMed))], test.stat = "CUSUM", penalty = 'None', method = 'AMOC')
 #767 m is changepoint detected depth with AMOC
-OrderedWells$WellDepth[3855]
+OrderedWells$WellDepth[3859]
 
 #   Add shallow data back into dataset for PA region ----
 WellsSort$LatDeg = WellsSort@coords[,2]
@@ -2230,6 +2256,7 @@ DeepFL = rbind(DeepCT, DeepCWV, DeepCNY, DeepENY, DeepENYPA, DeepMT, DeepNWPANY,
 #Compute variograms - All data, Data deeper than 1 km, Data that have been fully proessed. Plot all on same plot
 #Use universal with Basement Depth for CT and WPA. Out to 30 km, not necessary to use universal for WPA.
 #MT, CNY, SWPA do not need universal. NWPANY pobably not
+#SWPA could use BHT correction region, but doesn't explain too much, which is acutally good.
 #ENY universal with Basement Depth and COSUNA_ID. COSUNA is indicative of issues with local strat columns
 #ENYPA with coordinates and Basement depth
 v.CT <- variogram(Qs~1, CT, cutoff=60000, width=60000/50)
@@ -2399,7 +2426,7 @@ test = plot(variogram(Qs~1, MT[-which(MT$Operator == 'Waco Oil & Gas Co., Inc.')
 test = plot(variogram(Qs~1, MT[-which(MT$Operator == 'Waco Oil & Gas Co., Inc.'),][-248,][-246,][-245,], cutoff=60000, cloud = TRUE), digitize = TRUE)
 hist(c(test$head, test$tail), breaks = 100000)
 mode(c(test$head, test$tail))
-251
+#251
 MT[-which(MT$Operator == 'Waco Oil & Gas Co., Inc.'),][-248,][-246,][-245,][251,]
 
 p8 = plot(variogram(Qs~1, MT, cutoff=30000, width=30000/70), plot.numbers=F, ylab=expression(Semivariance ~ (mW/m^2)^2), main="Western WV", xlab = 'Separation Distance (m)', pch = 16, col = 'red', cex=0.5)
