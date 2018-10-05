@@ -1,12 +1,16 @@
-#### Sensitivity Analysis for Local Points Algorithm ####
-#Based on the "sensitivity analysis for local points algorithm" section of example_outlier_code.R in geothermal_pfa repository
+#### Sensitivity Analysis for Local Points Spatial Outlier Algorithm ####
+#Based on the "sensitivity analysis for local points algorithm" section of example_outlier_code.R in geothermal_pfa GitHub repository
 
 library(rgdal)
+library(devEMF)
 # Load data----
-DataTest = readOGR(dsn = "C:\\Users\\Jared\\Documents\\Cornell\\Research\\Masters - Spatial Assessment\\Figures", layer = "DataForOutlierTesting", stringsAsFactors = FALSE)
+DataTest = readOGR(dsn = "C:\\Users\\jsmif\\Documents\\Cornell\\Research\\Masters - Spatial Assessment\\Figures", layer = "WellsForOutlierTest_ESDA_2018", stringsAsFactors = FALSE)
+DataTest = spTransform(DataTest, CRS = '+init=epsg:26917')
+DataTest$POINT_X = DataTest@coords[,1]
+DataTest$POINT_Y = DataTest@coords[,2]
 
 # Load Outlier Identification Functions----
-source("C:\\Users\\Jared\\Documents\\Cornell\\Research\\Publications\\DOE Grant\\CombiningRiskFactorCode\\geothermal_pfa\\outliers\\outlier_identification.R")
+source("C:\\Users\\jsmif\\Documents\\Cornell\\Research\\Publications\\DOE Grant\\CombiningRiskFactorCode\\geothermal_pfa\\outliers\\outlier_identification.R")
 
 # Set neighborhood parameters----
 pts_sens <- c(10,25,50,100,200) # number of points for local neighborhood
@@ -40,18 +44,18 @@ for(i in 1:length(pts_sens)){
     outs_sparse[i,j] <- sum(sens_data2$NotOutliers$out_loc_error)
   }
 }
-rm(sens_data, sens_data2, i, j, outs_iden, outs_sparse)
+rm(sens_data, sens_data2, i, j)
 
 # Creating plot----
 #File type variable. 1 = EPS, 0 = EMF
-EPS = 1
-setwd("C:\\Users\\Jared\\Documents\\Cornell\\Research\\Publications\\ESDA")
+EPS = 0
+setwd("C:\\Users\\jsmif\\Documents\\Cornell\\Research\\Publications\\ESDA")
 if (EPS == 1){
   setEPS()
-  postscript(file = "outlier_sens.eps", title = "Sensitivity Outliers Local Points", width = 5, height = 5)
+  postscript(file = "outlier_sens_2018.eps", title = "Sensitivity Outliers Local Points", width = 5, height = 5)
 }else{
   #As EMF File for Word
-  emf(file = "outlier_sens.emf", width = 5, height = 5)
+  emf(file = "outlier_sens_2018.emf", width = 5, height = 5, emfPlus = FALSE)
 }
 
 #Make color ramp
@@ -87,14 +91,14 @@ plot(dataplot$pts
      , cex = 1.02*sqrt(nrow(DataTest))/30
      , col = "black"
      , pch = 19
-     , ylab = "Maximum Neighborhood Radius (km)"
-     , xlab = "Points Needed to Evaluate"
+     , ylab = ""
+     , xlab = ""
      , xaxt = "n"
      , yaxt = "n"
      , ylim = c(1.9,6.1)
      , xlim = c(10.85,230)
-     , line = 2
 )
+title(xlab = "Points Needed to Evaluate", ylab = "Maximum Neighborhood Radius (km)", line = 2)
 points(dataplot$pts
        , log(dataplot$rad, base=2)
        , cex = 0.98*sqrt(nrow(DataTest))/30
@@ -148,7 +152,7 @@ dev.off()
 
 
 # Global outlier test on the dataset ----
-sens_data <- DataTest
+sens_data <- DataTest@data
 GlobOut <- select_out_algo(Data = sens_data,
                              OutVarName = "Qs",
                              InVarName = "Qs",
@@ -165,7 +169,7 @@ GlobOut <- select_out_algo(Data = sens_data,
                              k_glob = 3,
                              k_loc = 3,
                              type = 7)
-sens_data <- DataTest
+sens_data <- DataTest@data
 LocOut_ManyPts <- select_out_algo(Data = sens_data,
                            OutVarName = "Qs",
                            InVarName = "Qs",
