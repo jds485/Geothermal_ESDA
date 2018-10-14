@@ -52,7 +52,106 @@ for (i in 1:nrow(Wacos)){
   }
 }
 
-#Fixme: horizontal and deviated wells for NY, PA, WV
+#Horizontal and deviated wells for NY, PA, WV
+#NY - This database has some wells that are deviated by very little. May not be worth excluding these wells
+setwd("C:\\Users\\jsmif\\Documents\\Cornell\\Research\\Publications\\ESDA\\DirectionalWellInvestigations")
+NY_DirWells = read.csv('DirectionalWellsNY.csv', stringsAsFactors = FALSE)
+APINY = read.csv('NY_APIs.csv', stringsAsFactors = FALSE)
+NY_DirWells$StateID = ''
+for (i in 1:nrow(NY_DirWells)){
+  if (length(which(APINY$API == NY_DirWells$API[i])) > 0){
+    if(length(APINY$StateID[APINY$API == NY_DirWells$API[i]]) > 1){
+      for (j in 1:length(APINY$StateID[APINY$API == NY_DirWells$API[i]])){
+        if (j == 1){
+          NY_DirWells$StateID[i] = APINY$StateID[APINY$API == NY_DirWells$API[i]][j]
+        }else{
+          NY_DirWells = rbind(NY_DirWells, NY_DirWells[i,])
+          NY_DirWells$StateID[nrow(NY_DirWells)] = APINY$StateID[APINY$API == NY_DirWells$API[i]][j]
+        }
+      }
+    }else{
+      NY_DirWells$StateID[i] = APINY$StateID[APINY$API == NY_DirWells$API[i]]
+    }
+  }
+}
+rm(i)
+
+#Only the wells that match with StateID number are in the BHT dataset.
+NY_DirWells[which(NY_DirWells$StateID != ''),]
+
+plot(Wells, pch = 16, cex = 0.3)
+plot(Wells[Wells$StateID %in% NY_DirWells$StateID[NY_DirWells$StateID != ''],], pch = 16, cex = 0.3, col = 'red', add = T)
+
+#PA
+setwd("C:\\Users\\jsmif\\Documents\\Cornell\\Research\\Publications\\ESDA\\DirectionalWellInvestigations")
+PA_CDRs = read.csv('CDR_PALogsWithDirectionalLogs.csv', stringsAsFactors = FALSE)
+PA_DirWells = read.csv('DirectionalWellsPA.csv', stringsAsFactors = FALSE)
+APIPA = read.csv('PA_APIs.csv', stringsAsFactors = FALSE)
+
+PA_CDRs$StateID = ''
+PA_DirWells$StateID = ''
+for (i in 1:nrow(PA_CDRs)){
+  if (length(which(APIPA$API == PA_CDRs$API[i])) > 0){
+    PA_CDRs$StateID[i] = APIPA$StateID[APIPA$API == PA_CDRs$API[i]]
+  }
+}
+for (i in 1:nrow(PA_DirWells)){
+  if (length(which(APIPA$API == PA_DirWells$API[i])) > 0){
+    PA_DirWells$StateID[i] = APIPA$StateID[APIPA$API == PA_DirWells$API[i]]
+  }
+}
+rm(i)
+
+#Only the wells that match with StateID number are in the BHT dataset.
+PA_CDRs[which(PA_CDRs$StateID != ''),]
+PA_DirWells[which(PA_DirWells$StateID != ''),]
+coordinates(PA_DirWells) = c('Longitude..Dec.', 'Latitude..Dec.')
+proj4string(PA_DirWells) = CRS = '+init=epsg:4326'
+PA_DirWells = spTransform(PA_DirWells, CRS = '+init=epsg:26917')
+
+plot(Wells, pch = 16, cex = 0.3)
+#plot(PA_DirWells, pch = 16, cex = 0.3, col = 'blue', add = T)
+plot(PA_DirWells[PA_DirWells$StateID != '',], pch = 16, cex = 0.3, col = 'red', add = T)
+plot(Wells[Wells$StateID %in% PA_CDRs$StateID[PA_CDRs$StateID != ''],], pch = 16, cex = 0.3, col = 'red', add = T)
+
+#WV
+setwd("C:\\Users\\jsmif\\Documents\\Cornell\\Research\\Publications\\CornellGeothermalProject\\WVUGrant\\LASdata&WellData\\LAS Files")
+WV_CompDirWells = read.csv('CompletedDirectionalWells.csv', stringsAsFactors = FALSE)
+WV_PermDirWells = read.csv('PermittedDirectionalWells.csv', stringsAsFactors = FALSE)
+WV_SurvsDirWells = read.csv('SurveysforDirectionalWells.csv', stringsAsFactors = FALSE)
+
+#Get the state ID for each API and place in repsective dataset
+WV_CompDirWells$StateID = ''
+WV_PermDirWells$StateID = ''
+WV_SurvsDirWells$StateID = ''
+for (i in 1:nrow(WV_CompDirWells)){
+  if (length(which(APIWV$APInum == WV_CompDirWells$API.Number[i])) > 0){
+    WV_CompDirWells$StateID[i] = APIWV$StateID[APIWV$APInum == WV_CompDirWells$API.Number[i]]
+  }
+}
+for (i in 1:nrow(WV_PermDirWells)){
+  if (length(which(APIWV$APInum == WV_PermDirWells$API.Number[i])) > 0){
+    WV_PermDirWells$StateID[i] = APIWV$StateID[APIWV$APInum == WV_PermDirWells$API.Number[i]]
+  }
+}
+for (i in 1:nrow(WV_SurvsDirWells)){
+  if (length(which(APIWV$APInum == WV_SurvsDirWells$API1[i])) > 0){
+    WV_SurvsDirWells$StateID[i] = APIWV$StateID[APIWV$APInum == WV_SurvsDirWells$API1[i]]
+  }
+}
+rm(i)
+
+#Only the wells that match with StateID number are in the BHT dataset.
+WV_CompDirWells[which(WV_CompDirWells$StateID != ''),]
+WV_PermDirWells[which(WV_PermDirWells$StateID != ''),]
+WV_SurvsDirWells[which(WV_SurvsDirWells$StateID != ''),]
+
+#WV_CompDirWells Contain all the direction wells. All checked. Only a couple may be rogue entries.
+#Check how far deviated at minimum these wells are
+WV_CompDirWells$MinDev = sqrt((WV_CompDirWells$Surface.Loc.UTME - WV_CompDirWells$Btm.Hole.Loc.UTME)^2 + (WV_CompDirWells$Surface.Loc.UTMN - WV_CompDirWells$Btm.Hole.Loc.UTMN)^2)
+
+plot(Wells, pch = 16, cex = 0.3)
+plot(Wells[Wells$StateID %in% WV_CompDirWells$StateID[WV_CompDirWells$StateID != ''],], pch = 16, cex = 0.3, col = 'red', add = T)
 
 #Spicer equilibrium well temperature profiles
 setwd('C:\\Users\\jsmif\\Documents\\Cornell\\Research\\Publications\\ESDA')
@@ -64,6 +163,10 @@ proj4string(Spicer) = CRS("+init=epsg:4326")
 Whealton = read.csv('EquilibriumTempProfiles_LocsAdded.csv')
 coordinates(Whealton) = c("Long", "Lat")
 proj4string(Whealton) = CRS("+init=epsg:4326")
+
+#Whealton MS thesis identified BHTs
+setwd('C:\\Users\\jsmif\\Documents\\Cornell\\Research\\Publications\\ESDA')
+WhealtonBHTs = read.csv('WhealtonBHTsNYPA.csv', stringsAsFactors = FALSE)
 
 #Political boundaries
 setwd('C:/Users/jsmif/Documents/Cornell/Research/Masters - Spatial Assessment/GIS/Population Density/2013_us_state_500k')
@@ -433,7 +536,7 @@ for (i in 1:length(unique(PlotFinal_DeepBHTsLarge$SameSpot))){
     #Record used coordinates
     Coords = PlotFinal_DeepBHTsLarge[which(PlotFinal_DeepBHTsLarge$SameSpot == unique(PlotFinal_DeepBHTsLarge$SameSpot)[i]),][1,]
     #All others black
-    plot(rep(i,length(PlotFinal_DeepBHTsLarge$BHT[which(PlotFinal_DeepBHTsLarge$SameSpot == unique(PlotFinal_DeepBHTsLarge$SameSpot)[i])])), PlotFinal_DeepBHTsLarge$BHT[which(PlotFinal_DeepBHTsLarge$SameSpot == unique(PlotFinal_DeepBHTsLarge$SameSpot)[i])], type = 'o', col = 'black', pch = 16, xlim = c(0,length(unique(PlotFinal_DeepBHTsLarge$SameSpot))), ylim = c(0,140), xlab = 'Same Spot Well', ylab = expression(paste('BHT (', degree, 'C)')), main = 'Deepest BHT is Largest', cex.axis = 1.5, cex.lab = 1.5)
+    plot(rep(i,length(PlotFinal_DeepBHTsLarge$BHT[which(PlotFinal_DeepBHTsLarge$SameSpot == unique(PlotFinal_DeepBHTsLarge$SameSpot)[i])])), PlotFinal_DeepBHTsLarge$BHT[which(PlotFinal_DeepBHTsLarge$SameSpot == unique(PlotFinal_DeepBHTsLarge$SameSpot)[i])], type = 'o', col = 'black', pch = 16, xlim = c(0,length(unique(PlotFinal_DeepBHTsLarge$SameSpot))), ylim = c(0,140), xlab = 'Spatial Location', ylab = expression(paste('BHT (', degree, 'C)')), main = 'Deepest BHT is Largest', cex.axis = 1.5, cex.lab = 1.5)
     par(new=TRUE)
     #Max depth wells red
     plot(rep(i, length(indsMaxDepth)), PlotFinal_DeepBHTsLarge$BHT[which(PlotFinal_DeepBHTsLarge$SameSpot == unique(PlotFinal_DeepBHTsLarge$SameSpot)[i])][indsMaxDepth], type = 'o', col = 'red', pch = 16, xlim = c(0,length(unique(PlotFinal_DeepBHTsLarge$SameSpot))), ylim = c(0,140), xlab = '', ylab = '', axes=FALSE)
@@ -459,7 +562,7 @@ for (i in 1:length(unique(PlotFinal_DeepBHTsSmall$SameSpot))){
     #Record used coordinates
     Coords = PlotFinal_DeepBHTsSmall[which(PlotFinal_DeepBHTsSmall$SameSpot == unique(PlotFinal_DeepBHTsSmall$SameSpot)[i]),][1,]
     #All others black
-    plot(rep(i,length(PlotFinal_DeepBHTsSmall$BHT[which(PlotFinal_DeepBHTsSmall$SameSpot == unique(PlotFinal_DeepBHTsSmall$SameSpot)[i])])), PlotFinal_DeepBHTsSmall$BHT[which(PlotFinal_DeepBHTsSmall$SameSpot == unique(PlotFinal_DeepBHTsSmall$SameSpot)[i])], type = 'o', col = 'black', pch = 16, xlim = c(0,length(unique(PlotFinal_DeepBHTsSmall$SameSpot))), ylim = c(0,140), xlab = 'Same Spot Well', ylab = expression(paste('BHT (', degree, 'C)')), main = 'Deepest BHT is Not Largest', cex.axis = 1.5, cex.lab = 1.5)
+    plot(rep(i,length(PlotFinal_DeepBHTsSmall$BHT[which(PlotFinal_DeepBHTsSmall$SameSpot == unique(PlotFinal_DeepBHTsSmall$SameSpot)[i])])), PlotFinal_DeepBHTsSmall$BHT[which(PlotFinal_DeepBHTsSmall$SameSpot == unique(PlotFinal_DeepBHTsSmall$SameSpot)[i])], type = 'o', col = 'black', pch = 16, xlim = c(0,length(unique(PlotFinal_DeepBHTsSmall$SameSpot))), ylim = c(0,140), xlab = 'Spatial Location', ylab = expression(paste('BHT (', degree, 'C)')), main = 'Deepest BHT is Not Largest', cex.axis = 1.5, cex.lab = 1.5)
     par(new=TRUE)
     #Max depth wells red
     plot(rep(i, length(indsMaxDepth)), PlotFinal_DeepBHTsSmall$BHT[which(PlotFinal_DeepBHTsSmall$SameSpot == unique(PlotFinal_DeepBHTsSmall$SameSpot)[i])][indsMaxDepth], type = 'o', col = 'red', pch = 16, xlim = c(0,length(unique(PlotFinal_DeepBHTsSmall$SameSpot))), ylim = c(0,140), xlab = '', ylab = '', axes=FALSE)
@@ -2386,6 +2489,136 @@ plot(p7dz, split=c(4,3,4,3), more=T)
 plot(p7z, split = c(4,3,4,3), more=F)
 
 dev.off()
+
+# Table of variogram lag estimates at close separation distances----
+#Separation distance targets
+SepTargets = c(2500, 5000, 10000, 20000)
+#Dataframe to store the table of values
+VarLagsTable = data.frame(GeologicRegion = '', ProcessingStep = 0, SeparationDistanceLag = 0, Semivariance = 0, stringsAsFactors = FALSE)
+
+#Get separation distance lags closest to the target values.
+CTtargets = vector('numeric', length = length(SepTargets))
+DeepCTtargets = vector('numeric', length = length(SepTargets))
+PreCTtargets = vector('numeric', length = length(SepTargets))
+for (i in 1:length(SepTargets)){
+  CTtargets[i] = which(abs(v.CT$dist - SepTargets[i]) == min(abs(v.CT$dist - SepTargets[i])))
+  DeepCTtargets[i] = which(abs(v.DeepCT$dist - SepTargets[i]) == min(abs(v.DeepCT$dist - SepTargets[i])))
+  PreCTtargets[i] = which(abs(v.PreCT$dist - SepTargets[i]) == min(abs(v.PreCT$dist - SepTargets[i])))
+}
+VarLagsTable[1:12,-1] = cbind(rbind(cbind(rep(1,length(SepTargets))), cbind(rep(2,length(SepTargets))), cbind(rep(3,length(SepTargets)))), 
+                        rbind(round(v.PreCT[PreCTtargets,2:3],1), round(v.DeepCT[DeepCTtargets,2:3],1), round(v.CT[CTtargets,2:3],1)))
+VarLagsTable[1:12,1] = 'Chautauqua, NY'
+
+WPAtargets = vector('numeric', length = length(SepTargets))
+DeepWPAtargets = vector('numeric', length = length(SepTargets))
+PreWPAtargets = vector('numeric', length = length(SepTargets))
+for (i in 1:length(SepTargets)){
+  WPAtargets[i] = which(abs(v.WPA$dist - SepTargets[i]) == min(abs(v.WPA$dist - SepTargets[i])))
+  DeepWPAtargets[i] = which(abs(v.DeepWPA$dist - SepTargets[i]) == min(abs(v.DeepWPA$dist - SepTargets[i])))
+  PreWPAtargets[i] = which(abs(v.PreWPA$dist - SepTargets[i]) == min(abs(v.PreWPA$dist - SepTargets[i])))
+}
+VarLagsTable[13:24,-1] = cbind(rbind(cbind(rep(1,length(SepTargets))), cbind(rep(2,length(SepTargets))), cbind(rep(3,length(SepTargets)))), 
+                              rbind(round(v.PreWPA[PreWPAtargets,2:3],1), round(v.DeepWPA[DeepWPAtargets,2:3],1), round(v.WPA[WPAtargets,2:3],1)))
+VarLagsTable[13:24,1] = 'Western PA'
+
+NWPANYtargets = vector('numeric', length = length(SepTargets))
+DeepNWPANYtargets = vector('numeric', length = length(SepTargets))
+PreNWPANYtargets = vector('numeric', length = length(SepTargets))
+for (i in 1:length(SepTargets)){
+  NWPANYtargets[i] = which(abs(v.NWPANY$dist - SepTargets[i]) == min(abs(v.NWPANY$dist - SepTargets[i])))
+  DeepNWPANYtargets[i] = which(abs(v.DeepNWPANY$dist - SepTargets[i]) == min(abs(v.DeepNWPANY$dist - SepTargets[i])))
+  PreNWPANYtargets[i] = which(abs(v.PreNWPANY$dist - SepTargets[i]) == min(abs(v.PreNWPANY$dist - SepTargets[i])))
+}
+VarLagsTable[25:36,-1] = cbind(rbind(cbind(rep(1,length(SepTargets))), cbind(rep(2,length(SepTargets))), cbind(rep(3,length(SepTargets)))), 
+                               rbind(round(v.PreNWPANY[PreNWPANYtargets,2:3],1), round(v.DeepNWPANY[DeepNWPANYtargets,2:3],1), round(v.NWPANY[NWPANYtargets,2:3],1)))
+VarLagsTable[25:36,1] = 'Northwestern PA & NY'
+
+CNYtargets = vector('numeric', length = length(SepTargets))
+DeepCNYtargets = vector('numeric', length = length(SepTargets))
+PreCNYtargets = vector('numeric', length = length(SepTargets))
+for (i in 1:length(SepTargets)){
+  CNYtargets[i] = which(abs(v.CNY$dist - SepTargets[i]) == min(abs(v.CNY$dist - SepTargets[i])))
+  DeepCNYtargets[i] = which(abs(v.DeepCNY$dist - SepTargets[i]) == min(abs(v.DeepCNY$dist - SepTargets[i])))
+  PreCNYtargets[i] = which(abs(v.PreCNY$dist - SepTargets[i]) == min(abs(v.PreCNY$dist - SepTargets[i])))
+}
+VarLagsTable[37:48,-1] = cbind(rbind(cbind(rep(1,length(SepTargets))), cbind(rep(2,length(SepTargets))), cbind(rep(3,length(SepTargets)))), 
+                               rbind(round(v.PreCNY[PreCNYtargets,2:3],1), round(v.DeepCNY[DeepCNYtargets,2:3],1), round(v.CNY[CNYtargets,2:3],1)))
+VarLagsTable[37:48,1] = 'Central NY'
+
+ENYtargets = vector('numeric', length = length(SepTargets))
+DeepENYtargets = vector('numeric', length = length(SepTargets))
+PreENYtargets = vector('numeric', length = length(SepTargets))
+for (i in 1:length(SepTargets)){
+  ENYtargets[i] = which(abs(v.ENY$dist - SepTargets[i]) == min(abs(v.ENY$dist - SepTargets[i])))
+  DeepENYtargets[i] = which(abs(v.DeepENY$dist - SepTargets[i]) == min(abs(v.DeepENY$dist - SepTargets[i])))
+  PreENYtargets[i] = which(abs(v.PreENY$dist - SepTargets[i]) == min(abs(v.PreENY$dist - SepTargets[i])))
+}
+VarLagsTable[49:60,-1] = cbind(rbind(cbind(rep(1,length(SepTargets))), cbind(rep(2,length(SepTargets))), cbind(rep(3,length(SepTargets)))), 
+                               rbind(round(v.PreENY[PreENYtargets,2:3],1), round(v.DeepENY[DeepENYtargets,2:3],1), round(v.ENY[ENYtargets,2:3],1)))
+VarLagsTable[49:60,1] = 'Eastern NY'
+
+ENYPAtargets = vector('numeric', length = length(SepTargets))
+DeepENYPAtargets = vector('numeric', length = length(SepTargets))
+PreENYPAtargets = vector('numeric', length = length(SepTargets))
+for (i in 1:length(SepTargets)){
+  ENYPAtargets[i] = which(abs(v.ENYPA$dist - SepTargets[i]) == min(abs(v.ENYPA$dist - SepTargets[i])))
+  DeepENYPAtargets[i] = which(abs(v.DeepENYPA$dist - SepTargets[i]) == min(abs(v.DeepENYPA$dist - SepTargets[i])))
+  PreENYPAtargets[i] = which(abs(v.PreENYPA$dist - SepTargets[i]) == min(abs(v.PreENYPA$dist - SepTargets[i])))
+}
+VarLagsTable[61:72,-1] = cbind(rbind(cbind(rep(1,length(SepTargets))), cbind(rep(2,length(SepTargets))), cbind(rep(3,length(SepTargets)))), 
+                               rbind(round(v.PreENYPA[PreENYPAtargets,2:3],1), round(v.DeepENYPA[DeepENYPAtargets,2:3],1), round(v.ENYPA[ENYPAtargets,2:3],1)))
+VarLagsTable[61:72,1] = 'Eastern NY & PA'
+
+SWPAtargets = vector('numeric', length = length(SepTargets))
+DeepSWPAtargets = vector('numeric', length = length(SepTargets))
+PreSWPAtargets = vector('numeric', length = length(SepTargets))
+for (i in 1:length(SepTargets)){
+  SWPAtargets[i] = which(abs(v.SWPA$dist - SepTargets[i]) == min(abs(v.SWPA$dist - SepTargets[i])))
+  DeepSWPAtargets[i] = which(abs(v.DeepSWPA$dist - SepTargets[i]) == min(abs(v.DeepSWPA$dist - SepTargets[i])))
+  PreSWPAtargets[i] = which(abs(v.PreSWPA$dist - SepTargets[i]) == min(abs(v.PreSWPA$dist - SepTargets[i])))
+}
+VarLagsTable[73:84,-1] = cbind(rbind(cbind(rep(1,length(SepTargets))), cbind(rep(2,length(SepTargets))), cbind(rep(3,length(SepTargets)))), 
+                               rbind(round(v.PreSWPA[PreSWPAtargets,2:3],1), round(v.DeepSWPA[DeepSWPAtargets,2:3],1), round(v.SWPA[SWPAtargets,2:3],1)))
+VarLagsTable[73:84,1] = 'Southwestern PA'
+
+CWVtargets = vector('numeric', length = length(SepTargets))
+DeepCWVtargets = vector('numeric', length = length(SepTargets))
+PreCWVtargets = vector('numeric', length = length(SepTargets))
+for (i in 1:length(SepTargets)){
+  CWVtargets[i] = which(abs(v.CWV$dist - SepTargets[i]) == min(abs(v.CWV$dist - SepTargets[i])))
+  DeepCWVtargets[i] = which(abs(v.DeepCWV$dist - SepTargets[i]) == min(abs(v.DeepCWV$dist - SepTargets[i])))
+  PreCWVtargets[i] = which(abs(v.PreCWV$dist - SepTargets[i]) == min(abs(v.PreCWV$dist - SepTargets[i])))
+}
+VarLagsTable[85:96,-1] = cbind(rbind(cbind(rep(1,length(SepTargets))), cbind(rep(2,length(SepTargets))), cbind(rep(3,length(SepTargets)))), 
+                               rbind(round(v.PreCWV[PreCWVtargets,2:3],1), round(v.DeepCWV[DeepCWVtargets,2:3],1), round(v.CWV[CWVtargets,2:3],1)))
+VarLagsTable[85:96,1] = 'Central WV'
+
+MTtargets = vector('numeric', length = length(SepTargets))
+DeepMTtargets = vector('numeric', length = length(SepTargets))
+PreMTtargets = vector('numeric', length = length(SepTargets))
+for (i in 1:length(SepTargets)){
+  MTtargets[i] = which(abs(v.MT$dist - SepTargets[i]) == min(abs(v.MT$dist - SepTargets[i])))
+  DeepMTtargets[i] = which(abs(v.DeepMT$dist - SepTargets[i]) == min(abs(v.DeepMT$dist - SepTargets[i])))
+  PreMTtargets[i] = which(abs(v.PreMT$dist - SepTargets[i]) == min(abs(v.PreMT$dist - SepTargets[i])))
+}
+VarLagsTable[97:108,-1] = cbind(rbind(cbind(rep(1,length(SepTargets))), cbind(rep(2,length(SepTargets))), cbind(rep(3,length(SepTargets)))), 
+                               rbind(round(v.PreMT[PreMTtargets,2:3],1), round(v.DeepMT[DeepMTtargets,2:3],1), round(v.MT[MTtargets,2:3],1)))
+VarLagsTable[97:108,1] = 'Western WV'
+
+VRtargets = vector('numeric', length = length(SepTargets))
+DeepVRtargets = vector('numeric', length = length(SepTargets))
+PreVRtargets = vector('numeric', length = length(SepTargets))
+for (i in 1:length(SepTargets)){
+  VRtargets[i] = which(abs(v.VR$dist - SepTargets[i]) == min(abs(v.VR$dist - SepTargets[i])))
+  DeepVRtargets[i] = which(abs(v.DeepVR$dist - SepTargets[i]) == min(abs(v.DeepVR$dist - SepTargets[i])))
+  PreVRtargets[i] = which(abs(v.PreVR$dist - SepTargets[i]) == min(abs(v.PreVR$dist - SepTargets[i])))
+}
+VarLagsTable[109:120,-1] = cbind(rbind(cbind(rep(1,length(SepTargets))), cbind(rep(2,length(SepTargets))), cbind(rep(3,length(SepTargets)))), 
+                                rbind(round(v.PreVR[PreVRtargets,2:3],1), round(v.DeepVR[DeepVRtargets,2:3],1), round(v.VR[VRtargets,2:3],1)))
+VarLagsTable[109:120,1] = 'Valley and Ridge'
+
+#Write table
+write.csv(VarLagsTable, file = 'TableVarianceLags.csv')
 
 #  Operator data----
 #Wow! This region becomes manageable with its variogram by removing these points
