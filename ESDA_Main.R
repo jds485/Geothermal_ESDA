@@ -19,6 +19,9 @@ library(Hmisc) #minor tick marks
 library(readxl) #for Excel data reading
 library(changepoint) #for changepoint analysis on the minimum BHT depth cutoff
 library(gstat) #for variogram analysis
+library(foreach) #parallel for loops
+library(doParallel) #parallel package
+library(lattice) #for plotting variograms
 
 # Loading Code from Repositories ----
 setwd("C:\\Users\\jsmif\\Documents\\Cornell\\Research\\Publications\\ESDA\\ESDACode\\Geothermal_ESDA")
@@ -1391,6 +1394,87 @@ TestedOutliers_HeatFlow_max2k = select_out_algo(Data = WellsDeep@data,
                                           type = 7, 
                                           min_val = 0, max_val = 2000, rank = TRUE)
 
+#Testing sensitivity to value of k
+TestedOutliers_HeatFlow_k1p0 = select_out_algo(Data = WellsDeep@data, 
+                                          InVarName = "Qs", OutVarName = "Qs", 
+                                          X_coordName = "POINT_X", Y_coordName = "POINT_Y", 
+                                          CensorName = 'WellDepth', 
+                                          rad_max = 32000, 
+                                          pt_min = 25, 
+                                          k_loc = 1, 
+                                          type = 7, 
+                                          min_val = 0, max_val = 7000, rank = TRUE)
+
+TestedOutliers_HeatFlow_k1p5 = select_out_algo(Data = WellsDeep@data, 
+                                               InVarName = "Qs", OutVarName = "Qs", 
+                                               X_coordName = "POINT_X", Y_coordName = "POINT_Y", 
+                                               CensorName = 'WellDepth', 
+                                               rad_max = 32000, 
+                                               pt_min = 25, 
+                                               k_loc = 1.5, 
+                                               type = 7, 
+                                               min_val = 0, max_val = 7000, rank = TRUE)
+
+TestedOutliers_HeatFlow_k2p0 = select_out_algo(Data = WellsDeep@data, 
+                                               InVarName = "Qs", OutVarName = "Qs", 
+                                               X_coordName = "POINT_X", Y_coordName = "POINT_Y", 
+                                               CensorName = 'WellDepth', 
+                                               rad_max = 32000, 
+                                               pt_min = 25, 
+                                               k_loc = 2, 
+                                               type = 7, 
+                                               min_val = 0, max_val = 7000, rank = TRUE)
+
+TestedOutliers_HeatFlow_k2p5 = select_out_algo(Data = WellsDeep@data, 
+                                               InVarName = "Qs", OutVarName = "Qs", 
+                                               X_coordName = "POINT_X", Y_coordName = "POINT_Y", 
+                                               CensorName = 'WellDepth', 
+                                               rad_max = 32000, 
+                                               pt_min = 25, 
+                                               k_loc = 2.5, 
+                                               type = 7, 
+                                               min_val = 0, max_val = 7000, rank = TRUE)
+
+TestedOutliers_HeatFlow_k3p5 = select_out_algo(Data = WellsDeep@data, 
+                                               InVarName = "Qs", OutVarName = "Qs", 
+                                               X_coordName = "POINT_X", Y_coordName = "POINT_Y", 
+                                               CensorName = 'WellDepth', 
+                                               rad_max = 32000, 
+                                               pt_min = 25, 
+                                               k_loc = 3.5, 
+                                               type = 7, 
+                                               min_val = 0, max_val = 7000, rank = TRUE)
+
+TestedOutliers_HeatFlow_k4p0 = select_out_algo(Data = WellsDeep@data, 
+                                               InVarName = "Qs", OutVarName = "Qs", 
+                                               X_coordName = "POINT_X", Y_coordName = "POINT_Y", 
+                                               CensorName = 'WellDepth', 
+                                               rad_max = 32000, 
+                                               pt_min = 25, 
+                                               k_loc = 4, 
+                                               type = 7, 
+                                               min_val = 0, max_val = 7000, rank = TRUE)
+
+TestedOutliers_HeatFlow_k4p5 = select_out_algo(Data = WellsDeep@data, 
+                                               InVarName = "Qs", OutVarName = "Qs", 
+                                               X_coordName = "POINT_X", Y_coordName = "POINT_Y", 
+                                               CensorName = 'WellDepth', 
+                                               rad_max = 32000, 
+                                               pt_min = 25, 
+                                               k_loc = 4.5, 
+                                               type = 7, 
+                                               min_val = 0, max_val = 7000, rank = TRUE)
+
+TestedOutliers_HeatFlow_k5p0 = select_out_algo(Data = WellsDeep@data, 
+                                               InVarName = "Qs", OutVarName = "Qs", 
+                                               X_coordName = "POINT_X", Y_coordName = "POINT_Y", 
+                                               CensorName = 'WellDepth', 
+                                               rad_max = 32000, 
+                                               pt_min = 25, 
+                                               k_loc = 5, 
+                                               type = 7, 
+                                               min_val = 0, max_val = 7000, rank = TRUE)
+
 #Convert to spatial data
 coordinates(TestedOutliers_HeatFlow$NotOutliers) = c('POINT_X', 'POINT_Y')
 proj4string(TestedOutliers_HeatFlow$NotOutliers) = CRS('+init=epsg:26917')
@@ -1406,6 +1490,46 @@ coordinates(TestedOutliers_HeatFlow_min2k$NotOutliers) = c('POINT_X', 'POINT_Y')
 proj4string(TestedOutliers_HeatFlow_min2k$NotOutliers) = CRS('+init=epsg:26917')
 coordinates(TestedOutliers_HeatFlow_min2k$Outliers) = c('POINT_X', 'POINT_Y')
 proj4string(TestedOutliers_HeatFlow_min2k$Outliers) = CRS('+init=epsg:26917')
+
+coordinates(TestedOutliers_HeatFlow_k1p0$NotOutliers) = c('POINT_X', 'POINT_Y')
+proj4string(TestedOutliers_HeatFlow_k1p0$NotOutliers) = CRS('+init=epsg:26917')
+coordinates(TestedOutliers_HeatFlow_k1p0$Outliers) = c('POINT_X', 'POINT_Y')
+proj4string(TestedOutliers_HeatFlow_k1p0$Outliers) = CRS('+init=epsg:26917')
+
+coordinates(TestedOutliers_HeatFlow_k1p5$NotOutliers) = c('POINT_X', 'POINT_Y')
+proj4string(TestedOutliers_HeatFlow_k1p5$NotOutliers) = CRS('+init=epsg:26917')
+coordinates(TestedOutliers_HeatFlow_k1p5$Outliers) = c('POINT_X', 'POINT_Y')
+proj4string(TestedOutliers_HeatFlow_k1p5$Outliers) = CRS('+init=epsg:26917')
+
+coordinates(TestedOutliers_HeatFlow_k2p0$NotOutliers) = c('POINT_X', 'POINT_Y')
+proj4string(TestedOutliers_HeatFlow_k2p0$NotOutliers) = CRS('+init=epsg:26917')
+coordinates(TestedOutliers_HeatFlow_k2p0$Outliers) = c('POINT_X', 'POINT_Y')
+proj4string(TestedOutliers_HeatFlow_k2p0$Outliers) = CRS('+init=epsg:26917')
+
+coordinates(TestedOutliers_HeatFlow_k2p5$NotOutliers) = c('POINT_X', 'POINT_Y')
+proj4string(TestedOutliers_HeatFlow_k2p5$NotOutliers) = CRS('+init=epsg:26917')
+coordinates(TestedOutliers_HeatFlow_k2p5$Outliers) = c('POINT_X', 'POINT_Y')
+proj4string(TestedOutliers_HeatFlow_k2p5$Outliers) = CRS('+init=epsg:26917')
+
+coordinates(TestedOutliers_HeatFlow_k3p5$NotOutliers) = c('POINT_X', 'POINT_Y')
+proj4string(TestedOutliers_HeatFlow_k3p5$NotOutliers) = CRS('+init=epsg:26917')
+coordinates(TestedOutliers_HeatFlow_k3p5$Outliers) = c('POINT_X', 'POINT_Y')
+proj4string(TestedOutliers_HeatFlow_k3p5$Outliers) = CRS('+init=epsg:26917')
+
+coordinates(TestedOutliers_HeatFlow_k4p0$NotOutliers) = c('POINT_X', 'POINT_Y')
+proj4string(TestedOutliers_HeatFlow_k4p0$NotOutliers) = CRS('+init=epsg:26917')
+coordinates(TestedOutliers_HeatFlow_k4p0$Outliers) = c('POINT_X', 'POINT_Y')
+proj4string(TestedOutliers_HeatFlow_k4p0$Outliers) = CRS('+init=epsg:26917')
+
+coordinates(TestedOutliers_HeatFlow_k4p5$NotOutliers) = c('POINT_X', 'POINT_Y')
+proj4string(TestedOutliers_HeatFlow_k4p5$NotOutliers) = CRS('+init=epsg:26917')
+coordinates(TestedOutliers_HeatFlow_k4p5$Outliers) = c('POINT_X', 'POINT_Y')
+proj4string(TestedOutliers_HeatFlow_k4p5$Outliers) = CRS('+init=epsg:26917')
+
+coordinates(TestedOutliers_HeatFlow_k5p0$NotOutliers) = c('POINT_X', 'POINT_Y')
+proj4string(TestedOutliers_HeatFlow_k5p0$NotOutliers) = CRS('+init=epsg:26917')
+coordinates(TestedOutliers_HeatFlow_k5p0$Outliers) = c('POINT_X', 'POINT_Y')
+proj4string(TestedOutliers_HeatFlow_k5p0$Outliers) = CRS('+init=epsg:26917')
 
 writeOGR(TestedOutliers_HeatFlow$NotOutliers, dsn=getwd(), layer="DeepestWells_NotOutliers_32km_Qs_CorrBase_Ranked_2018", driver = "ESRI Shapefile")
 writeOGR(TestedOutliers_HeatFlow$Outliers, dsn=getwd(), layer="DeepestWells_Outliers_32km_Qs_CorrBase_Ranked_2018", driver = "ESRI Shapefile")
@@ -1432,6 +1556,23 @@ Pal = colPal((scaleRange[2] - scaleRange[1])/scaleBy + 1)
 WellsDeepWGS = spTransform(WellsDeep, CRSobj = CRS('+init=epsg:4326'))
 NotOutliersWGS = spTransform(TestedOutliers_HeatFlow$NotOutliers, CRSobj = CRS('+init=epsg:4326'))
 OutliersWGS = spTransform(TestedOutliers_HeatFlow$Outliers, CRSobj = CRS('+init=epsg:4326'))
+
+NotOutliersWGS_k1p0 = spTransform(TestedOutliers_HeatFlow_k1p0$NotOutliers, CRSobj = CRS('+init=epsg:4326'))
+OutliersWGS_k1p0 = spTransform(TestedOutliers_HeatFlow_k1p0$Outliers, CRSobj = CRS('+init=epsg:4326'))
+NotOutliersWGS_k1p5 = spTransform(TestedOutliers_HeatFlow_k1p5$NotOutliers, CRSobj = CRS('+init=epsg:4326'))
+OutliersWGS_k1p5 = spTransform(TestedOutliers_HeatFlow_k1p5$Outliers, CRSobj = CRS('+init=epsg:4326'))
+NotOutliersWGS_k2p0 = spTransform(TestedOutliers_HeatFlow_k2p0$NotOutliers, CRSobj = CRS('+init=epsg:4326'))
+OutliersWGS_k2p0 = spTransform(TestedOutliers_HeatFlow_k2p0$Outliers, CRSobj = CRS('+init=epsg:4326'))
+NotOutliersWGS_k2p5 = spTransform(TestedOutliers_HeatFlow_k2p5$NotOutliers, CRSobj = CRS('+init=epsg:4326'))
+OutliersWGS_k2p5 = spTransform(TestedOutliers_HeatFlow_k2p5$Outliers, CRSobj = CRS('+init=epsg:4326'))
+NotOutliersWGS_k3p5 = spTransform(TestedOutliers_HeatFlow_k3p5$NotOutliers, CRSobj = CRS('+init=epsg:4326'))
+OutliersWGS_k3p5 = spTransform(TestedOutliers_HeatFlow_k3p5$Outliers, CRSobj = CRS('+init=epsg:4326'))
+NotOutliersWGS_k4p0 = spTransform(TestedOutliers_HeatFlow_k4p0$NotOutliers, CRSobj = CRS('+init=epsg:4326'))
+OutliersWGS_k4p0 = spTransform(TestedOutliers_HeatFlow_k4p0$Outliers, CRSobj = CRS('+init=epsg:4326'))
+NotOutliersWGS_k4p5 = spTransform(TestedOutliers_HeatFlow_k4p5$NotOutliers, CRSobj = CRS('+init=epsg:4326'))
+OutliersWGS_k4p5 = spTransform(TestedOutliers_HeatFlow_k4p5$Outliers, CRSobj = CRS('+init=epsg:4326'))
+NotOutliersWGS_k5p0 = spTransform(TestedOutliers_HeatFlow_k5p0$NotOutliers, CRSobj = CRS('+init=epsg:4326'))
+OutliersWGS_k5p0 = spTransform(TestedOutliers_HeatFlow_k5p0$Outliers, CRSobj = CRS('+init=epsg:4326'))
 
 png('LoHiOuts_Map.png', res = 1200, units = 'in', width = 14, height = 7)
 layout(cbind(1,2))
@@ -1936,6 +2077,102 @@ WPA = NotOutliersWGS[InterpRegs[InterpRegs$Name == 'WPA',],]
 VR = NotOutliersWGS[VR_Bounded,]
 FL = rbind(CT, CWV, CNY, ENY, ENYPA, MT, NWPANY, SWPA, WPA, VR)
 
+CT_k1p0 = NotOutliersWGS_k1p0[InterpRegs[InterpRegs$Name == 'CT',],]
+CNY_k1p0 = NotOutliersWGS_k1p0[InterpRegs[InterpRegs$Name == 'CNY',],]
+CWV_k1p0 = NotOutliersWGS_k1p0[CWV_Bounded,]
+ENY_k1p0 = NotOutliersWGS_k1p0[InterpRegs[InterpRegs$Name == 'ENY',],]
+ENYPA_k1p0 = NotOutliersWGS_k1p0[InterpRegs[InterpRegs$Name == 'ENYPA',],]
+MT_k1p0 = NotOutliersWGS_k1p0[MT_Bounded,]
+NWPANY_k1p0 = NotOutliersWGS_k1p0[InterpRegs[InterpRegs$Name == 'NWPANY',],]
+SWPA_k1p0 = NotOutliersWGS_k1p0[InterpRegs[InterpRegs$Name == 'SWPA',],]
+WPA_k1p0 = NotOutliersWGS_k1p0[InterpRegs[InterpRegs$Name == 'WPA',],]
+VR_k1p0 = NotOutliersWGS_k1p0[VR_Bounded,]
+FL_k1p0 = rbind(CT_k1p0, CWV_k1p0, CNY_k1p0, ENY_k1p0, ENYPA_k1p0, MT_k1p0, NWPANY_k1p0, SWPA_k1p0, WPA_k1p0, VR_k1p0)
+
+CT_k1p5 = NotOutliersWGS_k1p5[InterpRegs[InterpRegs$Name == 'CT',],]
+CNY_k1p5 = NotOutliersWGS_k1p5[InterpRegs[InterpRegs$Name == 'CNY',],]
+CWV_k1p5 = NotOutliersWGS_k1p5[CWV_Bounded,]
+ENY_k1p5 = NotOutliersWGS_k1p5[InterpRegs[InterpRegs$Name == 'ENY',],]
+ENYPA_k1p5 = NotOutliersWGS_k1p5[InterpRegs[InterpRegs$Name == 'ENYPA',],]
+MT_k1p5 = NotOutliersWGS_k1p5[MT_Bounded,]
+NWPANY_k1p5 = NotOutliersWGS_k1p5[InterpRegs[InterpRegs$Name == 'NWPANY',],]
+SWPA_k1p5 = NotOutliersWGS_k1p5[InterpRegs[InterpRegs$Name == 'SWPA',],]
+WPA_k1p5 = NotOutliersWGS_k1p5[InterpRegs[InterpRegs$Name == 'WPA',],]
+VR_k1p5 = NotOutliersWGS_k1p5[VR_Bounded,]
+FL_k1p5 = rbind(CT_k1p5, CWV_k1p5, CNY_k1p5, ENY_k1p5, ENYPA_k1p5, MT_k1p5, NWPANY_k1p5, SWPA_k1p5, WPA_k1p5, VR_k1p5)
+
+CT_k2p0 = NotOutliersWGS_k2p0[InterpRegs[InterpRegs$Name == 'CT',],]
+CNY_k2p0 = NotOutliersWGS_k2p0[InterpRegs[InterpRegs$Name == 'CNY',],]
+CWV_k2p0 = NotOutliersWGS_k2p0[CWV_Bounded,]
+ENY_k2p0 = NotOutliersWGS_k2p0[InterpRegs[InterpRegs$Name == 'ENY',],]
+ENYPA_k2p0 = NotOutliersWGS_k2p0[InterpRegs[InterpRegs$Name == 'ENYPA',],]
+MT_k2p0 = NotOutliersWGS_k2p0[MT_Bounded,]
+NWPANY_k2p0 = NotOutliersWGS_k2p0[InterpRegs[InterpRegs$Name == 'NWPANY',],]
+SWPA_k2p0 = NotOutliersWGS_k2p0[InterpRegs[InterpRegs$Name == 'SWPA',],]
+WPA_k2p0 = NotOutliersWGS_k2p0[InterpRegs[InterpRegs$Name == 'WPA',],]
+VR_k2p0 = NotOutliersWGS_k2p0[VR_Bounded,]
+FL_k2p0 = rbind(CT_k2p0, CWV_k2p0, CNY_k2p0, ENY_k2p0, ENYPA_k2p0, MT_k2p0, NWPANY_k2p0, SWPA_k2p0, WPA_k2p0, VR_k2p0)
+
+CT_k2p5 = NotOutliersWGS_k2p5[InterpRegs[InterpRegs$Name == 'CT',],]
+CNY_k2p5 = NotOutliersWGS_k2p5[InterpRegs[InterpRegs$Name == 'CNY',],]
+CWV_k2p5 = NotOutliersWGS_k2p5[CWV_Bounded,]
+ENY_k2p5 = NotOutliersWGS_k2p5[InterpRegs[InterpRegs$Name == 'ENY',],]
+ENYPA_k2p5 = NotOutliersWGS_k2p5[InterpRegs[InterpRegs$Name == 'ENYPA',],]
+MT_k2p5 = NotOutliersWGS_k2p5[MT_Bounded,]
+NWPANY_k2p5 = NotOutliersWGS_k2p5[InterpRegs[InterpRegs$Name == 'NWPANY',],]
+SWPA_k2p5 = NotOutliersWGS_k2p5[InterpRegs[InterpRegs$Name == 'SWPA',],]
+WPA_k2p5 = NotOutliersWGS_k2p5[InterpRegs[InterpRegs$Name == 'WPA',],]
+VR_k2p5 = NotOutliersWGS_k2p5[VR_Bounded,]
+FL_k2p5 = rbind(CT_k2p5, CWV_k2p5, CNY_k2p5, ENY_k2p5, ENYPA_k2p5, MT_k2p5, NWPANY_k2p5, SWPA_k2p5, WPA_k2p5, VR_k2p5)
+
+CT_k3p5 = NotOutliersWGS_k3p5[InterpRegs[InterpRegs$Name == 'CT',],]
+CNY_k3p5 = NotOutliersWGS_k3p5[InterpRegs[InterpRegs$Name == 'CNY',],]
+CWV_k3p5 = NotOutliersWGS_k3p5[CWV_Bounded,]
+ENY_k3p5 = NotOutliersWGS_k3p5[InterpRegs[InterpRegs$Name == 'ENY',],]
+ENYPA_k3p5 = NotOutliersWGS_k3p5[InterpRegs[InterpRegs$Name == 'ENYPA',],]
+MT_k3p5 = NotOutliersWGS_k3p5[MT_Bounded,]
+NWPANY_k3p5 = NotOutliersWGS_k3p5[InterpRegs[InterpRegs$Name == 'NWPANY',],]
+SWPA_k3p5 = NotOutliersWGS_k3p5[InterpRegs[InterpRegs$Name == 'SWPA',],]
+WPA_k3p5 = NotOutliersWGS_k3p5[InterpRegs[InterpRegs$Name == 'WPA',],]
+VR_k3p5 = NotOutliersWGS_k3p5[VR_Bounded,]
+FL_k3p5 = rbind(CT_k3p5, CWV_k3p5, CNY_k3p5, ENY_k3p5, ENYPA_k3p5, MT_k3p5, NWPANY_k3p5, SWPA_k3p5, WPA_k3p5, VR_k3p5)
+
+CT_k4p0 = NotOutliersWGS_k4p0[InterpRegs[InterpRegs$Name == 'CT',],]
+CNY_k4p0 = NotOutliersWGS_k4p0[InterpRegs[InterpRegs$Name == 'CNY',],]
+CWV_k4p0 = NotOutliersWGS_k4p0[CWV_Bounded,]
+ENY_k4p0 = NotOutliersWGS_k4p0[InterpRegs[InterpRegs$Name == 'ENY',],]
+ENYPA_k4p0 = NotOutliersWGS_k4p0[InterpRegs[InterpRegs$Name == 'ENYPA',],]
+MT_k4p0 = NotOutliersWGS_k4p0[MT_Bounded,]
+NWPANY_k4p0 = NotOutliersWGS_k4p0[InterpRegs[InterpRegs$Name == 'NWPANY',],]
+SWPA_k4p0 = NotOutliersWGS_k4p0[InterpRegs[InterpRegs$Name == 'SWPA',],]
+WPA_k4p0 = NotOutliersWGS_k4p0[InterpRegs[InterpRegs$Name == 'WPA',],]
+VR_k4p0 = NotOutliersWGS_k4p0[VR_Bounded,]
+FL_k4p0 = rbind(CT_k4p0, CWV_k4p0, CNY_k4p0, ENY_k4p0, ENYPA_k4p0, MT_k4p0, NWPANY_k4p0, SWPA_k4p0, WPA_k4p0, VR_k4p0)
+
+CT_k4p5 = NotOutliersWGS_k4p5[InterpRegs[InterpRegs$Name == 'CT',],]
+CNY_k4p5 = NotOutliersWGS_k4p5[InterpRegs[InterpRegs$Name == 'CNY',],]
+CWV_k4p5 = NotOutliersWGS_k4p5[CWV_Bounded,]
+ENY_k4p5 = NotOutliersWGS_k4p5[InterpRegs[InterpRegs$Name == 'ENY',],]
+ENYPA_k4p5 = NotOutliersWGS_k4p5[InterpRegs[InterpRegs$Name == 'ENYPA',],]
+MT_k4p5 = NotOutliersWGS_k4p5[MT_Bounded,]
+NWPANY_k4p5 = NotOutliersWGS_k4p5[InterpRegs[InterpRegs$Name == 'NWPANY',],]
+SWPA_k4p5 = NotOutliersWGS_k4p5[InterpRegs[InterpRegs$Name == 'SWPA',],]
+WPA_k4p5 = NotOutliersWGS_k4p5[InterpRegs[InterpRegs$Name == 'WPA',],]
+VR_k4p5 = NotOutliersWGS_k4p5[VR_Bounded,]
+FL_k4p5 = rbind(CT_k4p5, CWV_k4p5, CNY_k4p5, ENY_k4p5, ENYPA_k4p5, MT_k4p5, NWPANY_k4p5, SWPA_k4p5, WPA_k4p5, VR_k4p5)
+
+CT_k5p0 = NotOutliersWGS_k5p0[InterpRegs[InterpRegs$Name == 'CT',],]
+CNY_k5p0 = NotOutliersWGS_k5p0[InterpRegs[InterpRegs$Name == 'CNY',],]
+CWV_k5p0 = NotOutliersWGS_k5p0[CWV_Bounded,]
+ENY_k5p0 = NotOutliersWGS_k5p0[InterpRegs[InterpRegs$Name == 'ENY',],]
+ENYPA_k5p0 = NotOutliersWGS_k5p0[InterpRegs[InterpRegs$Name == 'ENYPA',],]
+MT_k5p0 = NotOutliersWGS_k5p0[MT_Bounded,]
+NWPANY_k5p0 = NotOutliersWGS_k5p0[InterpRegs[InterpRegs$Name == 'NWPANY',],]
+SWPA_k5p0 = NotOutliersWGS_k5p0[InterpRegs[InterpRegs$Name == 'SWPA',],]
+WPA_k5p0 = NotOutliersWGS_k5p0[InterpRegs[InterpRegs$Name == 'WPA',],]
+VR_k5p0 = NotOutliersWGS_k5p0[VR_Bounded,]
+FL_k5p0 = rbind(CT_k5p0, CWV_k5p0, CNY_k5p0, ENY_k5p0, ENYPA_k5p0, MT_k5p0, NWPANY_k5p0, SWPA_k5p0, WPA_k5p0, VR_k5p0)
+
 #Q-Q plots for data in each interpolation region
 #Unique axes
 sets = rbind(c(1,2,3), c(4,5,6),c(7,8,9))
@@ -2034,7 +2271,386 @@ dev.off()
 # plot(x = temp, y = MT@data$Qs[which(MT@data$out_loc_error == 1)], col = 'black', pch = 16, xlab = '', ylab = '', axes = FALSE, xlim = c(-3.5,3.5), ylim = c(5,120))
 # dev.off()
 
-#With Map
+#k = 1
+sets = rbind(c(1,2,3), c(4,5,6),c(7,8,9))
+png('QQPlotHeatFlow_NotTestedOuts_k1p0.png', res=600, units='in', width=10, height=10)
+layout(sets)
+par(mar=c(4,5,3,2))
+qqnorm(CT_k1p0@data$Qs, cex.axis=1.5, cex.lab=1.5, main='Chautauqua, NY', ylab=expression('Sample Quantiles' ~ (mW/m^2)), cex.main=2, col='red')
+qqline(CT_k1p0@data$Qs)
+qqnorm(WPA_k1p0@data$Qs, cex.axis=1.5, cex.lab=1.5, main='Western PA', ylab=expression('Sample Quantiles' ~ (mW/m^2)), cex.main=2, col='orange', xlim = c(-3.5,3.5), ylim = c(10,70))
+qqline(WPA_k1p0@data$Qs)
+temp = qqnorm(WPA_k1p0@data$Qs, plot.it = FALSE)$x[which(WPA_k1p0@data$out_loc_error == 1)]
+par(new = TRUE)
+plot(x = temp, y = WPA_k1p0@data$Qs[which(WPA_k1p0@data$out_loc_error == 1)], col = 'black', pch = 16, xlab = '', ylab = '', axes = FALSE, xlim = c(-3.5,3.5), ylim = c(10,70))
+qqnorm(NWPANY_k1p0@data$Qs, cex.axis=1.5, cex.lab=1.5, main='Northwestern NY and PA', ylab=expression('Sample Quantiles' ~ (mW/m^2)), cex.main=2, col='yellow', xlim = c(-3,3), ylim = c(5,75))
+qqline(NWPANY_k1p0@data$Qs)
+temp = qqnorm(NWPANY_k1p0@data$Qs, plot.it = FALSE)$x[which(NWPANY_k1p0@data$out_loc_error == 1)]
+par(new = TRUE)
+plot(x = temp, y = NWPANY_k1p0@data$Qs[which(NWPANY_k1p0@data$out_loc_error == 1)], col = 'black', pch = 16, xlab = '', ylab = '', axes = FALSE, xlim = c(-3,3), ylim = c(5,75))
+qqnorm(CNY_k1p0@data$Qs, cex.axis=1.5, cex.lab=1.5, main='Central NY', ylab=expression('Sample Quantiles' ~ (mW/m^2)), cex.main=2, col='green', xlim = c(-2.75,2.75), ylim = c(35,65))
+qqline(CNY_k1p0@data$Qs)
+temp = qqnorm(CNY_k1p0@data$Qs, plot.it = FALSE)$x[which(CNY_k1p0@data$out_loc_error == 1)]
+par(new = TRUE)
+plot(x = temp, y = CNY_k1p0@data$Qs[which(CNY_k1p0@data$out_loc_error == 1)], col = 'black', pch = 16, xlab = '', ylab = '', axes = FALSE, xlim = c(-2.75,2.75), ylim = c(35,65))
+qqnorm(ENY_k1p0@data$Qs, cex.axis=1.5, cex.lab=1.5, main='Eastern NY', ylab=expression('Sample Quantiles' ~ (mW/m^2)), cex.main=2, col='springgreen', xlim = c(-3,3), ylim = c(30,75))
+qqline(ENY_k1p0@data$Qs)
+temp = qqnorm(ENY_k1p0@data$Qs, plot.it = FALSE)$x[which(ENY_k1p0@data$out_loc_error == 1)]
+par(new = TRUE)
+plot(x = temp, y = ENY_k1p0@data$Qs[which(ENY_k1p0@data$out_loc_error == 1)], col = 'black', pch = 16, xlab = '', ylab = '', axes = FALSE, xlim = c(-3,3), ylim = c(30,75))
+qqnorm(ENYPA_k1p0@data$Qs, cex.axis=1.5, cex.lab=1.5, main='Eastern NY and PA', ylab=expression('Sample Quantiles' ~ (mW/m^2)), cex.main=2, col='skyblue', xlim = c(-3,3), ylim = c(10,110))
+qqline(ENYPA_k1p0@data$Qs)
+temp = qqnorm(ENYPA_k1p0@data$Qs, plot.it = FALSE)$x[which(ENYPA_k1p0@data$out_loc_error == 1)]
+par(new = TRUE)
+plot(x = temp, y = ENYPA_k1p0@data$Qs[which(ENYPA_k1p0@data$out_loc_error == 1)], col = 'black', pch = 16, xlab = '', ylab = '', axes = FALSE, xlim = c(-3,3), ylim = c(10,110))
+qqnorm(SWPA_k1p0@data$Qs, cex.axis=1.5, cex.lab=1.5, main='Southwestern PA', ylab=expression('Sample Quantiles' ~ (mW/m^2)), cex.main=2, col='blue', xlim = c(-4,4), ylim = c(5,110))
+qqline(SWPA_k1p0@data$Qs)
+temp = qqnorm(SWPA_k1p0@data$Qs, plot.it = FALSE)$x[which(SWPA_k1p0@data$out_loc_error == 1)]
+par(new = TRUE)
+plot(x = temp, y = SWPA_k1p0@data$Qs[which(SWPA_k1p0@data$out_loc_error == 1)], col = 'black', pch = 16, xlab = '', ylab = '', axes = FALSE, xlim = c(-4,4), ylim = c(5,110))
+qqnorm(CWV_k1p0@data$Qs, cex.axis=1.5, cex.lab=1.5, main='Central WV', ylab=expression('Sample Quantiles' ~ (mW/m^2)), cex.main=2, col='purple', xlim = c(-4,4), ylim = c(5,120))
+qqline(CWV_k1p0@data$Qs)
+temp = qqnorm(CWV_k1p0@data$Qs, plot.it = FALSE)$x[which(CWV_k1p0@data$out_loc_error == 1)]
+par(new = TRUE)
+plot(x = temp, y = CWV_k1p0@data$Qs[which(CWV_k1p0@data$out_loc_error == 1)], col = 'black', pch = 16, xlab = '', ylab = '', axes = FALSE, xlim = c(-4,4), ylim = c(5,120))
+qqnorm(MT_k1p0@data$Qs, cex.axis=1.5, cex.lab=1.5, main='Western WV', ylab=expression('Sample Quantiles' ~ (mW/m^2)), cex.main=2, col='violet', xlim = c(-3.5,3.5), ylim = c(5,120))
+qqline(MT_k1p0@data$Qs)
+temp = qqnorm(MT_k1p0@data$Qs, plot.it = FALSE)$x[which(MT_k1p0@data$out_loc_error == 1)]
+par(new = TRUE)
+plot(x = temp, y = MT_k1p0@data$Qs[which(MT_k1p0@data$out_loc_error == 1)], col = 'black', pch = 16, xlab = '', ylab = '', axes = FALSE, xlim = c(-3.5,3.5), ylim = c(5,120))
+dev.off()
+
+#k = 1.5
+png('QQPlotHeatFlow_NotTestedOuts_k1p5.png', res=600, units='in', width=10, height=10)
+layout(sets)
+par(mar=c(4,5,3,2))
+qqnorm(CT_k1p5@data$Qs, cex.axis=1.5, cex.lab=1.5, main='Chautauqua, NY', ylab=expression('Sample Quantiles' ~ (mW/m^2)), cex.main=2, col='red')
+qqline(CT_k1p5@data$Qs)
+qqnorm(WPA_k1p5@data$Qs, cex.axis=1.5, cex.lab=1.5, main='Western PA', ylab=expression('Sample Quantiles' ~ (mW/m^2)), cex.main=2, col='orange', xlim = c(-3.5,3.5), ylim = c(10,70))
+qqline(WPA_k1p5@data$Qs)
+temp = qqnorm(WPA_k1p5@data$Qs, plot.it = FALSE)$x[which(WPA_k1p5@data$out_loc_error == 1)]
+par(new = TRUE)
+plot(x = temp, y = WPA_k1p5@data$Qs[which(WPA_k1p5@data$out_loc_error == 1)], col = 'black', pch = 16, xlab = '', ylab = '', axes = FALSE, xlim = c(-3.5,3.5), ylim = c(10,70))
+qqnorm(NWPANY_k1p5@data$Qs, cex.axis=1.5, cex.lab=1.5, main='Northwestern NY and PA', ylab=expression('Sample Quantiles' ~ (mW/m^2)), cex.main=2, col='yellow', xlim = c(-3,3), ylim = c(5,75))
+qqline(NWPANY_k1p5@data$Qs)
+temp = qqnorm(NWPANY_k1p5@data$Qs, plot.it = FALSE)$x[which(NWPANY_k1p5@data$out_loc_error == 1)]
+par(new = TRUE)
+plot(x = temp, y = NWPANY_k1p5@data$Qs[which(NWPANY_k1p5@data$out_loc_error == 1)], col = 'black', pch = 16, xlab = '', ylab = '', axes = FALSE, xlim = c(-3,3), ylim = c(5,75))
+qqnorm(CNY_k1p5@data$Qs, cex.axis=1.5, cex.lab=1.5, main='Central NY', ylab=expression('Sample Quantiles' ~ (mW/m^2)), cex.main=2, col='green', xlim = c(-2.75,2.75), ylim = c(35,65))
+qqline(CNY_k1p5@data$Qs)
+temp = qqnorm(CNY_k1p5@data$Qs, plot.it = FALSE)$x[which(CNY_k1p5@data$out_loc_error == 1)]
+par(new = TRUE)
+plot(x = temp, y = CNY_k1p5@data$Qs[which(CNY_k1p5@data$out_loc_error == 1)], col = 'black', pch = 16, xlab = '', ylab = '', axes = FALSE, xlim = c(-2.75,2.75), ylim = c(35,65))
+qqnorm(ENY_k1p5@data$Qs, cex.axis=1.5, cex.lab=1.5, main='Eastern NY', ylab=expression('Sample Quantiles' ~ (mW/m^2)), cex.main=2, col='springgreen', xlim = c(-3,3), ylim = c(30,75))
+qqline(ENY_k1p5@data$Qs)
+temp = qqnorm(ENY_k1p5@data$Qs, plot.it = FALSE)$x[which(ENY_k1p5@data$out_loc_error == 1)]
+par(new = TRUE)
+plot(x = temp, y = ENY_k1p5@data$Qs[which(ENY_k1p5@data$out_loc_error == 1)], col = 'black', pch = 16, xlab = '', ylab = '', axes = FALSE, xlim = c(-3,3), ylim = c(30,75))
+qqnorm(ENYPA_k1p5@data$Qs, cex.axis=1.5, cex.lab=1.5, main='Eastern NY and PA', ylab=expression('Sample Quantiles' ~ (mW/m^2)), cex.main=2, col='skyblue', xlim = c(-3,3), ylim = c(10,110))
+qqline(ENYPA_k1p5@data$Qs)
+temp = qqnorm(ENYPA_k1p5@data$Qs, plot.it = FALSE)$x[which(ENYPA_k1p5@data$out_loc_error == 1)]
+par(new = TRUE)
+plot(x = temp, y = ENYPA_k1p5@data$Qs[which(ENYPA_k1p5@data$out_loc_error == 1)], col = 'black', pch = 16, xlab = '', ylab = '', axes = FALSE, xlim = c(-3,3), ylim = c(10,110))
+qqnorm(SWPA_k1p5@data$Qs, cex.axis=1.5, cex.lab=1.5, main='Southwestern PA', ylab=expression('Sample Quantiles' ~ (mW/m^2)), cex.main=2, col='blue', xlim = c(-4,4), ylim = c(5,110))
+qqline(SWPA_k1p5@data$Qs)
+temp = qqnorm(SWPA_k1p5@data$Qs, plot.it = FALSE)$x[which(SWPA_k1p5@data$out_loc_error == 1)]
+par(new = TRUE)
+plot(x = temp, y = SWPA_k1p5@data$Qs[which(SWPA_k1p5@data$out_loc_error == 1)], col = 'black', pch = 16, xlab = '', ylab = '', axes = FALSE, xlim = c(-4,4), ylim = c(5,110))
+qqnorm(CWV_k1p5@data$Qs, cex.axis=1.5, cex.lab=1.5, main='Central WV', ylab=expression('Sample Quantiles' ~ (mW/m^2)), cex.main=2, col='purple', xlim = c(-4,4), ylim = c(5,120))
+qqline(CWV_k1p5@data$Qs)
+temp = qqnorm(CWV_k1p5@data$Qs, plot.it = FALSE)$x[which(CWV_k1p5@data$out_loc_error == 1)]
+par(new = TRUE)
+plot(x = temp, y = CWV_k1p5@data$Qs[which(CWV_k1p5@data$out_loc_error == 1)], col = 'black', pch = 16, xlab = '', ylab = '', axes = FALSE, xlim = c(-4,4), ylim = c(5,120))
+qqnorm(MT_k1p5@data$Qs, cex.axis=1.5, cex.lab=1.5, main='Western WV', ylab=expression('Sample Quantiles' ~ (mW/m^2)), cex.main=2, col='violet', xlim = c(-3.5,3.5), ylim = c(5,120))
+qqline(MT_k1p5@data$Qs)
+temp = qqnorm(MT_k1p5@data$Qs, plot.it = FALSE)$x[which(MT_k1p5@data$out_loc_error == 1)]
+par(new = TRUE)
+plot(x = temp, y = MT_k1p5@data$Qs[which(MT_k1p5@data$out_loc_error == 1)], col = 'black', pch = 16, xlab = '', ylab = '', axes = FALSE, xlim = c(-3.5,3.5), ylim = c(5,120))
+dev.off()
+
+png('QQPlotHeatFlow_NotTestedOuts_k2p0.png', res=600, units='in', width=10, height=10)
+layout(sets)
+par(mar=c(4,5,3,2))
+qqnorm(CT_k2p0@data$Qs, cex.axis=1.5, cex.lab=1.5, main='Chautauqua, NY', ylab=expression('Sample Quantiles' ~ (mW/m^2)), cex.main=2, col='red')
+qqline(CT_k2p0@data$Qs)
+qqnorm(WPA_k2p0@data$Qs, cex.axis=1.5, cex.lab=1.5, main='Western PA', ylab=expression('Sample Quantiles' ~ (mW/m^2)), cex.main=2, col='orange', xlim = c(-3.5,3.5), ylim = c(10,70))
+qqline(WPA_k2p0@data$Qs)
+temp = qqnorm(WPA_k2p0@data$Qs, plot.it = FALSE)$x[which(WPA_k2p0@data$out_loc_error == 1)]
+par(new = TRUE)
+plot(x = temp, y = WPA_k2p0@data$Qs[which(WPA_k2p0@data$out_loc_error == 1)], col = 'black', pch = 16, xlab = '', ylab = '', axes = FALSE, xlim = c(-3.5,3.5), ylim = c(10,70))
+qqnorm(NWPANY_k2p0@data$Qs, cex.axis=1.5, cex.lab=1.5, main='Northwestern NY and PA', ylab=expression('Sample Quantiles' ~ (mW/m^2)), cex.main=2, col='yellow', xlim = c(-3,3), ylim = c(5,75))
+qqline(NWPANY_k2p0@data$Qs)
+temp = qqnorm(NWPANY_k2p0@data$Qs, plot.it = FALSE)$x[which(NWPANY_k2p0@data$out_loc_error == 1)]
+par(new = TRUE)
+plot(x = temp, y = NWPANY_k2p0@data$Qs[which(NWPANY_k2p0@data$out_loc_error == 1)], col = 'black', pch = 16, xlab = '', ylab = '', axes = FALSE, xlim = c(-3,3), ylim = c(5,75))
+qqnorm(CNY_k2p0@data$Qs, cex.axis=1.5, cex.lab=1.5, main='Central NY', ylab=expression('Sample Quantiles' ~ (mW/m^2)), cex.main=2, col='green', xlim = c(-2.75,2.75), ylim = c(35,65))
+qqline(CNY_k2p0@data$Qs)
+temp = qqnorm(CNY_k2p0@data$Qs, plot.it = FALSE)$x[which(CNY_k2p0@data$out_loc_error == 1)]
+par(new = TRUE)
+plot(x = temp, y = CNY_k2p0@data$Qs[which(CNY_k2p0@data$out_loc_error == 1)], col = 'black', pch = 16, xlab = '', ylab = '', axes = FALSE, xlim = c(-2.75,2.75), ylim = c(35,65))
+qqnorm(ENY_k2p0@data$Qs, cex.axis=1.5, cex.lab=1.5, main='Eastern NY', ylab=expression('Sample Quantiles' ~ (mW/m^2)), cex.main=2, col='springgreen', xlim = c(-3,3), ylim = c(30,75))
+qqline(ENY_k2p0@data$Qs)
+temp = qqnorm(ENY_k2p0@data$Qs, plot.it = FALSE)$x[which(ENY_k2p0@data$out_loc_error == 1)]
+par(new = TRUE)
+plot(x = temp, y = ENY_k2p0@data$Qs[which(ENY_k2p0@data$out_loc_error == 1)], col = 'black', pch = 16, xlab = '', ylab = '', axes = FALSE, xlim = c(-3,3), ylim = c(30,75))
+qqnorm(ENYPA_k2p0@data$Qs, cex.axis=1.5, cex.lab=1.5, main='Eastern NY and PA', ylab=expression('Sample Quantiles' ~ (mW/m^2)), cex.main=2, col='skyblue', xlim = c(-3,3), ylim = c(10,110))
+qqline(ENYPA_k2p0@data$Qs)
+temp = qqnorm(ENYPA_k2p0@data$Qs, plot.it = FALSE)$x[which(ENYPA_k2p0@data$out_loc_error == 1)]
+par(new = TRUE)
+plot(x = temp, y = ENYPA_k2p0@data$Qs[which(ENYPA_k2p0@data$out_loc_error == 1)], col = 'black', pch = 16, xlab = '', ylab = '', axes = FALSE, xlim = c(-3,3), ylim = c(10,110))
+qqnorm(SWPA_k2p0@data$Qs, cex.axis=1.5, cex.lab=1.5, main='Southwestern PA', ylab=expression('Sample Quantiles' ~ (mW/m^2)), cex.main=2, col='blue', xlim = c(-4,4), ylim = c(5,110))
+qqline(SWPA_k2p0@data$Qs)
+temp = qqnorm(SWPA_k2p0@data$Qs, plot.it = FALSE)$x[which(SWPA_k2p0@data$out_loc_error == 1)]
+par(new = TRUE)
+plot(x = temp, y = SWPA_k2p0@data$Qs[which(SWPA_k2p0@data$out_loc_error == 1)], col = 'black', pch = 16, xlab = '', ylab = '', axes = FALSE, xlim = c(-4,4), ylim = c(5,110))
+qqnorm(CWV_k2p0@data$Qs, cex.axis=1.5, cex.lab=1.5, main='Central WV', ylab=expression('Sample Quantiles' ~ (mW/m^2)), cex.main=2, col='purple', xlim = c(-4,4), ylim = c(5,120))
+qqline(CWV_k2p0@data$Qs)
+temp = qqnorm(CWV_k2p0@data$Qs, plot.it = FALSE)$x[which(CWV_k2p0@data$out_loc_error == 1)]
+par(new = TRUE)
+plot(x = temp, y = CWV_k2p0@data$Qs[which(CWV_k2p0@data$out_loc_error == 1)], col = 'black', pch = 16, xlab = '', ylab = '', axes = FALSE, xlim = c(-4,4), ylim = c(5,120))
+qqnorm(MT_k2p0@data$Qs, cex.axis=1.5, cex.lab=1.5, main='Western WV', ylab=expression('Sample Quantiles' ~ (mW/m^2)), cex.main=2, col='violet', xlim = c(-3.5,3.5), ylim = c(5,120))
+qqline(MT_k2p0@data$Qs)
+temp = qqnorm(MT_k2p0@data$Qs, plot.it = FALSE)$x[which(MT_k2p0@data$out_loc_error == 1)]
+par(new = TRUE)
+plot(x = temp, y = MT_k2p0@data$Qs[which(MT_k2p0@data$out_loc_error == 1)], col = 'black', pch = 16, xlab = '', ylab = '', axes = FALSE, xlim = c(-3.5,3.5), ylim = c(5,120))
+dev.off()
+
+png('QQPlotHeatFlow_NotTestedOuts_k2p5.png', res=600, units='in', width=10, height=10)
+layout(sets)
+par(mar=c(4,5,3,2))
+qqnorm(CT_k2p5@data$Qs, cex.axis=1.5, cex.lab=1.5, main='Chautauqua, NY', ylab=expression('Sample Quantiles' ~ (mW/m^2)), cex.main=2, col='red')
+qqline(CT_k2p5@data$Qs)
+qqnorm(WPA_k2p5@data$Qs, cex.axis=1.5, cex.lab=1.5, main='Western PA', ylab=expression('Sample Quantiles' ~ (mW/m^2)), cex.main=2, col='orange', xlim = c(-3.5,3.5), ylim = c(10,70))
+qqline(WPA_k2p5@data$Qs)
+temp = qqnorm(WPA_k2p5@data$Qs, plot.it = FALSE)$x[which(WPA_k2p5@data$out_loc_error == 1)]
+par(new = TRUE)
+plot(x = temp, y = WPA_k2p5@data$Qs[which(WPA_k2p5@data$out_loc_error == 1)], col = 'black', pch = 16, xlab = '', ylab = '', axes = FALSE, xlim = c(-3.5,3.5), ylim = c(10,70))
+qqnorm(NWPANY_k2p5@data$Qs, cex.axis=1.5, cex.lab=1.5, main='Northwestern NY and PA', ylab=expression('Sample Quantiles' ~ (mW/m^2)), cex.main=2, col='yellow', xlim = c(-3,3), ylim = c(5,75))
+qqline(NWPANY_k2p5@data$Qs)
+temp = qqnorm(NWPANY_k2p5@data$Qs, plot.it = FALSE)$x[which(NWPANY_k2p5@data$out_loc_error == 1)]
+par(new = TRUE)
+plot(x = temp, y = NWPANY_k2p5@data$Qs[which(NWPANY_k2p5@data$out_loc_error == 1)], col = 'black', pch = 16, xlab = '', ylab = '', axes = FALSE, xlim = c(-3,3), ylim = c(5,75))
+qqnorm(CNY_k2p5@data$Qs, cex.axis=1.5, cex.lab=1.5, main='Central NY', ylab=expression('Sample Quantiles' ~ (mW/m^2)), cex.main=2, col='green', xlim = c(-2.75,2.75), ylim = c(35,65))
+qqline(CNY_k2p5@data$Qs)
+temp = qqnorm(CNY_k2p5@data$Qs, plot.it = FALSE)$x[which(CNY_k2p5@data$out_loc_error == 1)]
+par(new = TRUE)
+plot(x = temp, y = CNY_k2p5@data$Qs[which(CNY_k2p5@data$out_loc_error == 1)], col = 'black', pch = 16, xlab = '', ylab = '', axes = FALSE, xlim = c(-2.75,2.75), ylim = c(35,65))
+qqnorm(ENY_k2p5@data$Qs, cex.axis=1.5, cex.lab=1.5, main='Eastern NY', ylab=expression('Sample Quantiles' ~ (mW/m^2)), cex.main=2, col='springgreen', xlim = c(-3,3), ylim = c(30,75))
+qqline(ENY_k2p5@data$Qs)
+temp = qqnorm(ENY_k2p5@data$Qs, plot.it = FALSE)$x[which(ENY_k2p5@data$out_loc_error == 1)]
+par(new = TRUE)
+plot(x = temp, y = ENY_k2p5@data$Qs[which(ENY_k2p5@data$out_loc_error == 1)], col = 'black', pch = 16, xlab = '', ylab = '', axes = FALSE, xlim = c(-3,3), ylim = c(30,75))
+qqnorm(ENYPA_k2p5@data$Qs, cex.axis=1.5, cex.lab=1.5, main='Eastern NY and PA', ylab=expression('Sample Quantiles' ~ (mW/m^2)), cex.main=2, col='skyblue', xlim = c(-3,3), ylim = c(10,110))
+qqline(ENYPA_k2p5@data$Qs)
+temp = qqnorm(ENYPA_k2p5@data$Qs, plot.it = FALSE)$x[which(ENYPA_k2p5@data$out_loc_error == 1)]
+par(new = TRUE)
+plot(x = temp, y = ENYPA_k2p5@data$Qs[which(ENYPA_k2p5@data$out_loc_error == 1)], col = 'black', pch = 16, xlab = '', ylab = '', axes = FALSE, xlim = c(-3,3), ylim = c(10,110))
+qqnorm(SWPA_k2p5@data$Qs, cex.axis=1.5, cex.lab=1.5, main='Southwestern PA', ylab=expression('Sample Quantiles' ~ (mW/m^2)), cex.main=2, col='blue', xlim = c(-4,4), ylim = c(5,110))
+qqline(SWPA_k2p5@data$Qs)
+temp = qqnorm(SWPA_k2p5@data$Qs, plot.it = FALSE)$x[which(SWPA_k2p5@data$out_loc_error == 1)]
+par(new = TRUE)
+plot(x = temp, y = SWPA_k2p5@data$Qs[which(SWPA_k2p5@data$out_loc_error == 1)], col = 'black', pch = 16, xlab = '', ylab = '', axes = FALSE, xlim = c(-4,4), ylim = c(5,110))
+qqnorm(CWV_k2p5@data$Qs, cex.axis=1.5, cex.lab=1.5, main='Central WV', ylab=expression('Sample Quantiles' ~ (mW/m^2)), cex.main=2, col='purple', xlim = c(-4,4), ylim = c(5,120))
+qqline(CWV_k2p5@data$Qs)
+temp = qqnorm(CWV_k2p5@data$Qs, plot.it = FALSE)$x[which(CWV_k2p5@data$out_loc_error == 1)]
+par(new = TRUE)
+plot(x = temp, y = CWV_k2p5@data$Qs[which(CWV_k2p5@data$out_loc_error == 1)], col = 'black', pch = 16, xlab = '', ylab = '', axes = FALSE, xlim = c(-4,4), ylim = c(5,120))
+qqnorm(MT_k2p5@data$Qs, cex.axis=1.5, cex.lab=1.5, main='Western WV', ylab=expression('Sample Quantiles' ~ (mW/m^2)), cex.main=2, col='violet', xlim = c(-3.5,3.5), ylim = c(5,120))
+qqline(MT_k2p5@data$Qs)
+temp = qqnorm(MT_k2p5@data$Qs, plot.it = FALSE)$x[which(MT_k2p5@data$out_loc_error == 1)]
+par(new = TRUE)
+plot(x = temp, y = MT_k2p5@data$Qs[which(MT_k2p5@data$out_loc_error == 1)], col = 'black', pch = 16, xlab = '', ylab = '', axes = FALSE, xlim = c(-3.5,3.5), ylim = c(5,120))
+dev.off()
+
+png('QQPlotHeatFlow_NotTestedOuts_k3p5.png', res=600, units='in', width=10, height=10)
+layout(sets)
+par(mar=c(4,5,3,2))
+qqnorm(CT_k3p5@data$Qs, cex.axis=1.5, cex.lab=1.5, main='Chautauqua, NY', ylab=expression('Sample Quantiles' ~ (mW/m^2)), cex.main=2, col='red')
+qqline(CT_k3p5@data$Qs)
+qqnorm(WPA_k3p5@data$Qs, cex.axis=1.5, cex.lab=1.5, main='Western PA', ylab=expression('Sample Quantiles' ~ (mW/m^2)), cex.main=2, col='orange', xlim = c(-3.5,3.5), ylim = c(10,70))
+qqline(WPA_k3p5@data$Qs)
+temp = qqnorm(WPA_k3p5@data$Qs, plot.it = FALSE)$x[which(WPA_k3p5@data$out_loc_error == 1)]
+par(new = TRUE)
+plot(x = temp, y = WPA_k3p5@data$Qs[which(WPA_k3p5@data$out_loc_error == 1)], col = 'black', pch = 16, xlab = '', ylab = '', axes = FALSE, xlim = c(-3.5,3.5), ylim = c(10,70))
+qqnorm(NWPANY_k3p5@data$Qs, cex.axis=1.5, cex.lab=1.5, main='Northwestern NY and PA', ylab=expression('Sample Quantiles' ~ (mW/m^2)), cex.main=2, col='yellow', xlim = c(-3,3), ylim = c(5,75))
+qqline(NWPANY_k3p5@data$Qs)
+temp = qqnorm(NWPANY_k3p5@data$Qs, plot.it = FALSE)$x[which(NWPANY_k3p5@data$out_loc_error == 1)]
+par(new = TRUE)
+plot(x = temp, y = NWPANY_k3p5@data$Qs[which(NWPANY_k3p5@data$out_loc_error == 1)], col = 'black', pch = 16, xlab = '', ylab = '', axes = FALSE, xlim = c(-3,3), ylim = c(5,75))
+qqnorm(CNY_k3p5@data$Qs, cex.axis=1.5, cex.lab=1.5, main='Central NY', ylab=expression('Sample Quantiles' ~ (mW/m^2)), cex.main=2, col='green', xlim = c(-2.75,2.75), ylim = c(35,65))
+qqline(CNY_k3p5@data$Qs)
+temp = qqnorm(CNY_k3p5@data$Qs, plot.it = FALSE)$x[which(CNY_k3p5@data$out_loc_error == 1)]
+par(new = TRUE)
+plot(x = temp, y = CNY_k3p5@data$Qs[which(CNY_k3p5@data$out_loc_error == 1)], col = 'black', pch = 16, xlab = '', ylab = '', axes = FALSE, xlim = c(-2.75,2.75), ylim = c(35,65))
+qqnorm(ENY_k3p5@data$Qs, cex.axis=1.5, cex.lab=1.5, main='Eastern NY', ylab=expression('Sample Quantiles' ~ (mW/m^2)), cex.main=2, col='springgreen', xlim = c(-3,3), ylim = c(30,75))
+qqline(ENY_k3p5@data$Qs)
+temp = qqnorm(ENY_k3p5@data$Qs, plot.it = FALSE)$x[which(ENY_k3p5@data$out_loc_error == 1)]
+par(new = TRUE)
+plot(x = temp, y = ENY_k3p5@data$Qs[which(ENY_k3p5@data$out_loc_error == 1)], col = 'black', pch = 16, xlab = '', ylab = '', axes = FALSE, xlim = c(-3,3), ylim = c(30,75))
+qqnorm(ENYPA_k3p5@data$Qs, cex.axis=1.5, cex.lab=1.5, main='Eastern NY and PA', ylab=expression('Sample Quantiles' ~ (mW/m^2)), cex.main=2, col='skyblue', xlim = c(-3,3), ylim = c(10,110))
+qqline(ENYPA_k3p5@data$Qs)
+temp = qqnorm(ENYPA_k3p5@data$Qs, plot.it = FALSE)$x[which(ENYPA_k3p5@data$out_loc_error == 1)]
+par(new = TRUE)
+plot(x = temp, y = ENYPA_k3p5@data$Qs[which(ENYPA_k3p5@data$out_loc_error == 1)], col = 'black', pch = 16, xlab = '', ylab = '', axes = FALSE, xlim = c(-3,3), ylim = c(10,110))
+qqnorm(SWPA_k3p5@data$Qs, cex.axis=1.5, cex.lab=1.5, main='Southwestern PA', ylab=expression('Sample Quantiles' ~ (mW/m^2)), cex.main=2, col='blue', xlim = c(-4,4), ylim = c(5,110))
+qqline(SWPA_k3p5@data$Qs)
+temp = qqnorm(SWPA_k3p5@data$Qs, plot.it = FALSE)$x[which(SWPA_k3p5@data$out_loc_error == 1)]
+par(new = TRUE)
+plot(x = temp, y = SWPA_k3p5@data$Qs[which(SWPA_k3p5@data$out_loc_error == 1)], col = 'black', pch = 16, xlab = '', ylab = '', axes = FALSE, xlim = c(-4,4), ylim = c(5,110))
+qqnorm(CWV_k3p5@data$Qs, cex.axis=1.5, cex.lab=1.5, main='Central WV', ylab=expression('Sample Quantiles' ~ (mW/m^2)), cex.main=2, col='purple', xlim = c(-4,4), ylim = c(5,120))
+qqline(CWV_k3p5@data$Qs)
+temp = qqnorm(CWV_k3p5@data$Qs, plot.it = FALSE)$x[which(CWV_k3p5@data$out_loc_error == 1)]
+par(new = TRUE)
+plot(x = temp, y = CWV_k3p5@data$Qs[which(CWV_k3p5@data$out_loc_error == 1)], col = 'black', pch = 16, xlab = '', ylab = '', axes = FALSE, xlim = c(-4,4), ylim = c(5,120))
+qqnorm(MT_k3p5@data$Qs, cex.axis=1.5, cex.lab=1.5, main='Western WV', ylab=expression('Sample Quantiles' ~ (mW/m^2)), cex.main=2, col='violet', xlim = c(-3.5,3.5), ylim = c(5,120))
+qqline(MT_k3p5@data$Qs)
+temp = qqnorm(MT_k3p5@data$Qs, plot.it = FALSE)$x[which(MT_k3p5@data$out_loc_error == 1)]
+par(new = TRUE)
+plot(x = temp, y = MT_k3p5@data$Qs[which(MT_k3p5@data$out_loc_error == 1)], col = 'black', pch = 16, xlab = '', ylab = '', axes = FALSE, xlim = c(-3.5,3.5), ylim = c(5,120))
+dev.off()
+
+png('QQPlotHeatFlow_NotTestedOuts_k4p0.png', res=600, units='in', width=10, height=10)
+layout(sets)
+par(mar=c(4,5,3,2))
+qqnorm(CT_k4p0@data$Qs, cex.axis=1.5, cex.lab=1.5, main='Chautauqua, NY', ylab=expression('Sample Quantiles' ~ (mW/m^2)), cex.main=2, col='red')
+qqline(CT_k4p0@data$Qs)
+qqnorm(WPA_k4p0@data$Qs, cex.axis=1.5, cex.lab=1.5, main='Western PA', ylab=expression('Sample Quantiles' ~ (mW/m^2)), cex.main=2, col='orange', xlim = c(-3.5,3.5), ylim = c(10,70))
+qqline(WPA_k4p0@data$Qs)
+temp = qqnorm(WPA_k4p0@data$Qs, plot.it = FALSE)$x[which(WPA_k4p0@data$out_loc_error == 1)]
+par(new = TRUE)
+plot(x = temp, y = WPA_k4p0@data$Qs[which(WPA_k4p0@data$out_loc_error == 1)], col = 'black', pch = 16, xlab = '', ylab = '', axes = FALSE, xlim = c(-3.5,3.5), ylim = c(10,70))
+qqnorm(NWPANY_k4p0@data$Qs, cex.axis=1.5, cex.lab=1.5, main='Northwestern NY and PA', ylab=expression('Sample Quantiles' ~ (mW/m^2)), cex.main=2, col='yellow', xlim = c(-3,3), ylim = c(5,75))
+qqline(NWPANY_k4p0@data$Qs)
+temp = qqnorm(NWPANY_k4p0@data$Qs, plot.it = FALSE)$x[which(NWPANY_k4p0@data$out_loc_error == 1)]
+par(new = TRUE)
+plot(x = temp, y = NWPANY_k4p0@data$Qs[which(NWPANY_k4p0@data$out_loc_error == 1)], col = 'black', pch = 16, xlab = '', ylab = '', axes = FALSE, xlim = c(-3,3), ylim = c(5,75))
+qqnorm(CNY_k4p0@data$Qs, cex.axis=1.5, cex.lab=1.5, main='Central NY', ylab=expression('Sample Quantiles' ~ (mW/m^2)), cex.main=2, col='green', xlim = c(-2.75,2.75), ylim = c(35,65))
+qqline(CNY_k4p0@data$Qs)
+temp = qqnorm(CNY_k4p0@data$Qs, plot.it = FALSE)$x[which(CNY_k4p0@data$out_loc_error == 1)]
+par(new = TRUE)
+plot(x = temp, y = CNY_k4p0@data$Qs[which(CNY_k4p0@data$out_loc_error == 1)], col = 'black', pch = 16, xlab = '', ylab = '', axes = FALSE, xlim = c(-2.75,2.75), ylim = c(35,65))
+qqnorm(ENY_k4p0@data$Qs, cex.axis=1.5, cex.lab=1.5, main='Eastern NY', ylab=expression('Sample Quantiles' ~ (mW/m^2)), cex.main=2, col='springgreen', xlim = c(-3,3), ylim = c(30,75))
+qqline(ENY_k4p0@data$Qs)
+temp = qqnorm(ENY_k4p0@data$Qs, plot.it = FALSE)$x[which(ENY_k4p0@data$out_loc_error == 1)]
+par(new = TRUE)
+plot(x = temp, y = ENY_k4p0@data$Qs[which(ENY_k4p0@data$out_loc_error == 1)], col = 'black', pch = 16, xlab = '', ylab = '', axes = FALSE, xlim = c(-3,3), ylim = c(30,75))
+qqnorm(ENYPA_k4p0@data$Qs, cex.axis=1.5, cex.lab=1.5, main='Eastern NY and PA', ylab=expression('Sample Quantiles' ~ (mW/m^2)), cex.main=2, col='skyblue', xlim = c(-3,3), ylim = c(10,110))
+qqline(ENYPA_k4p0@data$Qs)
+temp = qqnorm(ENYPA_k4p0@data$Qs, plot.it = FALSE)$x[which(ENYPA_k4p0@data$out_loc_error == 1)]
+par(new = TRUE)
+plot(x = temp, y = ENYPA_k4p0@data$Qs[which(ENYPA_k4p0@data$out_loc_error == 1)], col = 'black', pch = 16, xlab = '', ylab = '', axes = FALSE, xlim = c(-3,3), ylim = c(10,110))
+qqnorm(SWPA_k4p0@data$Qs, cex.axis=1.5, cex.lab=1.5, main='Southwestern PA', ylab=expression('Sample Quantiles' ~ (mW/m^2)), cex.main=2, col='blue', xlim = c(-4,4), ylim = c(5,110))
+qqline(SWPA_k4p0@data$Qs)
+temp = qqnorm(SWPA_k4p0@data$Qs, plot.it = FALSE)$x[which(SWPA_k4p0@data$out_loc_error == 1)]
+par(new = TRUE)
+plot(x = temp, y = SWPA_k4p0@data$Qs[which(SWPA_k4p0@data$out_loc_error == 1)], col = 'black', pch = 16, xlab = '', ylab = '', axes = FALSE, xlim = c(-4,4), ylim = c(5,110))
+qqnorm(CWV_k4p0@data$Qs, cex.axis=1.5, cex.lab=1.5, main='Central WV', ylab=expression('Sample Quantiles' ~ (mW/m^2)), cex.main=2, col='purple', xlim = c(-4,4), ylim = c(5,120))
+qqline(CWV_k4p0@data$Qs)
+temp = qqnorm(CWV_k4p0@data$Qs, plot.it = FALSE)$x[which(CWV_k4p0@data$out_loc_error == 1)]
+par(new = TRUE)
+plot(x = temp, y = CWV_k4p0@data$Qs[which(CWV_k4p0@data$out_loc_error == 1)], col = 'black', pch = 16, xlab = '', ylab = '', axes = FALSE, xlim = c(-4,4), ylim = c(5,120))
+qqnorm(MT_k4p0@data$Qs, cex.axis=1.5, cex.lab=1.5, main='Western WV', ylab=expression('Sample Quantiles' ~ (mW/m^2)), cex.main=2, col='violet', xlim = c(-3.5,3.5), ylim = c(5,120))
+qqline(MT_k4p0@data$Qs)
+temp = qqnorm(MT_k4p0@data$Qs, plot.it = FALSE)$x[which(MT_k4p0@data$out_loc_error == 1)]
+par(new = TRUE)
+plot(x = temp, y = MT_k4p0@data$Qs[which(MT_k4p0@data$out_loc_error == 1)], col = 'black', pch = 16, xlab = '', ylab = '', axes = FALSE, xlim = c(-3.5,3.5), ylim = c(5,120))
+dev.off()
+
+png('QQPlotHeatFlow_NotTestedOuts_k4p5.png', res=600, units='in', width=10, height=10)
+layout(sets)
+par(mar=c(4,5,3,2))
+qqnorm(CT_k4p5@data$Qs, cex.axis=1.5, cex.lab=1.5, main='Chautauqua, NY', ylab=expression('Sample Quantiles' ~ (mW/m^2)), cex.main=2, col='red')
+qqline(CT_k4p5@data$Qs)
+qqnorm(WPA_k4p5@data$Qs, cex.axis=1.5, cex.lab=1.5, main='Western PA', ylab=expression('Sample Quantiles' ~ (mW/m^2)), cex.main=2, col='orange', xlim = c(-3.5,3.5), ylim = c(10,70))
+qqline(WPA_k4p5@data$Qs)
+temp = qqnorm(WPA_k4p5@data$Qs, plot.it = FALSE)$x[which(WPA_k4p5@data$out_loc_error == 1)]
+par(new = TRUE)
+plot(x = temp, y = WPA_k4p5@data$Qs[which(WPA_k4p5@data$out_loc_error == 1)], col = 'black', pch = 16, xlab = '', ylab = '', axes = FALSE, xlim = c(-3.5,3.5), ylim = c(10,70))
+qqnorm(NWPANY_k4p5@data$Qs, cex.axis=1.5, cex.lab=1.5, main='Northwestern NY and PA', ylab=expression('Sample Quantiles' ~ (mW/m^2)), cex.main=2, col='yellow', xlim = c(-3,3), ylim = c(5,75))
+qqline(NWPANY_k4p5@data$Qs)
+temp = qqnorm(NWPANY_k4p5@data$Qs, plot.it = FALSE)$x[which(NWPANY_k4p5@data$out_loc_error == 1)]
+par(new = TRUE)
+plot(x = temp, y = NWPANY_k4p5@data$Qs[which(NWPANY_k4p5@data$out_loc_error == 1)], col = 'black', pch = 16, xlab = '', ylab = '', axes = FALSE, xlim = c(-3,3), ylim = c(5,75))
+qqnorm(CNY_k4p5@data$Qs, cex.axis=1.5, cex.lab=1.5, main='Central NY', ylab=expression('Sample Quantiles' ~ (mW/m^2)), cex.main=2, col='green', xlim = c(-2.75,2.75), ylim = c(35,65))
+qqline(CNY_k4p5@data$Qs)
+temp = qqnorm(CNY_k4p5@data$Qs, plot.it = FALSE)$x[which(CNY_k4p5@data$out_loc_error == 1)]
+par(new = TRUE)
+plot(x = temp, y = CNY_k4p5@data$Qs[which(CNY_k4p5@data$out_loc_error == 1)], col = 'black', pch = 16, xlab = '', ylab = '', axes = FALSE, xlim = c(-2.75,2.75), ylim = c(35,65))
+qqnorm(ENY_k4p5@data$Qs, cex.axis=1.5, cex.lab=1.5, main='Eastern NY', ylab=expression('Sample Quantiles' ~ (mW/m^2)), cex.main=2, col='springgreen', xlim = c(-3,3), ylim = c(30,75))
+qqline(ENY_k4p5@data$Qs)
+temp = qqnorm(ENY_k4p5@data$Qs, plot.it = FALSE)$x[which(ENY_k4p5@data$out_loc_error == 1)]
+par(new = TRUE)
+plot(x = temp, y = ENY_k4p5@data$Qs[which(ENY_k4p5@data$out_loc_error == 1)], col = 'black', pch = 16, xlab = '', ylab = '', axes = FALSE, xlim = c(-3,3), ylim = c(30,75))
+qqnorm(ENYPA_k4p5@data$Qs, cex.axis=1.5, cex.lab=1.5, main='Eastern NY and PA', ylab=expression('Sample Quantiles' ~ (mW/m^2)), cex.main=2, col='skyblue', xlim = c(-3,3), ylim = c(10,110))
+qqline(ENYPA_k4p5@data$Qs)
+temp = qqnorm(ENYPA_k4p5@data$Qs, plot.it = FALSE)$x[which(ENYPA_k4p5@data$out_loc_error == 1)]
+par(new = TRUE)
+plot(x = temp, y = ENYPA_k4p5@data$Qs[which(ENYPA_k4p5@data$out_loc_error == 1)], col = 'black', pch = 16, xlab = '', ylab = '', axes = FALSE, xlim = c(-3,3), ylim = c(10,110))
+qqnorm(SWPA_k4p5@data$Qs, cex.axis=1.5, cex.lab=1.5, main='Southwestern PA', ylab=expression('Sample Quantiles' ~ (mW/m^2)), cex.main=2, col='blue', xlim = c(-4,4), ylim = c(5,110))
+qqline(SWPA_k4p5@data$Qs)
+temp = qqnorm(SWPA_k4p5@data$Qs, plot.it = FALSE)$x[which(SWPA_k4p5@data$out_loc_error == 1)]
+par(new = TRUE)
+plot(x = temp, y = SWPA_k4p5@data$Qs[which(SWPA_k4p5@data$out_loc_error == 1)], col = 'black', pch = 16, xlab = '', ylab = '', axes = FALSE, xlim = c(-4,4), ylim = c(5,110))
+qqnorm(CWV_k4p5@data$Qs, cex.axis=1.5, cex.lab=1.5, main='Central WV', ylab=expression('Sample Quantiles' ~ (mW/m^2)), cex.main=2, col='purple', xlim = c(-4,4), ylim = c(5,120))
+qqline(CWV_k4p5@data$Qs)
+temp = qqnorm(CWV_k4p5@data$Qs, plot.it = FALSE)$x[which(CWV_k4p5@data$out_loc_error == 1)]
+par(new = TRUE)
+plot(x = temp, y = CWV_k4p5@data$Qs[which(CWV_k4p5@data$out_loc_error == 1)], col = 'black', pch = 16, xlab = '', ylab = '', axes = FALSE, xlim = c(-4,4), ylim = c(5,120))
+qqnorm(MT_k4p5@data$Qs, cex.axis=1.5, cex.lab=1.5, main='Western WV', ylab=expression('Sample Quantiles' ~ (mW/m^2)), cex.main=2, col='violet', xlim = c(-3.5,3.5), ylim = c(5,120))
+qqline(MT_k4p5@data$Qs)
+temp = qqnorm(MT_k4p5@data$Qs, plot.it = FALSE)$x[which(MT_k4p5@data$out_loc_error == 1)]
+par(new = TRUE)
+plot(x = temp, y = MT_k4p5@data$Qs[which(MT_k4p5@data$out_loc_error == 1)], col = 'black', pch = 16, xlab = '', ylab = '', axes = FALSE, xlim = c(-3.5,3.5), ylim = c(5,120))
+dev.off()
+
+png('QQPlotHeatFlow_NotTestedOuts_k5p0.png', res=600, units='in', width=10, height=10)
+layout(sets)
+par(mar=c(4,5,3,2))
+qqnorm(CT_k5p0@data$Qs, cex.axis=1.5, cex.lab=1.5, main='Chautauqua, NY', ylab=expression('Sample Quantiles' ~ (mW/m^2)), cex.main=2, col='red')
+qqline(CT_k5p0@data$Qs)
+qqnorm(WPA_k5p0@data$Qs, cex.axis=1.5, cex.lab=1.5, main='Western PA', ylab=expression('Sample Quantiles' ~ (mW/m^2)), cex.main=2, col='orange', xlim = c(-3.5,3.5), ylim = c(10,70))
+qqline(WPA_k5p0@data$Qs)
+temp = qqnorm(WPA_k5p0@data$Qs, plot.it = FALSE)$x[which(WPA_k5p0@data$out_loc_error == 1)]
+par(new = TRUE)
+plot(x = temp, y = WPA_k5p0@data$Qs[which(WPA_k5p0@data$out_loc_error == 1)], col = 'black', pch = 16, xlab = '', ylab = '', axes = FALSE, xlim = c(-3.5,3.5), ylim = c(10,70))
+qqnorm(NWPANY_k5p0@data$Qs, cex.axis=1.5, cex.lab=1.5, main='Northwestern NY and PA', ylab=expression('Sample Quantiles' ~ (mW/m^2)), cex.main=2, col='yellow', xlim = c(-3,3), ylim = c(5,75))
+qqline(NWPANY_k5p0@data$Qs)
+temp = qqnorm(NWPANY_k5p0@data$Qs, plot.it = FALSE)$x[which(NWPANY_k5p0@data$out_loc_error == 1)]
+par(new = TRUE)
+plot(x = temp, y = NWPANY_k5p0@data$Qs[which(NWPANY_k5p0@data$out_loc_error == 1)], col = 'black', pch = 16, xlab = '', ylab = '', axes = FALSE, xlim = c(-3,3), ylim = c(5,75))
+qqnorm(CNY_k5p0@data$Qs, cex.axis=1.5, cex.lab=1.5, main='Central NY', ylab=expression('Sample Quantiles' ~ (mW/m^2)), cex.main=2, col='green', xlim = c(-2.75,2.75), ylim = c(35,65))
+qqline(CNY_k5p0@data$Qs)
+temp = qqnorm(CNY_k5p0@data$Qs, plot.it = FALSE)$x[which(CNY_k5p0@data$out_loc_error == 1)]
+par(new = TRUE)
+plot(x = temp, y = CNY_k5p0@data$Qs[which(CNY_k5p0@data$out_loc_error == 1)], col = 'black', pch = 16, xlab = '', ylab = '', axes = FALSE, xlim = c(-2.75,2.75), ylim = c(35,65))
+qqnorm(ENY_k5p0@data$Qs, cex.axis=1.5, cex.lab=1.5, main='Eastern NY', ylab=expression('Sample Quantiles' ~ (mW/m^2)), cex.main=2, col='springgreen', xlim = c(-3,3), ylim = c(30,75))
+qqline(ENY_k5p0@data$Qs)
+temp = qqnorm(ENY_k5p0@data$Qs, plot.it = FALSE)$x[which(ENY_k5p0@data$out_loc_error == 1)]
+par(new = TRUE)
+plot(x = temp, y = ENY_k5p0@data$Qs[which(ENY_k5p0@data$out_loc_error == 1)], col = 'black', pch = 16, xlab = '', ylab = '', axes = FALSE, xlim = c(-3,3), ylim = c(30,75))
+qqnorm(ENYPA_k5p0@data$Qs, cex.axis=1.5, cex.lab=1.5, main='Eastern NY and PA', ylab=expression('Sample Quantiles' ~ (mW/m^2)), cex.main=2, col='skyblue', xlim = c(-3,3), ylim = c(10,110))
+qqline(ENYPA_k5p0@data$Qs)
+temp = qqnorm(ENYPA_k5p0@data$Qs, plot.it = FALSE)$x[which(ENYPA_k5p0@data$out_loc_error == 1)]
+par(new = TRUE)
+plot(x = temp, y = ENYPA_k5p0@data$Qs[which(ENYPA_k5p0@data$out_loc_error == 1)], col = 'black', pch = 16, xlab = '', ylab = '', axes = FALSE, xlim = c(-3,3), ylim = c(10,110))
+qqnorm(SWPA_k5p0@data$Qs, cex.axis=1.5, cex.lab=1.5, main='Southwestern PA', ylab=expression('Sample Quantiles' ~ (mW/m^2)), cex.main=2, col='blue', xlim = c(-4,4), ylim = c(5,110))
+qqline(SWPA_k5p0@data$Qs)
+temp = qqnorm(SWPA_k5p0@data$Qs, plot.it = FALSE)$x[which(SWPA_k5p0@data$out_loc_error == 1)]
+par(new = TRUE)
+plot(x = temp, y = SWPA_k5p0@data$Qs[which(SWPA_k5p0@data$out_loc_error == 1)], col = 'black', pch = 16, xlab = '', ylab = '', axes = FALSE, xlim = c(-4,4), ylim = c(5,110))
+qqnorm(CWV_k5p0@data$Qs, cex.axis=1.5, cex.lab=1.5, main='Central WV', ylab=expression('Sample Quantiles' ~ (mW/m^2)), cex.main=2, col='purple', xlim = c(-4,4), ylim = c(5,120))
+qqline(CWV_k5p0@data$Qs)
+temp = qqnorm(CWV_k5p0@data$Qs, plot.it = FALSE)$x[which(CWV_k5p0@data$out_loc_error == 1)]
+par(new = TRUE)
+plot(x = temp, y = CWV_k5p0@data$Qs[which(CWV_k5p0@data$out_loc_error == 1)], col = 'black', pch = 16, xlab = '', ylab = '', axes = FALSE, xlim = c(-4,4), ylim = c(5,120))
+qqnorm(MT_k5p0@data$Qs, cex.axis=1.5, cex.lab=1.5, main='Western WV', ylab=expression('Sample Quantiles' ~ (mW/m^2)), cex.main=2, col='violet', xlim = c(-3.5,3.5), ylim = c(5,120))
+qqline(MT_k5p0@data$Qs)
+temp = qqnorm(MT_k5p0@data$Qs, plot.it = FALSE)$x[which(MT_k5p0@data$out_loc_error == 1)]
+par(new = TRUE)
+plot(x = temp, y = MT_k5p0@data$Qs[which(MT_k5p0@data$out_loc_error == 1)], col = 'black', pch = 16, xlab = '', ylab = '', axes = FALSE, xlim = c(-3.5,3.5), ylim = c(5,120))
+dev.off()
+
+#With Map for k = 3
 sets = rbind(c(1,2,3,4), c(5,6,7,8),c(9,10,11,11))
 png('QQPlotHeatFlow_NotTestedOuts_Map.png', res=600, units='in', width=13, height=10)
 layout(sets)
@@ -2161,6 +2777,62 @@ if (nrow(FL) - nrow(CT) - nrow(CNY) - nrow(CWV) - nrow(ENY) - nrow(ENYPA) - nrow
   print('Number of wells in FL is different than the total in other regions.')
 }
 
+FL_k1p0 = FL_k1p0[-which(FL_k1p0$RowID_ == 19770),]
+ENYPA_k1p0 = ENYPA_k1p0[-which(ENYPA_k1p0$RowID_ == 19770),]
+FL_k1p0 = FL_k1p0[-which(FL_k1p0$RowID_ == 29908),]
+NWPANY_k1p0 = NWPANY_k1p0[-which(NWPANY_k1p0$RowID_ == 29908),]
+ENY_k1p0 = ENY_k1p0[-which(ENY_k1p0$RowID_ == 12690),]
+FL_k1p0 = FL_k1p0[-which(FL_k1p0$RowID_ == 12690),]
+
+FL_k1p5 = FL_k1p5[-which(FL_k1p5$RowID_ == 19770),]
+ENYPA_k1p5 = ENYPA_k1p5[-which(ENYPA_k1p5$RowID_ == 19770),]
+FL_k1p5 = FL_k1p5[-which(FL_k1p5$RowID_ == 29908),]
+NWPANY_k1p5 = NWPANY_k1p5[-which(NWPANY_k1p5$RowID_ == 29908),]
+ENY_k1p5 = ENY_k1p5[-which(ENY_k1p5$RowID_ == 12690),]
+FL_k1p5 = FL_k1p5[-which(FL_k1p5$RowID_ == 12690),]
+
+FL_k2p0 = FL_k2p0[-which(FL_k2p0$RowID_ == 19770),]
+ENYPA_k2p0 = ENYPA_k2p0[-which(ENYPA_k2p0$RowID_ == 19770),]
+FL_k2p0 = FL_k2p0[-which(FL_k2p0$RowID_ == 29908),]
+NWPANY_k2p0 = NWPANY_k2p0[-which(NWPANY_k2p0$RowID_ == 29908),]
+ENY_k2p0 = ENY_k2p0[-which(ENY_k2p0$RowID_ == 12690),]
+FL_k2p0 = FL_k2p0[-which(FL_k2p0$RowID_ == 12690),]
+
+FL_k2p5 = FL_k2p5[-which(FL_k2p5$RowID_ == 19770),]
+ENYPA_k2p5 = ENYPA_k2p5[-which(ENYPA_k2p5$RowID_ == 19770),]
+FL_k2p5 = FL_k2p5[-which(FL_k2p5$RowID_ == 29908),]
+NWPANY_k2p5 = NWPANY_k2p5[-which(NWPANY_k2p5$RowID_ == 29908),]
+ENY_k2p5 = ENY_k2p5[-which(ENY_k2p5$RowID_ == 12690),]
+FL_k2p5 = FL_k2p5[-which(FL_k2p5$RowID_ == 12690),]
+
+FL_k3p5 = FL_k3p5[-which(FL_k3p5$RowID_ == 19770),]
+ENYPA_k3p5 = ENYPA_k3p5[-which(ENYPA_k3p5$RowID_ == 19770),]
+FL_k3p5 = FL_k3p5[-which(FL_k3p5$RowID_ == 29908),]
+NWPANY_k3p5 = NWPANY_k3p5[-which(NWPANY_k3p5$RowID_ == 29908),]
+ENY_k3p5 = ENY_k3p5[-which(ENY_k3p5$RowID_ == 12690),]
+FL_k3p5 = FL_k3p5[-which(FL_k3p5$RowID_ == 12690),]
+
+FL_k4p0 = FL_k4p0[-which(FL_k4p0$RowID_ == 19770),]
+ENYPA_k4p0 = ENYPA_k4p0[-which(ENYPA_k4p0$RowID_ == 19770),]
+FL_k4p0 = FL_k4p0[-which(FL_k4p0$RowID_ == 29908),]
+NWPANY_k4p0 = NWPANY_k4p0[-which(NWPANY_k4p0$RowID_ == 29908),]
+ENY_k4p0 = ENY_k4p0[-which(ENY_k4p0$RowID_ == 12690),]
+FL_k4p0 = FL_k4p0[-which(FL_k4p0$RowID_ == 12690),]
+
+FL_k4p5 = FL_k4p5[-which(FL_k4p5$RowID_ == 19770),]
+ENYPA_k4p5 = ENYPA_k4p5[-which(ENYPA_k4p5$RowID_ == 19770),]
+FL_k4p5 = FL_k4p5[-which(FL_k4p5$RowID_ == 29908),]
+NWPANY_k4p5 = NWPANY_k4p5[-which(NWPANY_k4p5$RowID_ == 29908),]
+ENY_k4p5 = ENY_k4p5[-which(ENY_k4p5$RowID_ == 12690),]
+FL_k4p5 = FL_k4p5[-which(FL_k4p5$RowID_ == 12690),]
+
+FL_k5p0 = FL_k5p0[-which(FL_k5p0$RowID_ == 19770),]
+ENYPA_k5p0 = ENYPA_k5p0[-which(ENYPA_k5p0$RowID_ == 19770),]
+FL_k5p0 = FL_k5p0[-which(FL_k5p0$RowID_ == 29908),]
+NWPANY_k5p0 = NWPANY_k5p0[-which(NWPANY_k5p0$RowID_ == 29908),]
+ENY_k5p0 = ENY_k5p0[-which(ENY_k5p0$RowID_ == 12690),]
+FL_k5p0 = FL_k5p0[-which(FL_k5p0$RowID_ == 12690),]
+
 #QQ Plot Figure - corrected point locations
 sets = rbind(c(1,2,3), c(4,5,6),c(7,8,9))
 png('QQPlotHeatFlow_corrPoints_2018.png', res=300, units='in', width=10, height=10)
@@ -2188,7 +2860,6 @@ dev.off()
 
 qqnorm(FL@data$Qs, cex.axis=1.5, cex.lab=1.5, main='Full Region', ylab=expression('Sample Quantiles' ~ (mW/m^2)), cex.main=2, ylim=c(0,120), xlim=c(-4,4))
 qqline(FL@data$Qs)
-
 
 #  Fixme: Post analysis of spatial correlation of outlier depth ranks----
 
@@ -2330,6 +3001,102 @@ WPA = spTransform(WPA, CRS('+init=epsg:26917'))
 VR = spTransform(VR, CRS('+init=epsg:26917'))
 FL = spTransform(FL, CRS('+init=epsg:26917'))
 
+CT_k1p0 = spTransform(CT_k1p0, CRS('+init=epsg:26917'))
+CNY_k1p0 = spTransform(CNY_k1p0, CRS('+init=epsg:26917'))
+CWV_k1p0 = spTransform(CWV_k1p0, CRS('+init=epsg:26917'))
+ENY_k1p0 = spTransform(ENY_k1p0, CRS('+init=epsg:26917'))
+ENYPA_k1p0 = spTransform(ENYPA_k1p0, CRS('+init=epsg:26917'))
+MT_k1p0 = spTransform(MT_k1p0, CRS('+init=epsg:26917'))
+NWPANY_k1p0 = spTransform(NWPANY_k1p0, CRS('+init=epsg:26917'))
+SWPA_k1p0 = spTransform(SWPA_k1p0, CRS('+init=epsg:26917'))
+WPA_k1p0 = spTransform(WPA_k1p0, CRS('+init=epsg:26917'))
+VR_k1p0 = spTransform(VR_k1p0, CRS('+init=epsg:26917'))
+FL_k1p0 = spTransform(FL_k1p0, CRS('+init=epsg:26917'))
+
+CT_k1p5 = spTransform(CT_k1p5, CRS('+init=epsg:26917'))
+CNY_k1p5 = spTransform(CNY_k1p5, CRS('+init=epsg:26917'))
+CWV_k1p5 = spTransform(CWV_k1p5, CRS('+init=epsg:26917'))
+ENY_k1p5 = spTransform(ENY_k1p5, CRS('+init=epsg:26917'))
+ENYPA_k1p5 = spTransform(ENYPA_k1p5, CRS('+init=epsg:26917'))
+MT_k1p5 = spTransform(MT_k1p5, CRS('+init=epsg:26917'))
+NWPANY_k1p5 = spTransform(NWPANY_k1p5, CRS('+init=epsg:26917'))
+SWPA_k1p5 = spTransform(SWPA_k1p5, CRS('+init=epsg:26917'))
+WPA_k1p5 = spTransform(WPA_k1p5, CRS('+init=epsg:26917'))
+VR_k1p5 = spTransform(VR_k1p5, CRS('+init=epsg:26917'))
+FL_k1p5 = spTransform(FL_k1p5, CRS('+init=epsg:26917'))
+
+CT_k2p0 = spTransform(CT_k2p0, CRS('+init=epsg:26917'))
+CNY_k2p0 = spTransform(CNY_k2p0, CRS('+init=epsg:26917'))
+CWV_k2p0 = spTransform(CWV_k2p0, CRS('+init=epsg:26917'))
+ENY_k2p0 = spTransform(ENY_k2p0, CRS('+init=epsg:26917'))
+ENYPA_k2p0 = spTransform(ENYPA_k2p0, CRS('+init=epsg:26917'))
+MT_k2p0 = spTransform(MT_k2p0, CRS('+init=epsg:26917'))
+NWPANY_k2p0 = spTransform(NWPANY_k2p0, CRS('+init=epsg:26917'))
+SWPA_k2p0 = spTransform(SWPA_k2p0, CRS('+init=epsg:26917'))
+WPA_k2p0 = spTransform(WPA_k2p0, CRS('+init=epsg:26917'))
+VR_k2p0 = spTransform(VR_k2p0, CRS('+init=epsg:26917'))
+FL_k2p0 = spTransform(FL_k2p0, CRS('+init=epsg:26917'))
+
+CT_k2p5 = spTransform(CT_k2p5, CRS('+init=epsg:26917'))
+CNY_k2p5 = spTransform(CNY_k2p5, CRS('+init=epsg:26917'))
+CWV_k2p5 = spTransform(CWV_k2p5, CRS('+init=epsg:26917'))
+ENY_k2p5 = spTransform(ENY_k2p5, CRS('+init=epsg:26917'))
+ENYPA_k2p5 = spTransform(ENYPA_k2p5, CRS('+init=epsg:26917'))
+MT_k2p5 = spTransform(MT_k2p5, CRS('+init=epsg:26917'))
+NWPANY_k2p5 = spTransform(NWPANY_k2p5, CRS('+init=epsg:26917'))
+SWPA_k2p5 = spTransform(SWPA_k2p5, CRS('+init=epsg:26917'))
+WPA_k2p5 = spTransform(WPA_k2p5, CRS('+init=epsg:26917'))
+VR_k2p5 = spTransform(VR_k2p5, CRS('+init=epsg:26917'))
+FL_k2p5 = spTransform(FL_k2p5, CRS('+init=epsg:26917'))
+
+CT_k3p5 = spTransform(CT_k3p5, CRS('+init=epsg:26917'))
+CNY_k3p5 = spTransform(CNY_k3p5, CRS('+init=epsg:26917'))
+CWV_k3p5 = spTransform(CWV_k3p5, CRS('+init=epsg:26917'))
+ENY_k3p5 = spTransform(ENY_k3p5, CRS('+init=epsg:26917'))
+ENYPA_k3p5 = spTransform(ENYPA_k3p5, CRS('+init=epsg:26917'))
+MT_k3p5 = spTransform(MT_k3p5, CRS('+init=epsg:26917'))
+NWPANY_k3p5 = spTransform(NWPANY_k3p5, CRS('+init=epsg:26917'))
+SWPA_k3p5 = spTransform(SWPA_k3p5, CRS('+init=epsg:26917'))
+WPA_k3p5 = spTransform(WPA_k3p5, CRS('+init=epsg:26917'))
+VR_k3p5 = spTransform(VR_k3p5, CRS('+init=epsg:26917'))
+FL_k3p5 = spTransform(FL_k3p5, CRS('+init=epsg:26917'))
+
+CT_k4p0 = spTransform(CT_k4p0, CRS('+init=epsg:26917'))
+CNY_k4p0 = spTransform(CNY_k4p0, CRS('+init=epsg:26917'))
+CWV_k4p0 = spTransform(CWV_k4p0, CRS('+init=epsg:26917'))
+ENY_k4p0 = spTransform(ENY_k4p0, CRS('+init=epsg:26917'))
+ENYPA_k4p0 = spTransform(ENYPA_k4p0, CRS('+init=epsg:26917'))
+MT_k4p0 = spTransform(MT_k4p0, CRS('+init=epsg:26917'))
+NWPANY_k4p0 = spTransform(NWPANY_k4p0, CRS('+init=epsg:26917'))
+SWPA_k4p0 = spTransform(SWPA_k4p0, CRS('+init=epsg:26917'))
+WPA_k4p0 = spTransform(WPA_k4p0, CRS('+init=epsg:26917'))
+VR_k4p0 = spTransform(VR_k4p0, CRS('+init=epsg:26917'))
+FL_k4p0 = spTransform(FL_k4p0, CRS('+init=epsg:26917'))
+
+CT_k4p5 = spTransform(CT_k4p5, CRS('+init=epsg:26917'))
+CNY_k4p5 = spTransform(CNY_k4p5, CRS('+init=epsg:26917'))
+CWV_k4p5 = spTransform(CWV_k4p5, CRS('+init=epsg:26917'))
+ENY_k4p5 = spTransform(ENY_k4p5, CRS('+init=epsg:26917'))
+ENYPA_k4p5 = spTransform(ENYPA_k4p5, CRS('+init=epsg:26917'))
+MT_k4p5 = spTransform(MT_k4p5, CRS('+init=epsg:26917'))
+NWPANY_k4p5 = spTransform(NWPANY_k4p5, CRS('+init=epsg:26917'))
+SWPA_k4p5 = spTransform(SWPA_k4p5, CRS('+init=epsg:26917'))
+WPA_k4p5 = spTransform(WPA_k4p5, CRS('+init=epsg:26917'))
+VR_k4p5 = spTransform(VR_k4p5, CRS('+init=epsg:26917'))
+FL_k4p5 = spTransform(FL_k4p5, CRS('+init=epsg:26917'))
+
+CT_k5p0 = spTransform(CT_k5p0, CRS('+init=epsg:26917'))
+CNY_k5p0 = spTransform(CNY_k5p0, CRS('+init=epsg:26917'))
+CWV_k5p0 = spTransform(CWV_k5p0, CRS('+init=epsg:26917'))
+ENY_k5p0 = spTransform(ENY_k5p0, CRS('+init=epsg:26917'))
+ENYPA_k5p0 = spTransform(ENYPA_k5p0, CRS('+init=epsg:26917'))
+MT_k5p0 = spTransform(MT_k5p0, CRS('+init=epsg:26917'))
+NWPANY_k5p0 = spTransform(NWPANY_k5p0, CRS('+init=epsg:26917'))
+SWPA_k5p0 = spTransform(SWPA_k5p0, CRS('+init=epsg:26917'))
+WPA_k5p0 = spTransform(WPA_k5p0, CRS('+init=epsg:26917'))
+VR_k5p0 = spTransform(VR_k5p0, CRS('+init=epsg:26917'))
+FL_k5p0 = spTransform(FL_k5p0, CRS('+init=epsg:26917'))
+
 #Using oringal dataset for points without negative gradients, and no points in same spatial location
 PreCT = spTransform(WellsSort[InterpRegs[InterpRegs$Name == 'CT',],], CRS('+init=epsg:26917'))
 PreCNY = spTransform(WellsSort[InterpRegs[InterpRegs$Name == 'CNY',],], CRS('+init=epsg:26917'))
@@ -2374,6 +3141,102 @@ v.WPA <- variogram(Qs~1, WPA, cutoff=60000, width=60000/50)
 v.VR <- variogram(Qs~1, VR, cutoff=60000, width=60000/20) 
 v.FL <- variogram(Qs~1, FL, cutoff=60000, width=60000/200)
 
+v.CT_k1p0 <- variogram(Qs~1, CT_k1p0, cutoff=60000, width=60000/50)
+v.CNY_k1p0 <- variogram(Qs~1, CNY_k1p0, cutoff=60000, width=60000/15)
+v.CWV_k1p0 <- variogram(Qs~1, CWV_k1p0, cutoff=60000, width=60000/50)
+v.ENY_k1p0 <- variogram(Qs~1, ENY_k1p0, cutoff=60000, width=60000/15)
+v.ENYPA_k1p0 <- variogram(Qs~1, ENYPA_k1p0, cutoff=60000, width=60000/40)
+v.MT_k1p0 <- variogram(Qs~1, MT_k1p0, cutoff=60000, width=60000/50)
+v.NWPANY_k1p0 <- variogram(Qs~1, NWPANY_k1p0, cutoff=60000, width=60000/20) 
+v.SWPA_k1p0 <- variogram(Qs~1, SWPA_k1p0, cutoff=60000, width=60000/50) 
+v.WPA_k1p0 <- variogram(Qs~1, WPA_k1p0, cutoff=60000, width=60000/50) 
+v.VR_k1p0 <- variogram(Qs~1, VR_k1p0, cutoff=60000, width=60000/20) 
+v.FL_k1p0 <- variogram(Qs~1, FL_k1p0, cutoff=60000, width=60000/200)
+
+v.CT_k1p5 <- variogram(Qs~1, CT_k1p5, cutoff=60000, width=60000/50)
+v.CNY_k1p5 <- variogram(Qs~1, CNY_k1p5, cutoff=60000, width=60000/15)
+v.CWV_k1p5 <- variogram(Qs~1, CWV_k1p5, cutoff=60000, width=60000/50)
+v.ENY_k1p5 <- variogram(Qs~1, ENY_k1p5, cutoff=60000, width=60000/15)
+v.ENYPA_k1p5 <- variogram(Qs~1, ENYPA_k1p5, cutoff=60000, width=60000/40)
+v.MT_k1p5 <- variogram(Qs~1, MT_k1p5, cutoff=60000, width=60000/50)
+v.NWPANY_k1p5 <- variogram(Qs~1, NWPANY_k1p5, cutoff=60000, width=60000/20) 
+v.SWPA_k1p5 <- variogram(Qs~1, SWPA_k1p5, cutoff=60000, width=60000/50) 
+v.WPA_k1p5 <- variogram(Qs~1, WPA_k1p5, cutoff=60000, width=60000/50) 
+v.VR_k1p5 <- variogram(Qs~1, VR_k1p5, cutoff=60000, width=60000/20) 
+v.FL_k1p5 <- variogram(Qs~1, FL_k1p5, cutoff=60000, width=60000/200)
+
+v.CT_k2p0 <- variogram(Qs~1, CT_k2p0, cutoff=60000, width=60000/50)
+v.CNY_k2p0 <- variogram(Qs~1, CNY_k2p0, cutoff=60000, width=60000/15)
+v.CWV_k2p0 <- variogram(Qs~1, CWV_k2p0, cutoff=60000, width=60000/50)
+v.ENY_k2p0 <- variogram(Qs~1, ENY_k2p0, cutoff=60000, width=60000/15)
+v.ENYPA_k2p0 <- variogram(Qs~1, ENYPA_k2p0, cutoff=60000, width=60000/40)
+v.MT_k2p0 <- variogram(Qs~1, MT_k2p0, cutoff=60000, width=60000/50)
+v.NWPANY_k2p0 <- variogram(Qs~1, NWPANY_k2p0, cutoff=60000, width=60000/20) 
+v.SWPA_k2p0 <- variogram(Qs~1, SWPA_k2p0, cutoff=60000, width=60000/50) 
+v.WPA_k2p0 <- variogram(Qs~1, WPA_k2p0, cutoff=60000, width=60000/50) 
+v.VR_k2p0 <- variogram(Qs~1, VR_k2p0, cutoff=60000, width=60000/20) 
+v.FL_k2p0 <- variogram(Qs~1, FL_k2p0, cutoff=60000, width=60000/200)
+
+v.CT_k2p5 <- variogram(Qs~1, CT_k2p5, cutoff=60000, width=60000/50)
+v.CNY_k2p5 <- variogram(Qs~1, CNY_k2p5, cutoff=60000, width=60000/15)
+v.CWV_k2p5 <- variogram(Qs~1, CWV_k2p5, cutoff=60000, width=60000/50)
+v.ENY_k2p5 <- variogram(Qs~1, ENY_k2p5, cutoff=60000, width=60000/15)
+v.ENYPA_k2p5 <- variogram(Qs~1, ENYPA_k2p5, cutoff=60000, width=60000/40)
+v.MT_k2p5 <- variogram(Qs~1, MT_k2p5, cutoff=60000, width=60000/50)
+v.NWPANY_k2p5 <- variogram(Qs~1, NWPANY_k2p5, cutoff=60000, width=60000/20) 
+v.SWPA_k2p5 <- variogram(Qs~1, SWPA_k2p5, cutoff=60000, width=60000/50) 
+v.WPA_k2p5 <- variogram(Qs~1, WPA_k2p5, cutoff=60000, width=60000/50) 
+v.VR_k2p5 <- variogram(Qs~1, VR_k2p5, cutoff=60000, width=60000/20) 
+v.FL_k2p5 <- variogram(Qs~1, FL_k2p5, cutoff=60000, width=60000/200)
+
+v.CT_k3p5 <- variogram(Qs~1, CT_k3p5, cutoff=60000, width=60000/50)
+v.CNY_k3p5 <- variogram(Qs~1, CNY_k3p5, cutoff=60000, width=60000/15)
+v.CWV_k3p5 <- variogram(Qs~1, CWV_k3p5, cutoff=60000, width=60000/50)
+v.ENY_k3p5 <- variogram(Qs~1, ENY_k3p5, cutoff=60000, width=60000/15)
+v.ENYPA_k3p5 <- variogram(Qs~1, ENYPA_k3p5, cutoff=60000, width=60000/40)
+v.MT_k3p5 <- variogram(Qs~1, MT_k3p5, cutoff=60000, width=60000/50)
+v.NWPANY_k3p5 <- variogram(Qs~1, NWPANY_k3p5, cutoff=60000, width=60000/20) 
+v.SWPA_k3p5 <- variogram(Qs~1, SWPA_k3p5, cutoff=60000, width=60000/50) 
+v.WPA_k3p5 <- variogram(Qs~1, WPA_k3p5, cutoff=60000, width=60000/50) 
+v.VR_k3p5 <- variogram(Qs~1, VR_k3p5, cutoff=60000, width=60000/20) 
+v.FL_k3p5 <- variogram(Qs~1, FL_k3p5, cutoff=60000, width=60000/200)
+
+v.CT_k4p0 <- variogram(Qs~1, CT_k4p0, cutoff=60000, width=60000/50)
+v.CNY_k4p0 <- variogram(Qs~1, CNY_k4p0, cutoff=60000, width=60000/15)
+v.CWV_k4p0 <- variogram(Qs~1, CWV_k4p0, cutoff=60000, width=60000/50)
+v.ENY_k4p0 <- variogram(Qs~1, ENY_k4p0, cutoff=60000, width=60000/15)
+v.ENYPA_k4p0 <- variogram(Qs~1, ENYPA_k4p0, cutoff=60000, width=60000/40)
+v.MT_k4p0 <- variogram(Qs~1, MT_k4p0, cutoff=60000, width=60000/50)
+v.NWPANY_k4p0 <- variogram(Qs~1, NWPANY_k4p0, cutoff=60000, width=60000/20) 
+v.SWPA_k4p0 <- variogram(Qs~1, SWPA_k4p0, cutoff=60000, width=60000/50) 
+v.WPA_k4p0 <- variogram(Qs~1, WPA_k4p0, cutoff=60000, width=60000/50) 
+v.VR_k4p0 <- variogram(Qs~1, VR_k4p0, cutoff=60000, width=60000/20) 
+v.FL_k4p0 <- variogram(Qs~1, FL_k4p0, cutoff=60000, width=60000/200)
+
+v.CT_k4p5 <- variogram(Qs~1, CT_k4p5, cutoff=60000, width=60000/50)
+v.CNY_k4p5 <- variogram(Qs~1, CNY_k4p5, cutoff=60000, width=60000/15)
+v.CWV_k4p5 <- variogram(Qs~1, CWV_k4p5, cutoff=60000, width=60000/50)
+v.ENY_k4p5 <- variogram(Qs~1, ENY_k4p5, cutoff=60000, width=60000/15)
+v.ENYPA_k4p5 <- variogram(Qs~1, ENYPA_k4p5, cutoff=60000, width=60000/40)
+v.MT_k4p5 <- variogram(Qs~1, MT_k4p5, cutoff=60000, width=60000/50)
+v.NWPANY_k4p5 <- variogram(Qs~1, NWPANY_k4p5, cutoff=60000, width=60000/20) 
+v.SWPA_k4p5 <- variogram(Qs~1, SWPA_k4p5, cutoff=60000, width=60000/50) 
+v.WPA_k4p5 <- variogram(Qs~1, WPA_k4p5, cutoff=60000, width=60000/50) 
+v.VR_k4p5 <- variogram(Qs~1, VR_k4p5, cutoff=60000, width=60000/20) 
+v.FL_k4p5 <- variogram(Qs~1, FL_k4p5, cutoff=60000, width=60000/200)
+
+v.CT_k5p0 <- variogram(Qs~1, CT_k5p0, cutoff=60000, width=60000/50)
+v.CNY_k5p0 <- variogram(Qs~1, CNY_k5p0, cutoff=60000, width=60000/15)
+v.CWV_k5p0 <- variogram(Qs~1, CWV_k5p0, cutoff=60000, width=60000/50)
+v.ENY_k5p0 <- variogram(Qs~1, ENY_k5p0, cutoff=60000, width=60000/15)
+v.ENYPA_k5p0 <- variogram(Qs~1, ENYPA_k5p0, cutoff=60000, width=60000/40)
+v.MT_k5p0 <- variogram(Qs~1, MT_k5p0, cutoff=60000, width=60000/50)
+v.NWPANY_k5p0 <- variogram(Qs~1, NWPANY_k5p0, cutoff=60000, width=60000/20) 
+v.SWPA_k5p0 <- variogram(Qs~1, SWPA_k5p0, cutoff=60000, width=60000/50) 
+v.WPA_k5p0 <- variogram(Qs~1, WPA_k5p0, cutoff=60000, width=60000/50) 
+v.VR_k5p0 <- variogram(Qs~1, VR_k5p0, cutoff=60000, width=60000/20) 
+v.FL_k5p0 <- variogram(Qs~1, FL_k5p0, cutoff=60000, width=60000/200)
+
 v.PreCT <- variogram(Qs~1, PreCT, cutoff=60000, width=60000/50) 
 v.PreCNY <- variogram(Qs~1, PreCNY, cutoff=60000, width=60000/15) 
 v.PreCWV <- variogram(Qs~1, PreCWV, cutoff=60000, width=60000/50)
@@ -2412,6 +3275,128 @@ p10z = plot(v.VR, plot.numbers=F, ylab=expression(Semivariance ~ (mW/m^2)^2), ma
 p7 = plot(v.WPA, plot.numbers=F, ylab=expression(Semivariance ~ (mW/m^2)^2), main="Western PA", xlab = 'Separation Distance (m)', pch = 16, col = 'red', xlim = c(0,60000), ylim = c(0,700), cex=0.5)
 p7z = plot(v.WPA, plot.numbers=F, ylab=expression(Semivariance ~ (mW/m^2)^2), main="Western PA Zoom", xlab = 'Separation Distance (m)', pch = 16, col = 'red', xlim = c(0,60000), ylim = c(0,50), cex=0.5)
 p11 = plot(v.FL, plot.numbers=F, ylab=expression(Semivariance ~ (mW/m^2)^2), main="Full Region", xlab = 'Separation Distance (m)', pch = 16, col = 'red', xlim = c(0,60000), ylim = c(0,1000), cex=0.5)
+
+kcols = c(adjustcolor('green', alpha.f = 0.1),adjustcolor('green', alpha.f = 0.2),adjustcolor('green', alpha.f = 0.3),adjustcolor('green', alpha.f = 0.4),adjustcolor('green', alpha.f = 0.6),adjustcolor('green', alpha.f = 0.7),adjustcolor('green', alpha.f = 0.8),adjustcolor('green', alpha.f = 0.9))
+
+p1_k1p0 = plot(v.CT_k1p0, plot.numbers=F, ylab=expression(Semivariance ~ (mW/m^2)^2), main="Chautauqua, NY", xlab = 'Separation Distance (m)', pch = 16, ylim = c(0,50), col = kcols[1], xlim = c(0,60000), cex=0.5)
+p2_k1p0 = plot(v.CNY_k1p0,plot.numbers=F, ylab=expression(Semivariance ~ (mW/m^2)^2), main="Central NY", xlab = 'Separation Distance (m)', pch = 16, ylim = c(0,1500), col = kcols[1], xlim = c(0,60000), cex=0.5)
+p9_k1p0 = plot(v.CWV_k1p0, plot.numbers=F, ylab=expression(Semivariance ~ (mW/m^2)^2), main="Central WV", xlab = 'Separation Distance (m)', pch = 16, col = kcols[1], ylim = c(0,1200), xlim = c(0,60000), cex=0.5)
+p3_k1p0 = plot(v.ENY_k1p0, plot.numbers=F, ylab=expression(Semivariance ~ (mW/m^2)^2), main="Eastern NY", xlab = 'Separation Distance (m)', pch = 16, col = kcols[1], ylim = c(0,1500), xlim = c(0,60000), cex=0.5)
+p4_k1p0 = plot(v.ENYPA_k1p0, plot.numbers=F, ylab=expression(Semivariance ~ (mW/m^2)^2), main="Eastern NY & PA", xlab = 'Separation Distance (m)', pch = 16, col = kcols[1], xlim = c(0,60000), ylim = c(0,400), cex=0.5)
+p8_k1p0 = plot(v.MT_k1p0, plot.numbers=F, ylab=expression(Semivariance ~ (mW/m^2)^2), main="Western WV", xlab = 'Separation Distance (m)', pch = 16, col = kcols[1], xlim = c(0,60000), ylim = c(0,700), cex=0.5)
+p5_k1p0 = plot(v.NWPANY_k1p0, plot.numbers=F, ylab=expression(Semivariance ~ (mW/m^2)^2), main="Northwestern PA & NY", xlab = 'Separation Distance (m)', pch = 16, col = kcols[1], xlim = c(0,60000), ylim = c(0,500), cex=0.5)
+p6_k1p0 = plot(v.SWPA_k1p0, plot.numbers=F, ylab=expression(Semivariance ~ (mW/m^2)^2), main="Southwestern PA", xlab = 'Separation Distance (m)', pch = 16, col = kcols[1], xlim = c(0,60000), ylim = c(0,850), cex=0.5)
+p6z_k1p0 = plot(v.SWPA_k1p0, plot.numbers=F, ylab=expression(Semivariance ~ (mW/m^2)^2), main="Southwestern PA Zoom", xlab = 'Separation Distance (m)', pch = 16, col = kcols[1], xlim = c(0,60000), ylim = c(0,60), cex=0.5)
+p10_k1p0 = plot(v.VR_k1p0, plot.numbers=F, ylab=expression(Semivariance ~ (mW/m^2)^2), main="Valley and Ridge", xlab = 'Separation Distance (m)', pch = 16, col = kcols[1], xlim = c(0,60000), ylim = c(0,11000), cex=0.5)
+p10z_k1p0 = plot(v.VR_k1p0, plot.numbers=F, ylab=expression(Semivariance ~ (mW/m^2)^2), main="Valley and Ridge Zoom", xlab = 'Separation Distance (m)', pch = 16, col = kcols[1], xlim = c(0,60000), ylim = c(0,300), cex=0.5)
+p7_k1p0 = plot(v.WPA_k1p0, plot.numbers=F, ylab=expression(Semivariance ~ (mW/m^2)^2), main="Western PA", xlab = 'Separation Distance (m)', pch = 16, col = kcols[1], xlim = c(0,60000), ylim = c(0,700), cex=0.5)
+p7z_k1p0 = plot(v.WPA_k1p0, plot.numbers=F, ylab=expression(Semivariance ~ (mW/m^2)^2), main="Western PA Zoom", xlab = 'Separation Distance (m)', pch = 16, col = kcols[1], xlim = c(0,60000), ylim = c(0,50), cex=0.5)
+p11_k1p0 = plot(v.FL_k1p0, plot.numbers=F, ylab=expression(Semivariance ~ (mW/m^2)^2), main="Full Region", xlab = 'Separation Distance (m)', pch = 16, col = kcols[1], xlim = c(0,60000), ylim = c(0,1000), cex=0.5)
+
+p1_k1p5 = plot(v.CT_k1p5, plot.numbers=F, ylab=expression(Semivariance ~ (mW/m^2)^2), main="Chautauqua, NY", xlab = 'Separation Distance (m)', pch = 16, ylim = c(0,50), col = kcols[2], xlim = c(0,60000), cex=0.5)
+p2_k1p5 = plot(v.CNY_k1p5,plot.numbers=F, ylab=expression(Semivariance ~ (mW/m^2)^2), main="Central NY", xlab = 'Separation Distance (m)', pch = 16, ylim = c(0,1500), col = kcols[2], xlim = c(0,60000), cex=0.5)
+p9_k1p5 = plot(v.CWV_k1p5, plot.numbers=F, ylab=expression(Semivariance ~ (mW/m^2)^2), main="Central WV", xlab = 'Separation Distance (m)', pch = 16, col = kcols[2], ylim = c(0,1200), xlim = c(0,60000), cex=0.5)
+p3_k1p5 = plot(v.ENY_k1p5, plot.numbers=F, ylab=expression(Semivariance ~ (mW/m^2)^2), main="Eastern NY", xlab = 'Separation Distance (m)', pch = 16, col = kcols[2], ylim = c(0,1500), xlim = c(0,60000), cex=0.5)
+p4_k1p5 = plot(v.ENYPA_k1p5, plot.numbers=F, ylab=expression(Semivariance ~ (mW/m^2)^2), main="Eastern NY & PA", xlab = 'Separation Distance (m)', pch = 16, col = kcols[2], xlim = c(0,60000), ylim = c(0,400), cex=0.5)
+p8_k1p5 = plot(v.MT_k1p5, plot.numbers=F, ylab=expression(Semivariance ~ (mW/m^2)^2), main="Western WV", xlab = 'Separation Distance (m)', pch = 16, col = kcols[2], xlim = c(0,60000), ylim = c(0,700), cex=0.5)
+p5_k1p5 = plot(v.NWPANY_k1p5, plot.numbers=F, ylab=expression(Semivariance ~ (mW/m^2)^2), main="Northwestern PA & NY", xlab = 'Separation Distance (m)', pch = 16, col = kcols[2], xlim = c(0,60000), ylim = c(0,500), cex=0.5)
+p6_k1p5 = plot(v.SWPA_k1p5, plot.numbers=F, ylab=expression(Semivariance ~ (mW/m^2)^2), main="Southwestern PA", xlab = 'Separation Distance (m)', pch = 16, col = kcols[2], xlim = c(0,60000), ylim = c(0,850), cex=0.5)
+p6z_k1p5 = plot(v.SWPA_k1p5, plot.numbers=F, ylab=expression(Semivariance ~ (mW/m^2)^2), main="Southwestern PA Zoom", xlab = 'Separation Distance (m)', pch = 16, col = kcols[2], xlim = c(0,60000), ylim = c(0,60), cex=0.5)
+p10_k1p5 = plot(v.VR_k1p5, plot.numbers=F, ylab=expression(Semivariance ~ (mW/m^2)^2), main="Valley and Ridge", xlab = 'Separation Distance (m)', pch = 16, col = kcols[2], xlim = c(0,60000), ylim = c(0,11000), cex=0.5)
+p10z_k1p5 = plot(v.VR_k1p5, plot.numbers=F, ylab=expression(Semivariance ~ (mW/m^2)^2), main="Valley and Ridge Zoom", xlab = 'Separation Distance (m)', pch = 16, col = kcols[2], xlim = c(0,60000), ylim = c(0,300), cex=0.5)
+p7_k1p5 = plot(v.WPA_k1p5, plot.numbers=F, ylab=expression(Semivariance ~ (mW/m^2)^2), main="Western PA", xlab = 'Separation Distance (m)', pch = 16, col = kcols[2], xlim = c(0,60000), ylim = c(0,700), cex=0.5)
+p7z_k1p5 = plot(v.WPA_k1p5, plot.numbers=F, ylab=expression(Semivariance ~ (mW/m^2)^2), main="Western PA Zoom", xlab = 'Separation Distance (m)', pch = 16, col = kcols[2], xlim = c(0,60000), ylim = c(0,50), cex=0.5)
+p11_k1p5 = plot(v.FL_k1p5, plot.numbers=F, ylab=expression(Semivariance ~ (mW/m^2)^2), main="Full Region", xlab = 'Separation Distance (m)', pch = 16, col = kcols[2], xlim = c(0,60000), ylim = c(0,1000), cex=0.5)
+
+p1_k2p0 = plot(v.CT_k2p0, plot.numbers=F, ylab=expression(Semivariance ~ (mW/m^2)^2), main="Chautauqua, NY", xlab = 'Separation Distance (m)', pch = 16, ylim = c(0,50), col = kcols[3], xlim = c(0,60000), cex=0.5)
+p2_k2p0 = plot(v.CNY_k2p0,plot.numbers=F, ylab=expression(Semivariance ~ (mW/m^2)^2), main="Central NY", xlab = 'Separation Distance (m)', pch = 16, ylim = c(0,1500), col = kcols[3], xlim = c(0,60000), cex=0.5)
+p9_k2p0 = plot(v.CWV_k2p0, plot.numbers=F, ylab=expression(Semivariance ~ (mW/m^2)^2), main="Central WV", xlab = 'Separation Distance (m)', pch = 16, col = kcols[3], ylim = c(0,1200), xlim = c(0,60000), cex=0.5)
+p3_k2p0 = plot(v.ENY_k2p0, plot.numbers=F, ylab=expression(Semivariance ~ (mW/m^2)^2), main="Eastern NY", xlab = 'Separation Distance (m)', pch = 16, col = kcols[3], ylim = c(0,1500), xlim = c(0,60000), cex=0.5)
+p4_k2p0 = plot(v.ENYPA_k2p0, plot.numbers=F, ylab=expression(Semivariance ~ (mW/m^2)^2), main="Eastern NY & PA", xlab = 'Separation Distance (m)', pch = 16, col = kcols[3], xlim = c(0,60000), ylim = c(0,400), cex=0.5)
+p8_k2p0 = plot(v.MT_k2p0, plot.numbers=F, ylab=expression(Semivariance ~ (mW/m^2)^2), main="Western WV", xlab = 'Separation Distance (m)', pch = 16, col = kcols[3], xlim = c(0,60000), ylim = c(0,700), cex=0.5)
+p5_k2p0 = plot(v.NWPANY_k2p0, plot.numbers=F, ylab=expression(Semivariance ~ (mW/m^2)^2), main="Northwestern PA & NY", xlab = 'Separation Distance (m)', pch = 16, col = kcols[3], xlim = c(0,60000), ylim = c(0,500), cex=0.5)
+p6_k2p0 = plot(v.SWPA_k2p0, plot.numbers=F, ylab=expression(Semivariance ~ (mW/m^2)^2), main="Southwestern PA", xlab = 'Separation Distance (m)', pch = 16, col = kcols[3], xlim = c(0,60000), ylim = c(0,850), cex=0.5)
+p6z_k2p0 = plot(v.SWPA_k2p0, plot.numbers=F, ylab=expression(Semivariance ~ (mW/m^2)^2), main="Southwestern PA Zoom", xlab = 'Separation Distance (m)', pch = 16, col = kcols[3], xlim = c(0,60000), ylim = c(0,60), cex=0.5)
+p10_k2p0 = plot(v.VR_k2p0, plot.numbers=F, ylab=expression(Semivariance ~ (mW/m^2)^2), main="Valley and Ridge", xlab = 'Separation Distance (m)', pch = 16, col = kcols[3], xlim = c(0,60000), ylim = c(0,11000), cex=0.5)
+p10z_k2p0 = plot(v.VR_k2p0, plot.numbers=F, ylab=expression(Semivariance ~ (mW/m^2)^2), main="Valley and Ridge Zoom", xlab = 'Separation Distance (m)', pch = 16, col = kcols[3], xlim = c(0,60000), ylim = c(0,300), cex=0.5)
+p7_k2p0 = plot(v.WPA_k2p0, plot.numbers=F, ylab=expression(Semivariance ~ (mW/m^2)^2), main="Western PA", xlab = 'Separation Distance (m)', pch = 16, col = kcols[3], xlim = c(0,60000), ylim = c(0,700), cex=0.5)
+p7z_k2p0 = plot(v.WPA_k2p0, plot.numbers=F, ylab=expression(Semivariance ~ (mW/m^2)^2), main="Western PA Zoom", xlab = 'Separation Distance (m)', pch = 16, col = kcols[3], xlim = c(0,60000), ylim = c(0,50), cex=0.5)
+p11_k2p0 = plot(v.FL_k2p0, plot.numbers=F, ylab=expression(Semivariance ~ (mW/m^2)^2), main="Full Region", xlab = 'Separation Distance (m)', pch = 16, col = kcols[3], xlim = c(0,60000), ylim = c(0,1000), cex=0.5)
+
+p1_k2p5 = plot(v.CT_k2p5, plot.numbers=F, ylab=expression(Semivariance ~ (mW/m^2)^2), main="Chautauqua, NY", xlab = 'Separation Distance (m)', pch = 16, ylim = c(0,50), col = kcols[4], xlim = c(0,60000), cex=0.5)
+p2_k2p5 = plot(v.CNY_k2p5,plot.numbers=F, ylab=expression(Semivariance ~ (mW/m^2)^2), main="Central NY", xlab = 'Separation Distance (m)', pch = 16, ylim = c(0,1500), col = kcols[4], xlim = c(0,60000), cex=0.5)
+p9_k2p5 = plot(v.CWV_k2p5, plot.numbers=F, ylab=expression(Semivariance ~ (mW/m^2)^2), main="Central WV", xlab = 'Separation Distance (m)', pch = 16, col = kcols[4], ylim = c(0,1200), xlim = c(0,60000), cex=0.5)
+p3_k2p5 = plot(v.ENY_k2p5, plot.numbers=F, ylab=expression(Semivariance ~ (mW/m^2)^2), main="Eastern NY", xlab = 'Separation Distance (m)', pch = 16, col = kcols[4], ylim = c(0,1500), xlim = c(0,60000), cex=0.5)
+p4_k2p5 = plot(v.ENYPA_k2p5, plot.numbers=F, ylab=expression(Semivariance ~ (mW/m^2)^2), main="Eastern NY & PA", xlab = 'Separation Distance (m)', pch = 16, col = kcols[4], xlim = c(0,60000), ylim = c(0,400), cex=0.5)
+p8_k2p5 = plot(v.MT_k2p5, plot.numbers=F, ylab=expression(Semivariance ~ (mW/m^2)^2), main="Western WV", xlab = 'Separation Distance (m)', pch = 16, col = kcols[4], xlim = c(0,60000), ylim = c(0,700), cex=0.5)
+p5_k2p5 = plot(v.NWPANY_k2p5, plot.numbers=F, ylab=expression(Semivariance ~ (mW/m^2)^2), main="Northwestern PA & NY", xlab = 'Separation Distance (m)', pch = 16, col = kcols[4], xlim = c(0,60000), ylim = c(0,500), cex=0.5)
+p6_k2p5 = plot(v.SWPA_k2p5, plot.numbers=F, ylab=expression(Semivariance ~ (mW/m^2)^2), main="Southwestern PA", xlab = 'Separation Distance (m)', pch = 16, col = kcols[4], xlim = c(0,60000), ylim = c(0,850), cex=0.5)
+p6z_k2p5 = plot(v.SWPA_k2p5, plot.numbers=F, ylab=expression(Semivariance ~ (mW/m^2)^2), main="Southwestern PA Zoom", xlab = 'Separation Distance (m)', pch = 16, col = kcols[4], xlim = c(0,60000), ylim = c(0,60), cex=0.5)
+p10_k2p5 = plot(v.VR_k2p5, plot.numbers=F, ylab=expression(Semivariance ~ (mW/m^2)^2), main="Valley and Ridge", xlab = 'Separation Distance (m)', pch = 16, col = kcols[4], xlim = c(0,60000), ylim = c(0,11000), cex=0.5)
+p10z_k2p5 = plot(v.VR_k2p5, plot.numbers=F, ylab=expression(Semivariance ~ (mW/m^2)^2), main="Valley and Ridge Zoom", xlab = 'Separation Distance (m)', pch = 16, col = kcols[4], xlim = c(0,60000), ylim = c(0,300), cex=0.5)
+p7_k2p5 = plot(v.WPA_k2p5, plot.numbers=F, ylab=expression(Semivariance ~ (mW/m^2)^2), main="Western PA", xlab = 'Separation Distance (m)', pch = 16, col = kcols[4], xlim = c(0,60000), ylim = c(0,700), cex=0.5)
+p7z_k2p5 = plot(v.WPA_k2p5, plot.numbers=F, ylab=expression(Semivariance ~ (mW/m^2)^2), main="Western PA Zoom", xlab = 'Separation Distance (m)', pch = 16, col = kcols[4], xlim = c(0,60000), ylim = c(0,50), cex=0.5)
+p11_k2p5 = plot(v.FL_k2p5, plot.numbers=F, ylab=expression(Semivariance ~ (mW/m^2)^2), main="Full Region", xlab = 'Separation Distance (m)', pch = 16, col = kcols[4], xlim = c(0,60000), ylim = c(0,1000), cex=0.5)
+
+p1_k3p5 = plot(v.CT_k3p5, plot.numbers=F, ylab=expression(Semivariance ~ (mW/m^2)^2), main="Chautauqua, NY", xlab = 'Separation Distance (m)', pch = 16, ylim = c(0,50), col = kcols[5], xlim = c(0,60000), cex=0.5)
+p2_k3p5 = plot(v.CNY_k3p5,plot.numbers=F, ylab=expression(Semivariance ~ (mW/m^2)^2), main="Central NY", xlab = 'Separation Distance (m)', pch = 16, ylim = c(0,1500), col = kcols[5], xlim = c(0,60000), cex=0.5)
+p9_k3p5 = plot(v.CWV_k3p5, plot.numbers=F, ylab=expression(Semivariance ~ (mW/m^2)^2), main="Central WV", xlab = 'Separation Distance (m)', pch = 16, col = kcols[5], ylim = c(0,1200), xlim = c(0,60000), cex=0.5)
+p3_k3p5 = plot(v.ENY_k3p5, plot.numbers=F, ylab=expression(Semivariance ~ (mW/m^2)^2), main="Eastern NY", xlab = 'Separation Distance (m)', pch = 16, col = kcols[5], ylim = c(0,1500), xlim = c(0,60000), cex=0.5)
+p4_k3p5 = plot(v.ENYPA_k3p5, plot.numbers=F, ylab=expression(Semivariance ~ (mW/m^2)^2), main="Eastern NY & PA", xlab = 'Separation Distance (m)', pch = 16, col = kcols[5], xlim = c(0,60000), ylim = c(0,400), cex=0.5)
+p8_k3p5 = plot(v.MT_k3p5, plot.numbers=F, ylab=expression(Semivariance ~ (mW/m^2)^2), main="Western WV", xlab = 'Separation Distance (m)', pch = 16, col = kcols[5], xlim = c(0,60000), ylim = c(0,700), cex=0.5)
+p5_k3p5 = plot(v.NWPANY_k3p5, plot.numbers=F, ylab=expression(Semivariance ~ (mW/m^2)^2), main="Northwestern PA & NY", xlab = 'Separation Distance (m)', pch = 16, col = kcols[5], xlim = c(0,60000), ylim = c(0,500), cex=0.5)
+p6_k3p5 = plot(v.SWPA_k3p5, plot.numbers=F, ylab=expression(Semivariance ~ (mW/m^2)^2), main="Southwestern PA", xlab = 'Separation Distance (m)', pch = 16, col = kcols[5], xlim = c(0,60000), ylim = c(0,850), cex=0.5)
+p6z_k3p5 = plot(v.SWPA_k3p5, plot.numbers=F, ylab=expression(Semivariance ~ (mW/m^2)^2), main="Southwestern PA Zoom", xlab = 'Separation Distance (m)', pch = 16, col = kcols[5], xlim = c(0,60000), ylim = c(0,60), cex=0.5)
+p10_k3p5 = plot(v.VR_k3p5, plot.numbers=F, ylab=expression(Semivariance ~ (mW/m^2)^2), main="Valley and Ridge", xlab = 'Separation Distance (m)', pch = 16, col = kcols[5], xlim = c(0,60000), ylim = c(0,11000), cex=0.5)
+p10z_k3p5 = plot(v.VR_k3p5, plot.numbers=F, ylab=expression(Semivariance ~ (mW/m^2)^2), main="Valley and Ridge Zoom", xlab = 'Separation Distance (m)', pch = 16, col = kcols[5], xlim = c(0,60000), ylim = c(0,300), cex=0.5)
+p7_k3p5 = plot(v.WPA_k3p5, plot.numbers=F, ylab=expression(Semivariance ~ (mW/m^2)^2), main="Western PA", xlab = 'Separation Distance (m)', pch = 16, col = kcols[5], xlim = c(0,60000), ylim = c(0,700), cex=0.5)
+p7z_k3p5 = plot(v.WPA_k3p5, plot.numbers=F, ylab=expression(Semivariance ~ (mW/m^2)^2), main="Western PA Zoom", xlab = 'Separation Distance (m)', pch = 16, col = kcols[5], xlim = c(0,60000), ylim = c(0,50), cex=0.5)
+p11_k3p5 = plot(v.FL_k3p5, plot.numbers=F, ylab=expression(Semivariance ~ (mW/m^2)^2), main="Full Region", xlab = 'Separation Distance (m)', pch = 16, col = kcols[5], xlim = c(0,60000), ylim = c(0,1000), cex=0.5)
+
+p1_k4p0 = plot(v.CT_k4p0, plot.numbers=F, ylab=expression(Semivariance ~ (mW/m^2)^2), main="Chautauqua, NY", xlab = 'Separation Distance (m)', pch = 16, ylim = c(0,50), col = kcols[6], xlim = c(0,60000), cex=0.5)
+p2_k4p0 = plot(v.CNY_k4p0,plot.numbers=F, ylab=expression(Semivariance ~ (mW/m^2)^2), main="Central NY", xlab = 'Separation Distance (m)', pch = 16, ylim = c(0,1500), col = kcols[6], xlim = c(0,60000), cex=0.5)
+p9_k4p0 = plot(v.CWV_k4p0, plot.numbers=F, ylab=expression(Semivariance ~ (mW/m^2)^2), main="Central WV", xlab = 'Separation Distance (m)', pch = 16, col = kcols[6], ylim = c(0,1200), xlim = c(0,60000), cex=0.5)
+p3_k4p0 = plot(v.ENY_k4p0, plot.numbers=F, ylab=expression(Semivariance ~ (mW/m^2)^2), main="Eastern NY", xlab = 'Separation Distance (m)', pch = 16, col = kcols[6], ylim = c(0,1500), xlim = c(0,60000), cex=0.5)
+p4_k4p0 = plot(v.ENYPA_k4p0, plot.numbers=F, ylab=expression(Semivariance ~ (mW/m^2)^2), main="Eastern NY & PA", xlab = 'Separation Distance (m)', pch = 16, col = kcols[6], xlim = c(0,60000), ylim = c(0,400), cex=0.5)
+p8_k4p0 = plot(v.MT_k4p0, plot.numbers=F, ylab=expression(Semivariance ~ (mW/m^2)^2), main="Western WV", xlab = 'Separation Distance (m)', pch = 16, col = kcols[6], xlim = c(0,60000), ylim = c(0,700), cex=0.5)
+p5_k4p0 = plot(v.NWPANY_k4p0, plot.numbers=F, ylab=expression(Semivariance ~ (mW/m^2)^2), main="Northwestern PA & NY", xlab = 'Separation Distance (m)', pch = 16, col = kcols[6], xlim = c(0,60000), ylim = c(0,500), cex=0.5)
+p6_k4p0 = plot(v.SWPA_k4p0, plot.numbers=F, ylab=expression(Semivariance ~ (mW/m^2)^2), main="Southwestern PA", xlab = 'Separation Distance (m)', pch = 16, col = kcols[6], xlim = c(0,60000), ylim = c(0,850), cex=0.5)
+p6z_k4p0 = plot(v.SWPA_k4p0, plot.numbers=F, ylab=expression(Semivariance ~ (mW/m^2)^2), main="Southwestern PA Zoom", xlab = 'Separation Distance (m)', pch = 16, col = kcols[6], xlim = c(0,60000), ylim = c(0,60), cex=0.5)
+p10_k4p0 = plot(v.VR_k4p0, plot.numbers=F, ylab=expression(Semivariance ~ (mW/m^2)^2), main="Valley and Ridge", xlab = 'Separation Distance (m)', pch = 16, col = kcols[6], xlim = c(0,60000), ylim = c(0,11000), cex=0.5)
+p10z_k4p0 = plot(v.VR_k4p0, plot.numbers=F, ylab=expression(Semivariance ~ (mW/m^2)^2), main="Valley and Ridge Zoom", xlab = 'Separation Distance (m)', pch = 16, col = kcols[6], xlim = c(0,60000), ylim = c(0,300), cex=0.5)
+p7_k4p0 = plot(v.WPA_k4p0, plot.numbers=F, ylab=expression(Semivariance ~ (mW/m^2)^2), main="Western PA", xlab = 'Separation Distance (m)', pch = 16, col = kcols[6], xlim = c(0,60000), ylim = c(0,700), cex=0.5)
+p7z_k4p0 = plot(v.WPA_k4p0, plot.numbers=F, ylab=expression(Semivariance ~ (mW/m^2)^2), main="Western PA Zoom", xlab = 'Separation Distance (m)', pch = 16, col = kcols[6], xlim = c(0,60000), ylim = c(0,50), cex=0.5)
+p11_k4p0 = plot(v.FL_k4p0, plot.numbers=F, ylab=expression(Semivariance ~ (mW/m^2)^2), main="Full Region", xlab = 'Separation Distance (m)', pch = 16, col = kcols[6], xlim = c(0,60000), ylim = c(0,1000), cex=0.5)
+
+p1_k4p5 = plot(v.CT_k4p5, plot.numbers=F, ylab=expression(Semivariance ~ (mW/m^2)^2), main="Chautauqua, NY", xlab = 'Separation Distance (m)', pch = 16, ylim = c(0,50), col = kcols[7], xlim = c(0,60000), cex=0.5)
+p2_k4p5 = plot(v.CNY_k4p5,plot.numbers=F, ylab=expression(Semivariance ~ (mW/m^2)^2), main="Central NY", xlab = 'Separation Distance (m)', pch = 16, ylim = c(0,1500), col = kcols[7], xlim = c(0,60000), cex=0.5)
+p9_k4p5 = plot(v.CWV_k4p5, plot.numbers=F, ylab=expression(Semivariance ~ (mW/m^2)^2), main="Central WV", xlab = 'Separation Distance (m)', pch = 16, col = kcols[7], ylim = c(0,1200), xlim = c(0,60000), cex=0.5)
+p3_k4p5 = plot(v.ENY_k4p5, plot.numbers=F, ylab=expression(Semivariance ~ (mW/m^2)^2), main="Eastern NY", xlab = 'Separation Distance (m)', pch = 16, col = kcols[7], ylim = c(0,1500), xlim = c(0,60000), cex=0.5)
+p4_k4p5 = plot(v.ENYPA_k4p5, plot.numbers=F, ylab=expression(Semivariance ~ (mW/m^2)^2), main="Eastern NY & PA", xlab = 'Separation Distance (m)', pch = 16, col = kcols[7], xlim = c(0,60000), ylim = c(0,400), cex=0.5)
+p8_k4p5 = plot(v.MT_k4p5, plot.numbers=F, ylab=expression(Semivariance ~ (mW/m^2)^2), main="Western WV", xlab = 'Separation Distance (m)', pch = 16, col = kcols[7], xlim = c(0,60000), ylim = c(0,700), cex=0.5)
+p5_k4p5 = plot(v.NWPANY_k4p5, plot.numbers=F, ylab=expression(Semivariance ~ (mW/m^2)^2), main="Northwestern PA & NY", xlab = 'Separation Distance (m)', pch = 16, col = kcols[7], xlim = c(0,60000), ylim = c(0,500), cex=0.5)
+p6_k4p5 = plot(v.SWPA_k4p5, plot.numbers=F, ylab=expression(Semivariance ~ (mW/m^2)^2), main="Southwestern PA", xlab = 'Separation Distance (m)', pch = 16, col = kcols[7], xlim = c(0,60000), ylim = c(0,850), cex=0.5)
+p6z_k4p5 = plot(v.SWPA_k4p5, plot.numbers=F, ylab=expression(Semivariance ~ (mW/m^2)^2), main="Southwestern PA Zoom", xlab = 'Separation Distance (m)', pch = 16, col = kcols[7], xlim = c(0,60000), ylim = c(0,60), cex=0.5)
+p10_k4p5 = plot(v.VR_k4p5, plot.numbers=F, ylab=expression(Semivariance ~ (mW/m^2)^2), main="Valley and Ridge", xlab = 'Separation Distance (m)', pch = 16, col = kcols[7], xlim = c(0,60000), ylim = c(0,11000), cex=0.5)
+p10z_k4p5 = plot(v.VR_k4p5, plot.numbers=F, ylab=expression(Semivariance ~ (mW/m^2)^2), main="Valley and Ridge Zoom", xlab = 'Separation Distance (m)', pch = 16, col = kcols[7], xlim = c(0,60000), ylim = c(0,300), cex=0.5)
+p7_k4p5 = plot(v.WPA_k4p5, plot.numbers=F, ylab=expression(Semivariance ~ (mW/m^2)^2), main="Western PA", xlab = 'Separation Distance (m)', pch = 16, col = kcols[7], xlim = c(0,60000), ylim = c(0,700), cex=0.5)
+p7z_k4p5 = plot(v.WPA_k4p5, plot.numbers=F, ylab=expression(Semivariance ~ (mW/m^2)^2), main="Western PA Zoom", xlab = 'Separation Distance (m)', pch = 16, col = kcols[7], xlim = c(0,60000), ylim = c(0,50), cex=0.5)
+p11_k4p5 = plot(v.FL_k4p5, plot.numbers=F, ylab=expression(Semivariance ~ (mW/m^2)^2), main="Full Region", xlab = 'Separation Distance (m)', pch = 16, col = kcols[7], xlim = c(0,60000), ylim = c(0,1000), cex=0.5)
+
+p1_k5p0 = plot(v.CT_k5p0, plot.numbers=F, ylab=expression(Semivariance ~ (mW/m^2)^2), main="Chautauqua, NY", xlab = 'Separation Distance (m)', pch = 16, ylim = c(0,50), col = kcols[8], xlim = c(0,60000), cex=0.5)
+p2_k5p0 = plot(v.CNY_k5p0,plot.numbers=F, ylab=expression(Semivariance ~ (mW/m^2)^2), main="Central NY", xlab = 'Separation Distance (m)', pch = 16, ylim = c(0,1500), col = kcols[8], xlim = c(0,60000), cex=0.5)
+p9_k5p0 = plot(v.CWV_k5p0, plot.numbers=F, ylab=expression(Semivariance ~ (mW/m^2)^2), main="Central WV", xlab = 'Separation Distance (m)', pch = 16, col = kcols[8], ylim = c(0,1200), xlim = c(0,60000), cex=0.5)
+p3_k5p0 = plot(v.ENY_k5p0, plot.numbers=F, ylab=expression(Semivariance ~ (mW/m^2)^2), main="Eastern NY", xlab = 'Separation Distance (m)', pch = 16, col = kcols[8], ylim = c(0,1500), xlim = c(0,60000), cex=0.5)
+p4_k5p0 = plot(v.ENYPA_k5p0, plot.numbers=F, ylab=expression(Semivariance ~ (mW/m^2)^2), main="Eastern NY & PA", xlab = 'Separation Distance (m)', pch = 16, col = kcols[8], xlim = c(0,60000), ylim = c(0,400), cex=0.5)
+p8_k5p0 = plot(v.MT_k5p0, plot.numbers=F, ylab=expression(Semivariance ~ (mW/m^2)^2), main="Western WV", xlab = 'Separation Distance (m)', pch = 16, col = kcols[8], xlim = c(0,60000), ylim = c(0,700), cex=0.5)
+p5_k5p0 = plot(v.NWPANY_k5p0, plot.numbers=F, ylab=expression(Semivariance ~ (mW/m^2)^2), main="Northwestern PA & NY", xlab = 'Separation Distance (m)', pch = 16, col = kcols[8], xlim = c(0,60000), ylim = c(0,500), cex=0.5)
+p6_k5p0 = plot(v.SWPA_k5p0, plot.numbers=F, ylab=expression(Semivariance ~ (mW/m^2)^2), main="Southwestern PA", xlab = 'Separation Distance (m)', pch = 16, col = kcols[8], xlim = c(0,60000), ylim = c(0,850), cex=0.5)
+p6z_k5p0 = plot(v.SWPA_k5p0, plot.numbers=F, ylab=expression(Semivariance ~ (mW/m^2)^2), main="Southwestern PA Zoom", xlab = 'Separation Distance (m)', pch = 16, col = kcols[8], xlim = c(0,60000), ylim = c(0,60), cex=0.5)
+p10_k5p0 = plot(v.VR_k5p0, plot.numbers=F, ylab=expression(Semivariance ~ (mW/m^2)^2), main="Valley and Ridge", xlab = 'Separation Distance (m)', pch = 16, col = kcols[8], xlim = c(0,60000), ylim = c(0,11000), cex=0.5)
+p10z_k5p0 = plot(v.VR_k5p0, plot.numbers=F, ylab=expression(Semivariance ~ (mW/m^2)^2), main="Valley and Ridge Zoom", xlab = 'Separation Distance (m)', pch = 16, col = kcols[8], xlim = c(0,60000), ylim = c(0,300), cex=0.5)
+p7_k5p0 = plot(v.WPA_k5p0, plot.numbers=F, ylab=expression(Semivariance ~ (mW/m^2)^2), main="Western PA", xlab = 'Separation Distance (m)', pch = 16, col = kcols[8], xlim = c(0,60000), ylim = c(0,700), cex=0.5)
+p7z_k5p0 = plot(v.WPA_k5p0, plot.numbers=F, ylab=expression(Semivariance ~ (mW/m^2)^2), main="Western PA Zoom", xlab = 'Separation Distance (m)', pch = 16, col = kcols[8], xlim = c(0,60000), ylim = c(0,50), cex=0.5)
+p11_k5p0 = plot(v.FL_k5p0, plot.numbers=F, ylab=expression(Semivariance ~ (mW/m^2)^2), main="Full Region", xlab = 'Separation Distance (m)', pch = 16, col = kcols[8], xlim = c(0,60000), ylim = c(0,1000), cex=0.5)
 
 p1p = plot(v.PreCT, plot.numbers=F, ylab=expression(Semivariance ~ (mW/m^2)^2), main="Chautauqua, NY", xlab = 'Separation Distance (m)', pch = 16, ylim = c(0,50), col = 'black', xlim = c(0,60000), cex=0.5)
 p2p = plot(v.PreCNY,plot.numbers=F, ylab=expression(Semivariance ~ (mW/m^2)^2), main="Central NY", xlab = 'Separation Distance (m)', pch = 16, col = 'black', ylim = c(0,1500), xlim = c(0,60000), cex=0.5)
@@ -2487,6 +3472,917 @@ plot(p6z, split = c(3,3,4,3), more=T)
 
 plot(p7dz, split=c(4,3,4,3), more=T)
 plot(p7z, split = c(4,3,4,3), more=F)
+
+dev.off()
+
+p2 = plot(v.CNY,plot.numbers=F, ylab=expression(Semivariance ~ (mW/m^2)^2), main="Central NY", xlab = 'Separation Distance (m)', pch = 16, ylim = c(0,200), col = 'red', xlim = c(0,60000), cex=0.5)
+p2_k1p0 = plot(v.CNY_k1p0,plot.numbers=F, ylab=expression(Semivariance ~ (mW/m^2)^2), main="Central NY", xlab = 'Separation Distance (m)', pch = 16, ylim = c(0,200), col = kcols[1], xlim = c(0,60000), cex=0.5)
+p2_k1p5 = plot(v.CNY_k1p5,plot.numbers=F, ylab=expression(Semivariance ~ (mW/m^2)^2), main="Central NY", xlab = 'Separation Distance (m)', pch = 16, ylim = c(0,200), col = kcols[2], xlim = c(0,60000), cex=0.5)
+p2_k2p0 = plot(v.CNY_k2p0,plot.numbers=F, ylab=expression(Semivariance ~ (mW/m^2)^2), main="Central NY", xlab = 'Separation Distance (m)', pch = 16, ylim = c(0,200), col = kcols[3], xlim = c(0,60000), cex=0.5)
+p2_k2p5 = plot(v.CNY_k2p5,plot.numbers=F, ylab=expression(Semivariance ~ (mW/m^2)^2), main="Central NY", xlab = 'Separation Distance (m)', pch = 16, ylim = c(0,200), col = kcols[4], xlim = c(0,60000), cex=0.5)
+p2_k3p5 = plot(v.CNY_k3p5,plot.numbers=F, ylab=expression(Semivariance ~ (mW/m^2)^2), main="Central NY", xlab = 'Separation Distance (m)', pch = 16, ylim = c(0,200), col = kcols[5], xlim = c(0,60000), cex=0.5)
+p2_k4p0 = plot(v.CNY_k4p0,plot.numbers=F, ylab=expression(Semivariance ~ (mW/m^2)^2), main="Central NY", xlab = 'Separation Distance (m)', pch = 16, ylim = c(0,200), col = kcols[6], xlim = c(0,60000), cex=0.5)
+p2_k4p5 = plot(v.CNY_k4p5,plot.numbers=F, ylab=expression(Semivariance ~ (mW/m^2)^2), main="Central NY", xlab = 'Separation Distance (m)', pch = 16, ylim = c(0,200), col = kcols[7], xlim = c(0,60000), cex=0.5)
+p2_k5p0 = plot(v.CNY_k5p0,plot.numbers=F, ylab=expression(Semivariance ~ (mW/m^2)^2), main="Central NY", xlab = 'Separation Distance (m)', pch = 16, ylim = c(0,200), col = kcols[8], xlim = c(0,60000), cex=0.5)
+p2d = plot(v.DeepCNY,plot.numbers=F, ylab=expression(Semivariance ~ (mW/m^2)^2), main="Central NY", xlab = 'Separation Distance (m)', pch = 16, col = 'blue', ylim = c(0,200), xlim = c(0,60000), cex=0.5)
+
+p3 = plot(v.ENY, plot.numbers=F, ylab=expression(Semivariance ~ (mW/m^2)^2), main="Eastern NY", xlab = 'Separation Distance (m)', pch = 16, col = 'red', ylim = c(0,100), xlim = c(0,60000), cex=0.5)
+p3_k1p0 = plot(v.ENY_k1p0, plot.numbers=F, ylab=expression(Semivariance ~ (mW/m^2)^2), main="Eastern NY", xlab = 'Separation Distance (m)', pch = 16, col = kcols[1], ylim = c(0,100), xlim = c(0,60000), cex=0.5)
+p3_k1p5 = plot(v.ENY_k1p5, plot.numbers=F, ylab=expression(Semivariance ~ (mW/m^2)^2), main="Eastern NY", xlab = 'Separation Distance (m)', pch = 16, col = kcols[2], ylim = c(0,100), xlim = c(0,60000), cex=0.5)
+p3_k2p0 = plot(v.ENY_k2p0, plot.numbers=F, ylab=expression(Semivariance ~ (mW/m^2)^2), main="Eastern NY", xlab = 'Separation Distance (m)', pch = 16, col = kcols[3], ylim = c(0,100), xlim = c(0,60000), cex=0.5)
+p3_k2p5 = plot(v.ENY_k2p5, plot.numbers=F, ylab=expression(Semivariance ~ (mW/m^2)^2), main="Eastern NY", xlab = 'Separation Distance (m)', pch = 16, col = kcols[4], ylim = c(0,100), xlim = c(0,60000), cex=0.5)
+p3_k3p5 = plot(v.ENY_k3p5, plot.numbers=F, ylab=expression(Semivariance ~ (mW/m^2)^2), main="Eastern NY", xlab = 'Separation Distance (m)', pch = 16, col = kcols[5], ylim = c(0,100), xlim = c(0,60000), cex=0.5)
+p3_k4p0 = plot(v.ENY_k4p0, plot.numbers=F, ylab=expression(Semivariance ~ (mW/m^2)^2), main="Eastern NY", xlab = 'Separation Distance (m)', pch = 16, col = kcols[6], ylim = c(0,100), xlim = c(0,60000), cex=0.5)
+p3_k4p5 = plot(v.ENY_k4p5, plot.numbers=F, ylab=expression(Semivariance ~ (mW/m^2)^2), main="Eastern NY", xlab = 'Separation Distance (m)', pch = 16, col = kcols[7], ylim = c(0,100), xlim = c(0,60000), cex=0.5)
+p3_k5p0 = plot(v.ENY_k5p0, plot.numbers=F, ylab=expression(Semivariance ~ (mW/m^2)^2), main="Eastern NY", xlab = 'Separation Distance (m)', pch = 16, col = kcols[8], ylim = c(0,100), xlim = c(0,60000), cex=0.5)
+p3d = plot(v.DeepENY, plot.numbers=F, ylab=expression(Semivariance ~ (mW/m^2)^2), main="Eastern NY", xlab = 'Separation Distance (m)', pch = 16, col = 'blue', ylim = c(0,100), xlim = c(0,60000), cex=0.5)
+
+p5 = plot(v.NWPANY, plot.numbers=F, ylab=expression(Semivariance ~ (mW/m^2)^2), main="Northwestern PA & NY", xlab = 'Separation Distance (m)', pch = 16, col = 'red', xlim = c(0,60000), ylim = c(0,150), cex=0.5)
+p5_k1p0 = plot(v.NWPANY_k1p0, plot.numbers=F, ylab=expression(Semivariance ~ (mW/m^2)^2), main="Northwestern PA & NY", xlab = 'Separation Distance (m)', pch = 16, col = kcols[1], xlim = c(0,60000), ylim = c(0,150), cex=0.5)
+p5_k1p5 = plot(v.NWPANY_k1p5, plot.numbers=F, ylab=expression(Semivariance ~ (mW/m^2)^2), main="Northwestern PA & NY", xlab = 'Separation Distance (m)', pch = 16, col = kcols[2], xlim = c(0,60000), ylim = c(0,150), cex=0.5)
+p5_k2p0 = plot(v.NWPANY_k2p0, plot.numbers=F, ylab=expression(Semivariance ~ (mW/m^2)^2), main="Northwestern PA & NY", xlab = 'Separation Distance (m)', pch = 16, col = kcols[3], xlim = c(0,60000), ylim = c(0,150), cex=0.5)
+p5_k2p5 = plot(v.NWPANY_k2p5, plot.numbers=F, ylab=expression(Semivariance ~ (mW/m^2)^2), main="Northwestern PA & NY", xlab = 'Separation Distance (m)', pch = 16, col = kcols[4], xlim = c(0,60000), ylim = c(0,150), cex=0.5)
+p5_k3p5 = plot(v.NWPANY_k3p5, plot.numbers=F, ylab=expression(Semivariance ~ (mW/m^2)^2), main="Northwestern PA & NY", xlab = 'Separation Distance (m)', pch = 16, col = kcols[5], xlim = c(0,60000), ylim = c(0,150), cex=0.5)
+p5_k4p0 = plot(v.NWPANY_k4p0, plot.numbers=F, ylab=expression(Semivariance ~ (mW/m^2)^2), main="Northwestern PA & NY", xlab = 'Separation Distance (m)', pch = 16, col = kcols[6], xlim = c(0,60000), ylim = c(0,150), cex=0.5)
+p5_k4p5 = plot(v.NWPANY_k4p5, plot.numbers=F, ylab=expression(Semivariance ~ (mW/m^2)^2), main="Northwestern PA & NY", xlab = 'Separation Distance (m)', pch = 16, col = kcols[7], xlim = c(0,60000), ylim = c(0,150), cex=0.5)
+p5_k5p0 = plot(v.NWPANY_k5p0, plot.numbers=F, ylab=expression(Semivariance ~ (mW/m^2)^2), main="Northwestern PA & NY", xlab = 'Separation Distance (m)', pch = 16, col = kcols[8], xlim = c(0,60000), ylim = c(0,150), cex=0.5)
+p5d = plot(v.DeepNWPANY, plot.numbers=F, ylab=expression(Semivariance ~ (mW/m^2)^2), main="Northwestern PA & NY", xlab = 'Separation Distance (m)', pch = 16, col = 'blue', xlim = c(0,60000), ylim = c(0,150), cex=0.5)
+
+p9 = plot(v.CWV, plot.numbers=F, ylab=expression(Semivariance ~ (mW/m^2)^2), main="Central WV", xlab = 'Separation Distance (m)', pch = 16, col = 'red', ylim = c(0,400), xlim = c(0,60000), cex=0.5)
+p9_k1p0 = plot(v.CWV_k1p0, plot.numbers=F, ylab=expression(Semivariance ~ (mW/m^2)^2), main="Central WV", xlab = 'Separation Distance (m)', pch = 16, col = kcols[1], ylim = c(0,400), xlim = c(0,60000), cex=0.5)
+p9_k1p5 = plot(v.CWV_k1p5, plot.numbers=F, ylab=expression(Semivariance ~ (mW/m^2)^2), main="Central WV", xlab = 'Separation Distance (m)', pch = 16, col = kcols[2], ylim = c(0,400), xlim = c(0,60000), cex=0.5)
+p9_k2p0 = plot(v.CWV_k2p0, plot.numbers=F, ylab=expression(Semivariance ~ (mW/m^2)^2), main="Central WV", xlab = 'Separation Distance (m)', pch = 16, col = kcols[3], ylim = c(0,400), xlim = c(0,60000), cex=0.5)
+p9_k2p5 = plot(v.CWV_k2p5, plot.numbers=F, ylab=expression(Semivariance ~ (mW/m^2)^2), main="Central WV", xlab = 'Separation Distance (m)', pch = 16, col = kcols[4], ylim = c(0,400), xlim = c(0,60000), cex=0.5)
+p9_k3p5 = plot(v.CWV_k3p5, plot.numbers=F, ylab=expression(Semivariance ~ (mW/m^2)^2), main="Central WV", xlab = 'Separation Distance (m)', pch = 16, col = kcols[5], ylim = c(0,400), xlim = c(0,60000), cex=0.5)
+p9_k4p0 = plot(v.CWV_k4p0, plot.numbers=F, ylab=expression(Semivariance ~ (mW/m^2)^2), main="Central WV", xlab = 'Separation Distance (m)', pch = 16, col = kcols[6], ylim = c(0,400), xlim = c(0,60000), cex=0.5)
+p9_k4p5 = plot(v.CWV_k4p5, plot.numbers=F, ylab=expression(Semivariance ~ (mW/m^2)^2), main="Central WV", xlab = 'Separation Distance (m)', pch = 16, col = kcols[7], ylim = c(0,400), xlim = c(0,60000), cex=0.5)
+p9_k5p0 = plot(v.CWV_k5p0, plot.numbers=F, ylab=expression(Semivariance ~ (mW/m^2)^2), main="Central WV", xlab = 'Separation Distance (m)', pch = 16, col = kcols[8], ylim = c(0,400), xlim = c(0,60000), cex=0.5)
+p9d = plot(v.DeepCWV, plot.numbers=F, ylab=expression(Semivariance ~ (mW/m^2)^2), main="Central WV", xlab = 'Separation Distance (m)', pch = 16, col = 'blue', ylim = c(0,400), xlim = c(0,60000), cex=0.5)
+
+
+png("Variograms_UniqueYAxis_CompareESDA_DeepToOutliers.png", width=13, height=10, units="in", res=300)
+plot(p1d, split=c(1,1,4,3), more=T)
+plot(p1, split = c(1,1,4,3), more=T)
+
+plot(p2d, split=c(4,1,4,3), more=T)
+plot(p2, split = c(4,1,4,3), more=T)
+
+plot(p3d, split=c(1,2,4,3), more=T)
+plot(p3, split = c(1,2,4,3), more=T)
+
+plot(p4d, split=c(2,2,4,3), more=T)
+plot(p4, split = c(2,2,4,3), more=T)
+
+plot(p5d, split=c(3,1,4,3), more=T)
+plot(p5, split = c(3,1,4,3), more=T)
+
+plot(p6dz, split=c(3,2,4,3), more=T)
+plot(p6z, split = c(3,2,4,3), more=T)
+
+plot(p7dz, split=c(2,1,4,3), more=T)
+plot(p7z, split = c(2,1,4,3), more=T)
+
+plot(p8d, split=c(1,3,4,3), more=T)
+plot(p8, split = c(1,3,4,3), more=T)
+
+plot(p9d, split=c(4,2,4,3), more=T)
+plot(p9, split = c(4,2,4,3), more=T)
+
+plot(p10dz, split=c(2,3,4,3), more=T)
+plot(p10z, split = c(2,3,4,3), more=T)
+
+dev.off()
+
+png("Variograms_UniqueYAxis_CompareESDA_DeepToOutliers_kAll.png", width=13, height=10, units="in", res=300)
+plot(p1d, split=c(1,1,4,3), more=T)
+plot(p1_k1p0, split = c(1,1,4,3), more=T)
+plot(p1_k1p5, split = c(1,1,4,3), more=T)
+plot(p1_k2p0, split = c(1,1,4,3), more=T)
+plot(p1_k2p5, split = c(1,1,4,3), more=T)
+plot(p1_k3p5, split = c(1,1,4,3), more=T)
+plot(p1_k4p0, split = c(1,1,4,3), more=T)
+plot(p1_k4p5, split = c(1,1,4,3), more=T)
+plot(p1_k5p0, split = c(1,1,4,3), more=T)
+plot(p1, split = c(1,1,4,3), more=T)
+
+plot(p2d, split=c(4,1,4,3), more=T)
+plot(p2_k1p0, split = c(4,1,4,3), more=T)
+plot(p2_k1p5, split = c(4,1,4,3), more=T)
+plot(p2_k2p0, split = c(4,1,4,3), more=T)
+plot(p2_k2p5, split = c(4,1,4,3), more=T)
+plot(p2_k3p5, split = c(4,1,4,3), more=T)
+plot(p2_k4p0, split = c(4,1,4,3), more=T)
+plot(p2_k4p5, split = c(4,1,4,3), more=T)
+plot(p2_k5p0, split = c(4,1,4,3), more=T)
+plot(p2, split = c(4,1,4,3), more=T)
+
+plot(p3d, split=c(1,2,4,3), more=T)
+plot(p3_k1p0, split = c(1,2,4,3), more=T)
+plot(p3_k1p5, split = c(1,2,4,3), more=T)
+plot(p3_k2p0, split = c(1,2,4,3), more=T)
+plot(p3_k2p5, split = c(1,2,4,3), more=T)
+plot(p3_k3p5, split = c(1,2,4,3), more=T)
+plot(p3_k4p0, split = c(1,2,4,3), more=T)
+plot(p3_k4p5, split = c(1,2,4,3), more=T)
+plot(p3_k5p0, split = c(1,2,4,3), more=T)
+plot(p3, split = c(1,2,4,3), more=T)
+
+plot(p4d, split=c(2,2,4,3), more=T)
+plot(p4_k1p0, split = c(2,2,4,3), more=T)
+plot(p4_k1p5, split = c(2,2,4,3), more=T)
+plot(p4_k2p0, split = c(2,2,4,3), more=T)
+plot(p4_k2p5, split = c(2,2,4,3), more=T)
+plot(p4_k3p5, split = c(2,2,4,3), more=T)
+plot(p4_k4p0, split = c(2,2,4,3), more=T)
+plot(p4_k4p5, split = c(2,2,4,3), more=T)
+plot(p4_k5p0, split = c(2,2,4,3), more=T)
+plot(p4, split = c(2,2,4,3), more=T)
+
+plot(p5d, split=c(3,1,4,3), more=T)
+plot(p5_k1p0, split = c(3,1,4,3), more=T)
+plot(p5_k1p5, split = c(3,1,4,3), more=T)
+plot(p5_k2p0, split = c(3,1,4,3), more=T)
+plot(p5_k2p5, split = c(3,1,4,3), more=T)
+plot(p5_k3p5, split = c(3,1,4,3), more=T)
+plot(p5_k4p0, split = c(3,1,4,3), more=T)
+plot(p5_k4p5, split = c(3,1,4,3), more=T)
+plot(p5_k5p0, split = c(3,1,4,3), more=T)
+plot(p5, split = c(3,1,4,3), more=T)
+
+plot(p6dz, split=c(3,2,4,3), more=T)
+plot(p6z_k1p0, split = c(3,2,4,3), more=T)
+plot(p6z_k1p5, split = c(3,2,4,3), more=T)
+plot(p6z_k2p0, split = c(3,2,4,3), more=T)
+plot(p6z_k2p5, split = c(3,2,4,3), more=T)
+plot(p6z_k3p5, split = c(3,2,4,3), more=T)
+plot(p6z_k4p0, split = c(3,2,4,3), more=T)
+plot(p6z_k4p5, split = c(3,2,4,3), more=T)
+plot(p6z_k5p0, split = c(3,2,4,3), more=T)
+plot(p6z, split = c(3,2,4,3), more=T)
+
+plot(p7dz, split=c(2,1,4,3), more=T)
+plot(p7z_k1p0, split = c(2,1,4,3), more=T)
+plot(p7z_k1p5, split = c(2,1,4,3), more=T)
+plot(p7z_k2p0, split = c(2,1,4,3), more=T)
+plot(p7z_k2p5, split = c(2,1,4,3), more=T)
+plot(p7z_k3p5, split = c(2,1,4,3), more=T)
+plot(p7z_k4p0, split = c(2,1,4,3), more=T)
+plot(p7z_k4p5, split = c(2,1,4,3), more=T)
+plot(p7z_k5p0, split = c(2,1,4,3), more=T)
+plot(p7z, split = c(2,1,4,3), more=T)
+
+plot(p8d, split=c(1,3,4,3), more=T)
+plot(p8_k1p0, split = c(1,3,4,3), more=T)
+plot(p8_k1p5, split = c(1,3,4,3), more=T)
+plot(p8_k2p0, split = c(1,3,4,3), more=T)
+plot(p8_k2p5, split = c(1,3,4,3), more=T)
+plot(p8_k3p5, split = c(1,3,4,3), more=T)
+plot(p8_k4p0, split = c(1,3,4,3), more=T)
+plot(p8_k4p5, split = c(1,3,4,3), more=T)
+plot(p8_k5p0, split = c(1,3,4,3), more=T)
+plot(p8, split = c(1,3,4,3), more=T)
+
+plot(p9d, split=c(4,2,4,3), more=T)
+plot(p9_k1p0, split = c(4,2,4,3), more=T)
+plot(p9_k1p5, split = c(4,2,4,3), more=T)
+plot(p9_k2p0, split = c(4,2,4,3), more=T)
+plot(p9_k2p5, split = c(4,2,4,3), more=T)
+plot(p9_k3p5, split = c(4,2,4,3), more=T)
+plot(p9_k4p0, split = c(4,2,4,3), more=T)
+plot(p9_k4p5, split = c(4,2,4,3), more=T)
+plot(p9_k5p0, split = c(4,2,4,3), more=T)
+plot(p9, split = c(4,2,4,3), more=T)
+
+plot(p10dz, split=c(2,3,4,3), more=T)
+plot(p10z_k1p0, split = c(2,3,4,3), more=T)
+plot(p10z_k1p5, split = c(2,3,4,3), more=T)
+plot(p10z_k2p0, split = c(2,3,4,3), more=T)
+plot(p10z_k2p5, split = c(2,3,4,3), more=T)
+plot(p10z_k3p5, split = c(2,3,4,3), more=T)
+plot(p10z_k4p0, split = c(2,3,4,3), more=T)
+plot(p10z_k4p5, split = c(2,3,4,3), more=T)
+plot(p10z_k5p0, split = c(2,3,4,3), more=T)
+plot(p10z, split = c(2,3,4,3), more=T)
+
+dev.off()
+
+#Confidence intervals for variogram lags----
+#Fixme: There is a real need to parallelize this code. It is way too slow for large samples (> 1000 points)
+#Note that if the number of point pairs in a bin is 2, then the standard deviation will be 0 because when only 2 samples are removed in that bin there is sample reuse because each point contributes the same value when it is removed. Therefore the jackknife variance is likely too small when the number of data points is small.
+#Also note that point pairs is not the same as number of points.
+JackKnife = function(Dat,      #Spatial points datafame containing the points to be jackknifed. Should be in UTM coordinates.
+                      bins,    #Number of lags for the semi-variogram
+                      cut,     #Cutoff distance for the semi-variogram
+                      anis=NA, #anisotropy for semi-variogram. Currently only works for 2 directions.
+                      v.Dat    #variogram model for Dat using all of the data. Must have same bins, cut, and anis as specified.
+                      )
+  {  
+  if (is.na(anis[1]) == FALSE){
+    #Anisotropic Variogram
+    if (length(anis) < 2){
+      print('Error, need to have at least 2 angles for the anisotropy angle')
+      stop
+    }
+    #Expand the length of VarioMat matrix to accommodate the number of angles in anis
+    VarioMat = Pts = Dist = Gamma = matrix(NA, nrow=nrow(Dat)*length(anis), ncol=bins)
+    
+    #Make a vector of the number of replications of each bin from the jackknife. This number only changes if a given resampling results in no estimate for a given bin.
+    Nmat = rbind(rep(nrow(Dat), bins), rep(nrow(Dat), bins))
+    
+    #Fixme: Make a storage for the anisotropic variogram for any angle length. Currently at 2 (most common) but can be nrow(Dat)*length(anis) + i
+    for (i in 1:nrow(Dat)){
+      #Make a variogram, and save the bin information in VarioMat
+      #Use anisotropic variogram.
+      vj = variogram(Qs~1, data = Dat[-i,], cutoff=cut, width=cut/bins, alpha=anis)
+      
+      #Get the indicies in vj that are populated with information for the direction of interest.
+      Ind1 = which(vj$dir.hor == anis[1])
+      Ind2 = which(vj$dir.hor == anis[2])
+      
+      Pts[i, 1:length(Ind1)] = vj$np[Ind1]
+      Pts[(nrow(Dat) + i), 1:length(Ind2)] = vj$np[Ind2]
+      Dist[i,1:length(Ind1)] = vj$dist[Ind1]
+      Dist[(nrow(Dat) + i), 1:length(Ind2)] = vj$dist[Ind2]
+      Gamma[i, 1:length(Ind1)] = vj$gamma[Ind1]
+      Gamma[(nrow(Dat) + i), 1:length(Ind2)] = vj$gamma[Ind2]
+      
+      if (any(is.na(Pts[i,])) || any(Pts[i,] < 2)){
+        #Mark the distance as NA and reduce the number of points in Nvec. The model will have to be rerun with the new Nvec...
+        ind = which(is.na(Pts[i,]) == TRUE | Pts[i,] < 2)
+        Pts[i, ind] = NA
+        Dist[i, ind] = NA
+        Nmat[1, ind] = Nmat[1, ind] - 1
+        Gamma[i, ind] = NA
+      }
+      if (any(is.na(Pts[(nrow(Dat) + i),])) || any(Pts[(nrow(Dat) + i),] < 2)){
+        #Mark the distance as NA and reduce the number of points in Nvec. The model will have to be rerun with the new Nvec...
+        ind = which(is.na(Pts[(nrow(Dat) + i),]) == TRUE | Pts[(nrow(Dat) + i),] < 2)
+        Pts[(nrow(Dat) + i), ind] = NA
+        Dist[(nrow(Dat) + i), ind] = NA
+        Nmat[2, ind] = Nmat[2, ind] - 1
+        Gamma[(nrow(Dat) + i), ind] = NA
+      }
+      if (i == nrow(Dat)){
+        print('finished first loop')
+      }
+    }
+    rm(i)
+    
+    #Get the indices of the anisotropy for the variogram with all of the points. This will contain the maximum number of bins for each angle.
+    Ind1 = which(v.Dat$dir.hor == anis[1])
+    Ind2 = which(v.Dat$dir.hor == anis[2])
+    
+    #Fill in the matrix of the estimates. The transposition is a faster way of using sweep() to multiply a vector by row of a matrix.
+    VarioMat[1:nrow(Dat), 1:length(Ind1)] = t(Nmat[1, 1:length(Ind1)]*v.Dat$gamma[Ind1] - t(t(t(Gamma[1:nrow(Dat), 1:length(Ind1)])*(Nmat[1, 1:length(Ind1)]-1))))
+    VarioMat[(nrow(Dat)+1):(2*nrow(Dat)), 1:length(Ind2)] = t(Nmat[2, 1:length(Ind2)]*v.Dat$gamma[Ind2] - t(t(t(Gamma[(nrow(Dat)+1):(2*nrow(Dat)), 1:length(Ind2)])*(Nmat[2, 1:length(Ind2)]-1))))
+    
+    #Calculate the Jackknife mean
+    BinMean_1 = apply(VarioMat[1:nrow(Dat), ], 2, FUN=sum, na.rm=TRUE)/Nmat[1,]
+    BinMean_2 = apply(VarioMat[(nrow(Dat)+1):(nrow(Dat)*2), ], 2, FUN=sum, na.rm=TRUE)/Nmat[2,]
+    
+    BinMean = rbind(BinMean_1, BinMean_2)
+    
+    #Calculate the average bin distances for plotting purposes
+    BinMean_dist1 = apply(Dist[1:nrow(Dat), ], 2, FUN=sum, na.rm=TRUE)/Nmat[1,]
+    BinMean_dist2 = apply(Dist[(nrow(Dat)+1):(2*nrow(Dat)), ], 2, FUN=sum, na.rm=TRUE)/Nmat[2,]
+    
+    BinMean_dist = rbind(BinMean_dist1, BinMean_dist2)
+    
+    
+    #Calculate the jackknife standard error
+    VarioMatSquaredMatrix = matrix(NA, ncol=bins, nrow=nrow(Dat)*length(anis))
+    DistSd = matrix(NA, ncol=bins, nrow=nrow(Dat)*length(anis))
+    for (j in 1:(nrow(Dat)*length(anis))){
+      if (j <= nrow(Dat)){
+        VarioMatSquaredMatrix[j,] = (VarioMat[j,] - BinMean_1)^2
+        DistSd[j, ] = (Dist[j, ] - BinMean_dist1)^2
+      }
+      else{
+        VarioMatSquaredMatrix[j,] = (VarioMat[j,] - BinMean_2)^2
+        DistSd[j, ] = (Dist[j, ] - BinMean_dist2)^2
+      }
+      if (j == nrow(Dat)*length(anis)){
+        print('finished second loop')
+      }
+    }
+    rm(j)
+    
+    
+    #Calculate the jackknife variance for each bin
+    VarEst = matrix(NA, ncol=bins, nrow=length(anis))
+    VarEst[1,] = apply(VarioMatSquaredMatrix[1:nrow(Dat),], 2, FUN=sum, na.rm=TRUE)/(Nmat[1,]*(Nmat[1,]-1))
+    VarEst[2,] = apply(VarioMatSquaredMatrix[(nrow(Dat)+1):(nrow(Dat)*2),], 2, FUN=sum, na.rm=TRUE)/(Nmat[2,]*(Nmat[2,]-1))
+    
+    SdEst = sqrt(VarEst)
+    
+    #Calculate the standard deviation of the bin distances for plotting error bars on the positions
+    BinVar_dist1 = apply(DistSd[1:nrow(Dat), ], 2, FUN=sum, na.rm=TRUE)/(Nmat[1,] - 1)
+    BinVar_dist2 = apply(DistSd[(nrow(Dat)+1):(2*nrow(Dat)), ], 2, FUN=sum, na.rm=TRUE)/(Nmat[2,] - 1)
+    BinSd_dist1 = sqrt(BinVar_dist1)
+    BinSd_dist2 = sqrt(BinVar_dist2)
+    BinSd_dist = rbind(BinSd_dist1, BinSd_dist2)
+    
+    Nvec=Nmat
+  }
+  else {
+    #Make a matrix for storing the bin estimates of variance, number of points, and the distance to points.
+    VarioMat = Pts = Dist = Gamma = matrix(NA, nrow=nrow(Dat), ncol=bins)
+    
+    #Make a vector of the number of replications of each bin from the jackknife. This number only changes if a given resampling results in no estimate for a given bin.
+    Nvec = rep(nrow(Dat), bins)
+    
+    #Start jackknife
+    for (i in 1:nrow(Dat)){
+      vj = variogram(Qs~1, data = Dat[-i,], cutoff=cut, width=cut/bins)
+      
+      #Store the number of points in each lag and the average lag distance.
+      Pts[i,] = vj$np
+      Dist[i,] = vj$dist
+      Gamma[i,] = vj$gamma
+      
+      if (any(is.na(Pts[i,])) || any(Pts[i,] < 2)){
+        #Mark the distance as NA and reduce the number of points in Nvec. The model will have to be rerun with the new Nvec...
+        ind = which((is.na(Pts[i,]) == TRUE) | (Pts[i,] < 2))
+        Pts[i, ind] = NA
+        Dist[i, ind] = NA
+        Nvec[ind] = Nvec[ind] - 1
+        Gamma[i, ind] = NA
+      }
+    }
+    rm(i)
+    
+    #Calculate the estimate of the bin mean from the jackknife. The transposition is a faster way of using sweep() to multiply a vector by row of a matrix.
+    VarioMat =  t(Nvec*v.Dat$gamma - t(t(t(Gamma)*(Nvec-1))))
+    
+    #Calculate the Jackknife mean. Remove NAs generated from before.
+    BinMean = apply(VarioMat, 2, FUN=sum, na.rm=TRUE)/Nvec
+    
+    #Calculate the average bin distance for plotting purposes
+    BinMean_dist = apply(Dist, 2, FUN=sum, na.rm=TRUE)/Nvec
+    
+    #Calculate the jackknife standard error
+    VarioMatSquaredMatrix = matrix(NA, ncol=bins, nrow=nrow(Dat))
+    DistSd = matrix(NA, ncol=bins, nrow=nrow(Dat))
+    for (j in 1:nrow(Dat)){
+      VarioMatSquaredMatrix[j, ] = (VarioMat[j, ] - BinMean)^2
+      DistSd[j, ] = (Dist[j, ] - BinMean_dist)^2
+    }
+    rm(j)
+    
+    #Calculate the jackknife variance for each bin
+    VarEst = apply(VarioMatSquaredMatrix, 2, FUN=sum, na.rm=TRUE)/(Nvec*(Nvec-1))
+    
+    SdEst = sqrt(VarEst)
+    
+    #Calculate the standard deviation of the bin distances for plotting error bars on the positions
+    BinVar_dist = apply(DistSd, 2, FUN=sum, na.rm=TRUE)/(Nvec - 1)
+    BinSd_dist = sqrt(BinVar_dist)
+    
+  }
+  
+  #return a list
+  lst = list(SdEst = SdEst, BinMean = BinMean, AvgDist = BinMean_dist, SdDist = BinSd_dist, NumPts = Pts, N = Nvec)
+  return(lst)
+}
+
+#Parallel Jackknife function. Anisotropy part still needs work----
+JackKnifePar = function(Dat,      #Spatial points datafame containing the points to be jackknifed. Should be in UTM coordinates.
+                     bins,    #Number of lags for the semi-variogram
+                     cut,     #Cutoff distance for the semi-variogram
+                     anis=NA, #anisotropy for semi-variogram. Currently only works for 2 directions.
+                     v.Dat    #variogram model for Dat using all of the data. Must have same bins, cut, and anis as specified.
+)
+{  
+  if (is.na(anis[1]) == FALSE){
+    #Anisotropic Variogram
+    if (length(anis) < 2){
+      print('Error, need to have at least 2 angles for the anisotropy angle')
+      stop
+    }
+    #Expand the length of VarioMat matrix to accommodate the number of angles in anis
+    VarioMat = Pts = Dist = Gamma = matrix(NA, nrow=nrow(Dat)*length(anis), ncol=bins)
+    
+    #Make a vector of the number of replications of each bin from the jackknife. This number only changes if a given resampling results in no estimate for a given bin.
+    Nmat = rbind(rep(nrow(Dat), bins), rep(nrow(Dat), bins))
+    
+    #Fixme: Make a storage for the anisotropic variogram for any angle length. Currently at 2 (most common) but can be nrow(Dat)*length(anis) + i
+    for (i in 1:nrow(Dat)){
+      #Make a variogram, and save the bin information in VarioMat
+      #Use anisotropic variogram.
+      vj = variogram(Qs~1, data = Dat[-i,], cutoff=cut, width=cut/bins, alpha=anis)
+      
+      #Get the indicies in vj that are populated with information for the direction of interest.
+      Ind1 = which(vj$dir.hor == anis[1])
+      Ind2 = which(vj$dir.hor == anis[2])
+      
+      Pts[i, 1:length(Ind1)] = vj$np[Ind1]
+      Pts[(nrow(Dat) + i), 1:length(Ind2)] = vj$np[Ind2]
+      Dist[i,1:length(Ind1)] = vj$dist[Ind1]
+      Dist[(nrow(Dat) + i), 1:length(Ind2)] = vj$dist[Ind2]
+      Gamma[i, 1:length(Ind1)] = vj$gamma[Ind1]
+      Gamma[(nrow(Dat) + i), 1:length(Ind2)] = vj$gamma[Ind2]
+      
+      if (any(is.na(Pts[i,])) || any(Pts[i,] < 2)){
+        #Mark the distance as NA and reduce the number of points in Nvec. The model will have to be rerun with the new Nvec...
+        ind = which(is.na(Pts[i,]) == TRUE | Pts[i,] < 2)
+        Pts[i, ind] = NA
+        Dist[i, ind] = NA
+        Nmat[1, ind] = Nmat[1, ind] - 1
+        Gamma[i, ind] = NA
+      }
+      if (any(is.na(Pts[(nrow(Dat) + i),])) || any(Pts[(nrow(Dat) + i),] < 2)){
+        #Mark the distance as NA and reduce the number of points in Nvec. The model will have to be rerun with the new Nvec...
+        ind = which(is.na(Pts[(nrow(Dat) + i),]) == TRUE | Pts[(nrow(Dat) + i),] < 2)
+        Pts[(nrow(Dat) + i), ind] = NA
+        Dist[(nrow(Dat) + i), ind] = NA
+        Nmat[2, ind] = Nmat[2, ind] - 1
+        Gamma[(nrow(Dat) + i), ind] = NA
+      }
+      if (i == nrow(Dat)){
+        print('finished first loop')
+      }
+    }
+    rm(i)
+    
+    #Get the indices of the anisotropy for the variogram with all of the points. This will contain the maximum number of bins for each angle.
+    Ind1 = which(v.Dat$dir.hor == anis[1])
+    Ind2 = which(v.Dat$dir.hor == anis[2])
+    
+    #Fill in the matrix of the estimates. The transposition is a faster way of using sweep() to multiply a vector by row of a matrix.
+    VarioMat[1:nrow(Dat), 1:length(Ind1)] = t(Nmat[1, 1:length(Ind1)]*v.Dat$gamma[Ind1] - t(t(t(Gamma[1:nrow(Dat), 1:length(Ind1)])*(Nmat[1, 1:length(Ind1)]-1))))
+    VarioMat[(nrow(Dat)+1):(2*nrow(Dat)), 1:length(Ind2)] = t(Nmat[2, 1:length(Ind2)]*v.Dat$gamma[Ind2] - t(t(t(Gamma[(nrow(Dat)+1):(2*nrow(Dat)), 1:length(Ind2)])*(Nmat[2, 1:length(Ind2)]-1))))
+    
+    #Calculate the Jackknife mean
+    BinMean_1 = apply(VarioMat[1:nrow(Dat), ], 2, FUN=sum, na.rm=TRUE)/Nmat[1,]
+    BinMean_2 = apply(VarioMat[(nrow(Dat)+1):(nrow(Dat)*2), ], 2, FUN=sum, na.rm=TRUE)/Nmat[2,]
+    
+    BinMean = rbind(BinMean_1, BinMean_2)
+    
+    #Calculate the average bin distances for plotting purposes
+    BinMean_dist1 = apply(Dist[1:nrow(Dat), ], 2, FUN=sum, na.rm=TRUE)/Nmat[1,]
+    BinMean_dist2 = apply(Dist[(nrow(Dat)+1):(2*nrow(Dat)), ], 2, FUN=sum, na.rm=TRUE)/Nmat[2,]
+    
+    BinMean_dist = rbind(BinMean_dist1, BinMean_dist2)
+    
+    
+    #Calculate the jackknife standard error
+    VarioMatSquaredMatrix = matrix(NA, ncol=bins, nrow=nrow(Dat)*length(anis))
+    DistSd = matrix(NA, ncol=bins, nrow=nrow(Dat)*length(anis))
+    for (j in 1:(nrow(Dat)*length(anis))){
+      if (j <= nrow(Dat)){
+        VarioMatSquaredMatrix[j,] = (VarioMat[j,] - BinMean_1)^2
+        DistSd[j, ] = (Dist[j, ] - BinMean_dist1)^2
+      }
+      else{
+        VarioMatSquaredMatrix[j,] = (VarioMat[j,] - BinMean_2)^2
+        DistSd[j, ] = (Dist[j, ] - BinMean_dist2)^2
+      }
+      if (j == nrow(Dat)*length(anis)){
+        print('finished second loop')
+      }
+    }
+    rm(j)
+    
+    
+    #Calculate the jackknife variance for each bin
+    VarEst = matrix(NA, ncol=bins, nrow=length(anis))
+    VarEst[1,] = apply(VarioMatSquaredMatrix[1:nrow(Dat),], 2, FUN=sum, na.rm=TRUE)/(Nmat[1,]*(Nmat[1,]-1))
+    VarEst[2,] = apply(VarioMatSquaredMatrix[(nrow(Dat)+1):(nrow(Dat)*2),], 2, FUN=sum, na.rm=TRUE)/(Nmat[2,]*(Nmat[2,]-1))
+    
+    SdEst = sqrt(VarEst)
+    
+    #Calculate the standard deviation of the bin distances for plotting error bars on the positions
+    BinVar_dist1 = apply(DistSd[1:nrow(Dat), ], 2, FUN=sum, na.rm=TRUE)/(Nmat[1,] - 1)
+    BinVar_dist2 = apply(DistSd[(nrow(Dat)+1):(2*nrow(Dat)), ], 2, FUN=sum, na.rm=TRUE)/(Nmat[2,] - 1)
+    BinSd_dist1 = sqrt(BinVar_dist1)
+    BinSd_dist2 = sqrt(BinVar_dist2)
+    BinSd_dist = rbind(BinSd_dist1, BinSd_dist2)
+    
+    Nvec=Nmat
+  }
+  else {
+    #Make a vector of the number of replications of each bin from the jackknife. This number only changes if a given resampling results in no estimate for a given bin.
+    Nvec = rep(nrow(Dat), bins)
+    
+    #Start jackknife
+    Store = foreach(i = 1:nrow(Dat), .packages = "gstat", .combine = "rbind") %dopar% {
+      vj = variogram(Qs~1, data = Dat[-i,], cutoff=cut, width=cut/bins)
+      
+      #Store the number of points in each lag and the average lag distance.
+      Ptsi = vj$np
+      Disti = vj$dist
+      Gammai = vj$gamma
+      N = Nvec
+      
+      if (any(is.na(Ptsi)) || any(Ptsi < 2)){
+        #Mark the distance as NA and reduce the number of points in Nvec. The model will have to be rerun with the new Nvec...
+        ind = which((is.na(Ptsi) == TRUE) | (Ptsi < 2))
+        Ptsi[ind] = NA
+        Disti[ind] = NA
+        N[ind] = N[ind] - 1
+        Gammai[ind] = NA
+      }
+      lst = data.frame(Pts = Ptsi, Dist = Disti, Gamma = Gammai, N = N)
+      lst
+    }
+    
+    #Get data from Store into matrices
+    Pts = t(matrix(Store$Pts, ncol = nrow(Dat), nrow = bins))
+    Dist = t(matrix(Store$Dist, ncol = nrow(Dat), nrow = bins))
+    Gamma = t(matrix(Store$Gamma, ncol = nrow(Dat), nrow = bins))
+    Nvec = Nvec - apply((nrow(Dat) - t(matrix(Store$N, ncol = nrow(Dat), nrow = bins))), MARGIN = 2, FUN = sum)
+    
+    #Calculate the estimate of the bin mean from the jackknife. The transposition is a faster way of using sweep() to multiply a vector by row of a matrix.
+    VarioMat =  t(Nvec*v.Dat$gamma - t(t(t(Gamma)*(Nvec-1))))
+    
+    #Calculate the Jackknife mean. Remove NAs generated from before.
+    BinMean = apply(VarioMat, 2, FUN=sum, na.rm=TRUE)/Nvec
+    
+    #Calculate the average bin distance for plotting purposes
+    BinMean_dist = apply(Dist, 2, FUN=sum, na.rm=TRUE)/Nvec
+    
+    #Calculate the jackknife standard error
+    Store2 = foreach (j = 1:nrow(Dat), .combine = "rbind") %dopar% {
+      VarioMatSquaredMatrix = (VarioMat[j, ] - BinMean)^2
+      DistSd = (Dist[j, ] - BinMean_dist)^2
+      
+      lst = data.frame(Varios = VarioMatSquaredMatrix, Dists = DistSd)
+      lst
+    }
+    
+    VarioMatSquaredMatrix = t(matrix(Store2$Varios, ncol = nrow(Dat), nrow = bins))
+    DistSd = t(matrix(Store2$Dists, ncol = nrow(Dat), nrow = bins))
+    
+    #Calculate the jackknife variance for each bin
+    VarEst = apply(VarioMatSquaredMatrix, 2, FUN=sum, na.rm=TRUE)/(Nvec*(Nvec-1))
+    
+    SdEst = sqrt(VarEst)
+    
+    #Calculate the standard deviation of the bin distances for plotting error bars on the positions
+    BinVar_dist = apply(DistSd, 2, FUN=sum, na.rm=TRUE)/(Nvec - 1)
+    BinSd_dist = sqrt(BinVar_dist)
+  }
+  
+  #return a list
+  lst = list(SdEst = SdEst, BinMean = BinMean, AvgDist = BinMean_dist, SdDist = BinSd_dist, NumPts = Pts, N = Nvec)
+  return(lst)
+}
+
+#Detect number of computer cores:
+cores = detectCores() - 1 
+cl = makeCluster(cores)
+registerDoParallel(cl)
+#Compute jackknife estimates of variogram----
+JackPreCT  = JackKnifePar(Dat = PreCT, bins=50, cut=60000, v.Dat = v.PreCT)
+JackPreCNY = JackKnifePar(Dat = PreCNY, bins=15, cut=60000, v.Dat = v.PreCNY)
+JackPreCWV = JackKnifePar(Dat = PreCWV, bins=50, cut=60000, v.Dat = v.PreCWV)
+JackPreENY = JackKnifePar(Dat = PreENY, bins=15, cut=60000, v.Dat = v.PreENY)
+JackPreENYPA = JackKnifePar(Dat = PreENYPA, bins=40, cut=60000, v.Dat = v.PreENYPA)
+JackPreWPA  = JackKnifePar(Dat = PreWPA, bins=50, cut=60000, v.Dat = v.PreWPA)
+JackPreSWPA = JackKnifePar(Dat = PreSWPA, bins=50, cut=60000, v.Dat = v.PreSWPA)
+JackPreNWPANY = JackKnifePar(Dat = PreNWPANY, bins=20, cut=60000, v.Dat = v.PreNWPANY)
+JackPreMT = JackKnifePar(Dat = PreMT, bins=50, cut=60000, v.Dat = v.PreMT)
+JackPreVR = JackKnifePar(Dat = PreVR, bins=20, cut=60000, v.Dat = v.PreVR)
+
+JackDeepCT  = JackKnifePar(Dat = DeepCT, bins=50, cut=60000, v.Dat = v.DeepCT)
+JackDeepCNY = JackKnifePar(Dat = DeepCNY, bins=15, cut=60000, v.Dat = v.DeepCNY)
+JackDeepCWV = JackKnifePar(Dat = DeepCWV, bins=50, cut=60000, v.Dat = v.DeepCWV)
+JackDeepENY = JackKnifePar(Dat = DeepENY, bins=15, cut=60000, v.Dat = v.DeepENY)
+JackDeepENYPA = JackKnifePar(Dat = DeepENYPA, bins=40, cut=60000, v.Dat = v.DeepENYPA)
+JackDeepWPA  = JackKnifePar(Dat = DeepWPA, bins=50, cut=60000, v.Dat = v.DeepWPA)
+JackDeepSWPA = JackKnifePar(Dat = DeepSWPA, bins=50, cut=60000, v.Dat = v.DeepSWPA)
+JackDeepNWPANY = JackKnifePar(Dat = DeepNWPANY, bins=20, cut=60000, v.Dat = v.DeepNWPANY)
+JackDeepMT = JackKnifePar(Dat = DeepMT, bins=50, cut=60000, v.Dat = v.DeepMT)
+JackDeepVR = JackKnifePar(Dat = DeepVR, bins=20, cut=60000, v.Dat = v.DeepVR)
+
+JackCT  = JackKnifePar(Dat = CT, bins=50, cut=60000, v.Dat = v.CT)
+JackCNY = JackKnifePar(Dat = CNY, bins=15, cut=60000, v.Dat = v.CNY)
+JackCWV = JackKnifePar(Dat = CWV, bins=50, cut=60000, v.Dat = v.CWV)
+JackENY = JackKnifePar(Dat = ENY, bins=15, cut=60000, v.Dat = v.ENY)
+JackENYPA = JackKnifePar(Dat = ENYPA, bins=40, cut=60000, v.Dat = v.ENYPA)
+JackWPA  = JackKnifePar(Dat = WPA, bins=50, cut=60000, v.Dat = v.WPA)
+JackSWPA = JackKnifePar(Dat = SWPA, bins=50, cut=60000, v.Dat = v.SWPA)
+JackNWPANY = JackKnifePar(Dat = NWPANY, bins=20, cut=60000, v.Dat = v.NWPANY)
+JackMT = JackKnifePar(Dat = MT, bins=50, cut=60000, v.Dat = v.MT)
+JackVR = JackKnifePar(Dat = VR, bins=20, cut=60000, v.Dat = v.VR)
+
+JackCT_k1p0  = JackKnifePar(Dat = CT_k1p0, bins=50, cut=60000, v.Dat = v.CT_k1p0)
+JackCNY_k1p0 = JackKnifePar(Dat = CNY_k1p0, bins=15, cut=60000, v.Dat = v.CNY_k1p0)
+JackCWV_k1p0 = JackKnifePar(Dat = CWV_k1p0, bins=50, cut=60000, v.Dat = v.CWV_k1p0)
+JackENY_k1p0 = JackKnifePar(Dat = ENY_k1p0, bins=15, cut=60000, v.Dat = v.ENY_k1p0)
+JackENYPA_k1p0 = JackKnifePar(Dat = ENYPA_k1p0, bins=40, cut=60000, v.Dat = v.ENYPA_k1p0)
+JackWPA_k1p0  = JackKnifePar(Dat = WPA_k1p0, bins=50, cut=60000, v.Dat = v.WPA_k1p0)
+JackSWPA_k1p0 = JackKnifePar(Dat = SWPA_k1p0, bins=50, cut=60000, v.Dat = v.SWPA_k1p0)
+JackNWPANY_k1p0 = JackKnifePar(Dat = NWPANY_k1p0, bins=20, cut=60000, v.Dat = v.NWPANY_k1p0)
+JackMT_k1p0 = JackKnifePar(Dat = MT_k1p0, bins=50, cut=60000, v.Dat = v.MT_k1p0)
+JackVR_k1p0 = JackKnifePar(Dat = VR_k1p0, bins=20, cut=60000, v.Dat = v.VR_k1p0)
+
+JackCT_k1p5  = JackKnifePar(Dat = CT_k1p5, bins=50, cut=60000, v.Dat = v.CT_k1p5)
+JackCNY_k1p5 = JackKnifePar(Dat = CNY_k1p5, bins=15, cut=60000, v.Dat = v.CNY_k1p5)
+JackCWV_k1p5 = JackKnifePar(Dat = CWV_k1p5, bins=50, cut=60000, v.Dat = v.CWV_k1p5)
+JackENY_k1p5 = JackKnifePar(Dat = ENY_k1p5, bins=15, cut=60000, v.Dat = v.ENY_k1p5)
+JackENYPA_k1p5 = JackKnifePar(Dat = ENYPA_k1p5, bins=40, cut=60000, v.Dat = v.ENYPA_k1p5)
+JackWPA_k1p5  = JackKnifePar(Dat = WPA_k1p5, bins=50, cut=60000, v.Dat = v.WPA_k1p5)
+JackSWPA_k1p5 = JackKnifePar(Dat = SWPA_k1p5, bins=50, cut=60000, v.Dat = v.SWPA_k1p5)
+JackNWPANY_k1p5 = JackKnifePar(Dat = NWPANY_k1p5, bins=20, cut=60000, v.Dat = v.NWPANY_k1p5)
+JackMT_k1p5 = JackKnifePar(Dat = MT_k1p5, bins=50, cut=60000, v.Dat = v.MT_k1p5)
+JackVR_k1p5 = JackKnifePar(Dat = VR_k1p5, bins=20, cut=60000, v.Dat = v.VR_k1p5)
+
+JackCT_k2p0  = JackKnifePar(Dat = CT_k2p0, bins=50, cut=60000, v.Dat = v.CT_k2p0)
+JackCNY_k2p0 = JackKnifePar(Dat = CNY_k2p0, bins=15, cut=60000, v.Dat = v.CNY_k2p0)
+JackCWV_k2p0 = JackKnifePar(Dat = CWV_k2p0, bins=50, cut=60000, v.Dat = v.CWV_k2p0)
+JackENY_k2p0 = JackKnifePar(Dat = ENY_k2p0, bins=15, cut=60000, v.Dat = v.ENY_k2p0)
+JackENYPA_k2p0 = JackKnifePar(Dat = ENYPA_k2p0, bins=40, cut=60000, v.Dat = v.ENYPA_k2p0)
+JackWPA_k2p0  = JackKnifePar(Dat = WPA_k2p0, bins=50, cut=60000, v.Dat = v.WPA_k2p0)
+JackSWPA_k2p0 = JackKnifePar(Dat = SWPA_k2p0, bins=50, cut=60000, v.Dat = v.SWPA_k2p0)
+JackNWPANY_k2p0 = JackKnifePar(Dat = NWPANY_k2p0, bins=20, cut=60000, v.Dat = v.NWPANY_k2p0)
+JackMT_k2p0 = JackKnifePar(Dat = MT_k2p0, bins=50, cut=60000, v.Dat = v.MT_k2p0)
+JackVR_k2p0 = JackKnifePar(Dat = VR_k2p0, bins=20, cut=60000, v.Dat = v.VR_k2p0)
+
+JackCT_k2p5  = JackKnifePar(Dat = CT_k2p5, bins=50, cut=60000, v.Dat = v.CT_k2p5)
+JackCNY_k2p5 = JackKnifePar(Dat = CNY_k2p5, bins=15, cut=60000, v.Dat = v.CNY_k2p5)
+JackCWV_k2p5 = JackKnifePar(Dat = CWV_k2p5, bins=50, cut=60000, v.Dat = v.CWV_k2p5)
+JackENY_k2p5 = JackKnifePar(Dat = ENY_k2p5, bins=15, cut=60000, v.Dat = v.ENY_k2p5)
+JackENYPA_k2p5 = JackKnifePar(Dat = ENYPA_k2p5, bins=40, cut=60000, v.Dat = v.ENYPA_k2p5)
+JackWPA_k2p5  = JackKnifePar(Dat = WPA_k2p5, bins=50, cut=60000, v.Dat = v.WPA_k2p5)
+JackSWPA_k2p5 = JackKnifePar(Dat = SWPA_k2p5, bins=50, cut=60000, v.Dat = v.SWPA_k2p5)
+JackNWPANY_k2p5 = JackKnifePar(Dat = NWPANY_k2p5, bins=20, cut=60000, v.Dat = v.NWPANY_k2p5)
+JackMT_k2p5 = JackKnifePar(Dat = MT_k2p5, bins=50, cut=60000, v.Dat = v.MT_k2p5)
+JackVR_k2p5 = JackKnifePar(Dat = VR_k2p5, bins=20, cut=60000, v.Dat = v.VR_k2p5)
+
+JackCT_k3p5  = JackKnifePar(Dat = CT_k3p5, bins=50, cut=60000, v.Dat = v.CT_k3p5)
+JackCNY_k3p5 = JackKnifePar(Dat = CNY_k3p5, bins=15, cut=60000, v.Dat = v.CNY_k3p5)
+JackCWV_k3p5 = JackKnifePar(Dat = CWV_k3p5, bins=50, cut=60000, v.Dat = v.CWV_k3p5)
+JackENY_k3p5 = JackKnifePar(Dat = ENY_k3p5, bins=15, cut=60000, v.Dat = v.ENY_k3p5)
+JackENYPA_k3p5 = JackKnifePar(Dat = ENYPA_k3p5, bins=40, cut=60000, v.Dat = v.ENYPA_k3p5)
+JackWPA_k3p5  = JackKnifePar(Dat = WPA_k3p5, bins=50, cut=60000, v.Dat = v.WPA_k3p5)
+JackSWPA_k3p5 = JackKnifePar(Dat = SWPA_k3p5, bins=50, cut=60000, v.Dat = v.SWPA_k3p5)
+JackNWPANY_k3p5 = JackKnifePar(Dat = NWPANY_k3p5, bins=20, cut=60000, v.Dat = v.NWPANY_k3p5)
+JackMT_k3p5 = JackKnifePar(Dat = MT_k3p5, bins=50, cut=60000, v.Dat = v.MT_k3p5)
+JackVR_k3p5 = JackKnifePar(Dat = VR_k3p5, bins=20, cut=60000, v.Dat = v.VR_k3p5)
+
+JackCT_k4p0  = JackKnifePar(Dat = CT_k4p0, bins=50, cut=60000, v.Dat = v.CT_k4p0)
+JackCNY_k4p0 = JackKnifePar(Dat = CNY_k4p0, bins=15, cut=60000, v.Dat = v.CNY_k4p0)
+JackCWV_k4p0 = JackKnifePar(Dat = CWV_k4p0, bins=50, cut=60000, v.Dat = v.CWV_k4p0)
+JackENY_k4p0 = JackKnifePar(Dat = ENY_k4p0, bins=15, cut=60000, v.Dat = v.ENY_k4p0)
+JackENYPA_k4p0 = JackKnifePar(Dat = ENYPA_k4p0, bins=40, cut=60000, v.Dat = v.ENYPA_k4p0)
+JackWPA_k4p0  = JackKnifePar(Dat = WPA_k4p0, bins=50, cut=60000, v.Dat = v.WPA_k4p0)
+JackSWPA_k4p0 = JackKnifePar(Dat = SWPA_k4p0, bins=50, cut=60000, v.Dat = v.SWPA_k4p0)
+JackNWPANY_k4p0 = JackKnifePar(Dat = NWPANY_k4p0, bins=20, cut=60000, v.Dat = v.NWPANY_k4p0)
+JackMT_k4p0 = JackKnifePar(Dat = MT_k4p0, bins=50, cut=60000, v.Dat = v.MT_k4p0)
+JackVR_k4p0 = JackKnifePar(Dat = VR_k4p0, bins=20, cut=60000, v.Dat = v.VR_k4p0)
+
+JackCT_k4p5  = JackKnifePar(Dat = CT_k4p5, bins=50, cut=60000, v.Dat = v.CT_k4p5)
+JackCNY_k4p5 = JackKnifePar(Dat = CNY_k4p5, bins=15, cut=60000, v.Dat = v.CNY_k4p5)
+JackCWV_k4p5 = JackKnifePar(Dat = CWV_k4p5, bins=50, cut=60000, v.Dat = v.CWV_k4p5)
+JackENY_k4p5 = JackKnifePar(Dat = ENY_k4p5, bins=15, cut=60000, v.Dat = v.ENY_k4p5)
+JackENYPA_k4p5 = JackKnifePar(Dat = ENYPA_k4p5, bins=40, cut=60000, v.Dat = v.ENYPA_k4p5)
+JackWPA_k4p5  = JackKnifePar(Dat = WPA_k4p5, bins=50, cut=60000, v.Dat = v.WPA_k4p5)
+JackSWPA_k4p5 = JackKnifePar(Dat = SWPA_k4p5, bins=50, cut=60000, v.Dat = v.SWPA_k4p5)
+JackNWPANY_k4p5 = JackKnifePar(Dat = NWPANY_k4p5, bins=20, cut=60000, v.Dat = v.NWPANY_k4p5)
+JackMT_k4p5 = JackKnifePar(Dat = MT_k4p5, bins=50, cut=60000, v.Dat = v.MT_k4p5)
+JackVR_k4p5 = JackKnifePar(Dat = VR_k4p5, bins=20, cut=60000, v.Dat = v.VR_k4p5)
+
+JackCT_k5p0  = JackKnifePar(Dat = CT_k5p0, bins=50, cut=60000, v.Dat = v.CT_k5p0)
+JackCNY_k5p0 = JackKnifePar(Dat = CNY_k5p0, bins=15, cut=60000, v.Dat = v.CNY_k5p0)
+JackCWV_k5p0 = JackKnifePar(Dat = CWV_k5p0, bins=50, cut=60000, v.Dat = v.CWV_k5p0)
+JackENY_k5p0 = JackKnifePar(Dat = ENY_k5p0, bins=15, cut=60000, v.Dat = v.ENY_k5p0)
+JackENYPA_k5p0 = JackKnifePar(Dat = ENYPA_k5p0, bins=40, cut=60000, v.Dat = v.ENYPA_k5p0)
+JackWPA_k5p0  = JackKnifePar(Dat = WPA_k5p0, bins=50, cut=60000, v.Dat = v.WPA_k5p0)
+JackSWPA_k5p0 = JackKnifePar(Dat = SWPA_k5p0, bins=50, cut=60000, v.Dat = v.SWPA_k5p0)
+JackNWPANY_k5p0 = JackKnifePar(Dat = NWPANY_k5p0, bins=20, cut=60000, v.Dat = v.NWPANY_k5p0)
+JackMT_k5p0 = JackKnifePar(Dat = MT_k5p0, bins=50, cut=60000, v.Dat = v.MT_k5p0)
+JackVR_k5p0 = JackKnifePar(Dat = VR_k5p0, bins=20, cut=60000, v.Dat = v.VR_k5p0)
+
+stopCluster(cl)
+
+#Plot the variograms with confidence intervals----
+png("Variograms_UniqueYAxis_CompareESDA_95ConfInt.png", width=13, height=10, units="in", res=300)
+plot(p1p, split=c(1,1,4,3), more=T)
+plot(p1d, split=c(1,1,4,3), more=T)
+plot(p1, split = c(1,1,4,3), more=T)
+trellis.focus('panel', 1,1)
+lpoints(x = JackCT$AvgDist, y = (JackCT$BinMean + JackCT$SdEst*2), ylim=p1$y.limits, pch=1, type='o', lty=2, cex=0.7, lwd=1.5, col='red')
+lpoints(x = JackCT$AvgDist, y = (JackCT$BinMean - JackCT$SdEst*2), ylim=p1$y.limits, pch=1, type='o', lty=2, cex=0.7, lwd=1.5, col='red')
+lpoints(x = JackPreCT$AvgDist, y = (JackPreCT$BinMean + JackPreCT$SdEst*2), ylim=p1$y.limits, pch=1, type='o', lty=2, cex=0.7, lwd=1.5, col='black')
+lpoints(x = JackPreCT$AvgDist, y = (JackPreCT$BinMean - JackPreCT$SdEst*2), ylim=p1$y.limits, pch=1, type='o', lty=2, cex=0.7, lwd=1.5, col='black')
+lpoints(x = JackDeepCT$AvgDist, y = (JackDeepCT$BinMean + JackDeepCT$SdEst*2), ylim=p1$y.limits, pch=1, type='o', lty=2, cex=0.7, lwd=1.5, col='blue')
+lpoints(x = JackDeepCT$AvgDist, y = (JackDeepCT$BinMean - JackDeepCT$SdEst*2), ylim=p1$y.limits, pch=1, type='o', lty=2, cex=0.7, lwd=1.5, col='blue')
+trellis.unfocus()
+
+plot(p2p, split=c(4,1,4,3), more=T)
+plot(p2d, split=c(4,1,4,3), more=T)
+plot(p2, split = c(4,1,4,3), more=T)
+trellis.focus('panel', 1,1)
+lpoints(x = JackCNY$AvgDist, y = (JackCNY$BinMean + JackCNY$SdEst*2), ylim=p2$y.limits, pch=1, type='o', lty=2, cex=0.7, lwd=1.5, col='red')
+lpoints(x = JackCNY$AvgDist, y = (JackCNY$BinMean - JackCNY$SdEst*2), ylim=p2$y.limits, pch=1, type='o', lty=2, cex=0.7, lwd=1.5, col='red')
+lpoints(x = JackPreCNY$AvgDist, y = (JackPreCNY$BinMean + JackPreCNY$SdEst*2), ylim=p2$y.limits, pch=1, type='o', lty=2, cex=0.7, lwd=1.5, col='black')
+lpoints(x = JackPreCNY$AvgDist, y = (JackPreCNY$BinMean - JackPreCNY$SdEst*2), ylim=p2$y.limits, pch=1, type='o', lty=2, cex=0.7, lwd=1.5, col='black')
+lpoints(x = JackDeepCNY$AvgDist, y = (JackDeepCNY$BinMean + JackDeepCNY$SdEst*2), ylim=p2$y.limits, pch=1, type='o', lty=2, cex=0.7, lwd=1.5, col='blue')
+lpoints(x = JackDeepCNY$AvgDist, y = (JackDeepCNY$BinMean - JackDeepCNY$SdEst*2), ylim=p2$y.limits, pch=1, type='o', lty=2, cex=0.7, lwd=1.5, col='blue')
+trellis.unfocus()
+
+plot(p3p, split=c(1,2,4,3), more=T)
+plot(p3d, split=c(1,2,4,3), more=T)
+plot(p3, split = c(1,2,4,3), more=T)
+trellis.focus('panel', 1,1)
+lpoints(x = JackENY$AvgDist, y = (JackENY$BinMean + JackENY$SdEst*2), ylim=p3$y.limits, pch=1, type='o', lty=2, cex=0.7, lwd=1.5, col='red')
+lpoints(x = JackENY$AvgDist, y = (JackENY$BinMean - JackENY$SdEst*2), ylim=p3$y.limits, pch=1, type='o', lty=2, cex=0.7, lwd=1.5, col='red')
+lpoints(x = JackPreENY$AvgDist, y = (JackPreENY$BinMean + JackPreENY$SdEst*2), ylim=p3$y.limits, pch=1, type='o', lty=2, cex=0.7, lwd=1.5, col='black')
+lpoints(x = JackPreENY$AvgDist, y = (JackPreENY$BinMean - JackPreENY$SdEst*2), ylim=p3$y.limits, pch=1, type='o', lty=2, cex=0.7, lwd=1.5, col='black')
+lpoints(x = JackDeepENY$AvgDist, y = (JackDeepENY$BinMean + JackDeepENY$SdEst*2), ylim=p3$y.limits, pch=1, type='o', lty=2, cex=0.7, lwd=1.5, col='blue')
+lpoints(x = JackDeepENY$AvgDist, y = (JackDeepENY$BinMean - JackDeepENY$SdEst*2), ylim=p3$y.limits, pch=1, type='o', lty=2, cex=0.7, lwd=1.5, col='blue')
+trellis.unfocus()
+
+plot(p4p, split=c(2,2,4,3), more=T)
+plot(p4d, split=c(2,2,4,3), more=T)
+plot(p4, split = c(2,2,4,3), more=T)
+trellis.focus('panel', 1,1)
+lpoints(x = JackENYPA$AvgDist, y = (JackENYPA$BinMean + JackENYPA$SdEst*2), ylim=p4$y.limits, pch=1, type='o', lty=2, cex=0.7, lwd=1.5, col='red')
+lpoints(x = JackENYPA$AvgDist, y = (JackENYPA$BinMean - JackENYPA$SdEst*2), ylim=p4$y.limits, pch=1, type='o', lty=2, cex=0.7, lwd=1.5, col='red')
+lpoints(x = JackPreENYPA$AvgDist, y = (JackPreENYPA$BinMean + JackPreENYPA$SdEst*2), ylim=p4$y.limits, pch=1, type='o', lty=2, cex=0.7, lwd=1.5, col='black')
+lpoints(x = JackPreENYPA$AvgDist, y = (JackPreENYPA$BinMean - JackPreENYPA$SdEst*2), ylim=p4$y.limits, pch=1, type='o', lty=2, cex=0.7, lwd=1.5, col='black')
+lpoints(x = JackDeepENYPA$AvgDist, y = (JackDeepENYPA$BinMean + JackDeepENYPA$SdEst*2), ylim=p4$y.limits, pch=1, type='o', lty=2, cex=0.7, lwd=1.5, col='blue')
+lpoints(x = JackDeepENYPA$AvgDist, y = (JackDeepENYPA$BinMean - JackDeepENYPA$SdEst*2), ylim=p4$y.limits, pch=1, type='o', lty=2, cex=0.7, lwd=1.5, col='blue')
+trellis.unfocus()
+
+plot(p5p, split=c(3,1,4,3), more=T)
+plot(p5d, split=c(3,1,4,3), more=T)
+plot(p5, split = c(3,1,4,3), more=T)
+trellis.focus('panel', 1,1)
+lpoints(x = JackNWPANY$AvgDist, y = (JackNWPANY$BinMean + JackNWPANY$SdEst*2), ylim=p5$y.limits, pch=1, type='o', lty=2, cex=0.7, lwd=1.5, col='red')
+lpoints(x = JackNWPANY$AvgDist, y = (JackNWPANY$BinMean - JackNWPANY$SdEst*2), ylim=p5$y.limits, pch=1, type='o', lty=2, cex=0.7, lwd=1.5, col='red')
+lpoints(x = JackPreNWPANY$AvgDist, y = (JackPreNWPANY$BinMean + JackPreNWPANY$SdEst*2), ylim=p5$y.limits, pch=1, type='o', lty=2, cex=0.7, lwd=1.5, col='black')
+lpoints(x = JackPreNWPANY$AvgDist, y = (JackPreNWPANY$BinMean - JackPreNWPANY$SdEst*2), ylim=p5$y.limits, pch=1, type='o', lty=2, cex=0.7, lwd=1.5, col='black')
+lpoints(x = JackDeepNWPANY$AvgDist, y = (JackDeepNWPANY$BinMean + JackDeepNWPANY$SdEst*2), ylim=p5$y.limits, pch=1, type='o', lty=2, cex=0.7, lwd=1.5, col='blue')
+lpoints(x = JackDeepNWPANY$AvgDist, y = (JackDeepNWPANY$BinMean - JackDeepNWPANY$SdEst*2), ylim=p5$y.limits, pch=1, type='o', lty=2, cex=0.7, lwd=1.5, col='blue')
+trellis.unfocus()
+
+plot(p6p, split=c(3,2,4,3), more=T)
+plot(p6d, split=c(3,2,4,3), more=T)
+plot(p6, split = c(3,2,4,3), more=T)
+trellis.focus('panel', 1,1)
+lpoints(x = JackSWPA$AvgDist, y = (JackSWPA$BinMean + JackSWPA$SdEst*2), ylim=p6$y.limits, pch=1, type='o', lty=2, cex=0.7, lwd=1.5, col='red')
+lpoints(x = JackSWPA$AvgDist, y = (JackSWPA$BinMean - JackSWPA$SdEst*2), ylim=p6$y.limits, pch=1, type='o', lty=2, cex=0.7, lwd=1.5, col='red')
+lpoints(x = JackPreSWPA$AvgDist, y = (JackPreSWPA$BinMean + JackPreSWPA$SdEst*2), ylim=p6$y.limits, pch=1, type='o', lty=2, cex=0.7, lwd=1.5, col='black')
+lpoints(x = JackPreSWPA$AvgDist, y = (JackPreSWPA$BinMean - JackPreSWPA$SdEst*2), ylim=p6$y.limits, pch=1, type='o', lty=2, cex=0.7, lwd=1.5, col='black')
+lpoints(x = JackDeepSWPA$AvgDist, y = (JackDeepSWPA$BinMean + JackDeepSWPA$SdEst*2), ylim=p6$y.limits, pch=1, type='o', lty=2, cex=0.7, lwd=1.5, col='blue')
+lpoints(x = JackDeepSWPA$AvgDist, y = (JackDeepSWPA$BinMean - JackDeepSWPA$SdEst*2), ylim=p6$y.limits, pch=1, type='o', lty=2, cex=0.7, lwd=1.5, col='blue')
+trellis.unfocus()
+
+plot(p7p, split=c(2,1,4,3), more=T)
+plot(p7d, split=c(2,1,4,3), more=T)
+plot(p7, split = c(2,1,4,3), more=T)
+trellis.focus('panel', 1,1)
+lpoints(x = JackWPA$AvgDist, y = (JackWPA$BinMean + JackWPA$SdEst*2), ylim=p7$y.limits, pch=1, type='o', lty=2, cex=0.7, lwd=1.5, col='red')
+lpoints(x = JackWPA$AvgDist, y = (JackWPA$BinMean - JackWPA$SdEst*2), ylim=p7$y.limits, pch=1, type='o', lty=2, cex=0.7, lwd=1.5, col='red')
+lpoints(x = JackPreWPA$AvgDist, y = (JackPreWPA$BinMean + JackPreWPA$SdEst*2), ylim=p7$y.limits, pch=1, type='o', lty=2, cex=0.7, lwd=1.5, col='black')
+lpoints(x = JackPreWPA$AvgDist, y = (JackPreWPA$BinMean - JackPreWPA$SdEst*2), ylim=p7$y.limits, pch=1, type='o', lty=2, cex=0.7, lwd=1.5, col='black')
+lpoints(x = JackDeepWPA$AvgDist, y = (JackDeepWPA$BinMean + JackDeepWPA$SdEst*2), ylim=p7$y.limits, pch=1, type='o', lty=2, cex=0.7, lwd=1.5, col='blue')
+lpoints(x = JackDeepWPA$AvgDist, y = (JackDeepWPA$BinMean - JackDeepWPA$SdEst*2), ylim=p7$y.limits, pch=1, type='o', lty=2, cex=0.7, lwd=1.5, col='blue')
+trellis.unfocus()
+
+plot(p8p, split=c(1,3,4,3), more=T)
+plot(p8d, split=c(1,3,4,3), more=T)
+plot(p8, split = c(1,3,4,3), more=T)
+trellis.focus('panel', 1,1)
+lpoints(x = JackMT$AvgDist, y = (JackMT$BinMean + JackMT$SdEst*2), ylim=p8$y.limits, pch=1, type='o', lty=2, cex=0.7, lwd=1.5, col='red')
+lpoints(x = JackMT$AvgDist, y = (JackMT$BinMean - JackMT$SdEst*2), ylim=p8$y.limits, pch=1, type='o', lty=2, cex=0.7, lwd=1.5, col='red')
+lpoints(x = JackPreMT$AvgDist, y = (JackPreMT$BinMean + JackPreMT$SdEst*2), ylim=p8$y.limits, pch=1, type='o', lty=2, cex=0.7, lwd=1.5, col='black')
+lpoints(x = JackPreMT$AvgDist, y = (JackPreMT$BinMean - JackPreMT$SdEst*2), ylim=p8$y.limits, pch=1, type='o', lty=2, cex=0.7, lwd=1.5, col='black')
+lpoints(x = JackDeepMT$AvgDist, y = (JackDeepMT$BinMean + JackDeepMT$SdEst*2), ylim=p8$y.limits, pch=1, type='o', lty=2, cex=0.7, lwd=1.5, col='blue')
+lpoints(x = JackDeepMT$AvgDist, y = (JackDeepMT$BinMean - JackDeepMT$SdEst*2), ylim=p8$y.limits, pch=1, type='o', lty=2, cex=0.7, lwd=1.5, col='blue')
+trellis.unfocus()
+
+plot(p9p, split=c(4,2,4,3), more=T)
+plot(p9d, split=c(4,2,4,3), more=T)
+plot(p9, split = c(4,2,4,3), more=T)
+trellis.focus('panel', 1,1)
+lpoints(x = JackCWV$AvgDist, y = (JackCWV$BinMean + JackCWV$SdEst*2), ylim=p9$y.limits, pch=1, type='o', lty=2, cex=0.7, lwd=1.5, col='red')
+lpoints(x = JackCWV$AvgDist, y = (JackCWV$BinMean - JackCWV$SdEst*2), ylim=p9$y.limits, pch=1, type='o', lty=2, cex=0.7, lwd=1.5, col='red')
+lpoints(x = JackPreCWV$AvgDist, y = (JackPreCWV$BinMean + JackPreCWV$SdEst*2), ylim=p9$y.limits, pch=1, type='o', lty=2, cex=0.7, lwd=1.5, col='black')
+lpoints(x = JackPreCWV$AvgDist, y = (JackPreCWV$BinMean - JackPreCWV$SdEst*2), ylim=p9$y.limits, pch=1, type='o', lty=2, cex=0.7, lwd=1.5, col='black')
+lpoints(x = JackDeepCWV$AvgDist, y = (JackDeepCWV$BinMean + JackDeepCWV$SdEst*2), ylim=p9$y.limits, pch=1, type='o', lty=2, cex=0.7, lwd=1.5, col='blue')
+lpoints(x = JackDeepCWV$AvgDist, y = (JackDeepCWV$BinMean - JackDeepCWV$SdEst*2), ylim=p9$y.limits, pch=1, type='o', lty=2, cex=0.7, lwd=1.5, col='blue')
+trellis.unfocus()
+
+plot(p10p, split=c(2,3,4,3), more=T)
+plot(p10d, split=c(2,3,4,3), more=T)
+plot(p10, split = c(2,3,4,3), more=T)
+trellis.focus('panel', 1,1)
+lpoints(x = JackVR$AvgDist, y = (JackVR$BinMean + JackVR$SdEst*2), ylim=p10$y.limits, pch=1, type='o', lty=2, cex=0.7, lwd=1.5, col='red')
+lpoints(x = JackVR$AvgDist, y = (JackVR$BinMean - JackVR$SdEst*2), ylim=p10$y.limits, pch=1, type='o', lty=2, cex=0.7, lwd=1.5, col='red')
+lpoints(x = JackPreVR$AvgDist, y = (JackPreVR$BinMean + JackPreVR$SdEst*2), ylim=p10$y.limits, pch=1, type='o', lty=2, cex=0.7, lwd=1.5, col='black')
+lpoints(x = JackPreVR$AvgDist, y = (JackPreVR$BinMean - JackPreVR$SdEst*2), ylim=p10$y.limits, pch=1, type='o', lty=2, cex=0.7, lwd=1.5, col='black')
+lpoints(x = JackDeepVR$AvgDist, y = (JackDeepVR$BinMean + JackDeepVR$SdEst*2), ylim=p10$y.limits, pch=1, type='o', lty=2, cex=0.7, lwd=1.5, col='blue')
+lpoints(x = JackDeepVR$AvgDist, y = (JackDeepVR$BinMean - JackDeepVR$SdEst*2), ylim=p10$y.limits, pch=1, type='o', lty=2, cex=0.7, lwd=1.5, col='blue')
+trellis.unfocus()
+
+dev.off()
+
+#Only deep and post-ESDA
+p2 = plot(v.CNY,plot.numbers=F, ylab=expression(Semivariance ~ (mW/m^2)^2), main="Central NY", xlab = 'Separation Distance (m)', pch = 16, ylim = c(0,200), col = 'red', xlim = c(0,60000), cex=0.5)
+p2d = plot(v.DeepCNY,plot.numbers=F, ylab=expression(Semivariance ~ (mW/m^2)^2), main="Central NY", xlab = 'Separation Distance (m)', pch = 16, col = 'blue', ylim = c(0,200), xlim = c(0,60000), cex=0.5)
+
+p3 = plot(v.ENY, plot.numbers=F, ylab=expression(Semivariance ~ (mW/m^2)^2), main="Eastern NY", xlab = 'Separation Distance (m)', pch = 16, col = 'red', ylim = c(0,100), xlim = c(0,60000), cex=0.5)
+p3d = plot(v.DeepENY, plot.numbers=F, ylab=expression(Semivariance ~ (mW/m^2)^2), main="Eastern NY", xlab = 'Separation Distance (m)', pch = 16, col = 'blue', ylim = c(0,100), xlim = c(0,60000), cex=0.5)
+
+p5 = plot(v.NWPANY, plot.numbers=F, ylab=expression(Semivariance ~ (mW/m^2)^2), main="Northwestern PA & NY", xlab = 'Separation Distance (m)', pch = 16, col = 'red', xlim = c(0,60000), ylim = c(0,150), cex=0.5)
+p5d = plot(v.DeepNWPANY, plot.numbers=F, ylab=expression(Semivariance ~ (mW/m^2)^2), main="Northwestern PA & NY", xlab = 'Separation Distance (m)', pch = 16, col = 'blue', xlim = c(0,60000), ylim = c(0,150), cex=0.5)
+
+p9 = plot(v.CWV, plot.numbers=F, ylab=expression(Semivariance ~ (mW/m^2)^2), main="Central WV", xlab = 'Separation Distance (m)', pch = 16, col = 'red', ylim = c(0,400), xlim = c(0,60000), cex=0.5)
+p9d = plot(v.DeepCWV, plot.numbers=F, ylab=expression(Semivariance ~ (mW/m^2)^2), main="Central WV", xlab = 'Separation Distance (m)', pch = 16, col = 'blue', ylim = c(0,400), xlim = c(0,60000), cex=0.5)
+
+png("Variograms_UniqueYAxis_CompareESDA_DeepPost_95ConfInt.png", width=13, height=10, units="in", res=300)
+plot(p1d, split=c(1,1,4,3), more=T)
+plot(p1, split = c(1,1,4,3), more=T)
+trellis.focus('panel', 1,1)
+lpoints(x = JackCT$AvgDist, y = (JackCT$BinMean + JackCT$SdEst*2), ylim=p1$y.limits, pch=1, type='o', lty=2, cex=0.7, lwd=1.5, col='red')
+lpoints(x = JackCT$AvgDist, y = (JackCT$BinMean - JackCT$SdEst*2), ylim=p1$y.limits, pch=1, type='o', lty=2, cex=0.7, lwd=1.5, col='red')
+lpoints(x = JackDeepCT$AvgDist, y = (JackDeepCT$BinMean + JackDeepCT$SdEst*2), ylim=p1$y.limits, pch=1, type='o', lty=2, cex=0.7, lwd=1.5, col='blue')
+lpoints(x = JackDeepCT$AvgDist, y = (JackDeepCT$BinMean - JackDeepCT$SdEst*2), ylim=p1$y.limits, pch=1, type='o', lty=2, cex=0.7, lwd=1.5, col='blue')
+trellis.unfocus()
+
+plot(p2d, split=c(4,1,4,3), more=T)
+plot(p2, split = c(4,1,4,3), more=T)
+trellis.focus('panel', 1,1)
+lpoints(x = JackCNY$AvgDist, y = (JackCNY$BinMean + JackCNY$SdEst*2), ylim=p2$y.limits, pch=1, type='o', lty=2, cex=0.7, lwd=1.5, col='red')
+lpoints(x = JackCNY$AvgDist, y = (JackCNY$BinMean - JackCNY$SdEst*2), ylim=p2$y.limits, pch=1, type='o', lty=2, cex=0.7, lwd=1.5, col='red')
+lpoints(x = JackDeepCNY$AvgDist, y = (JackDeepCNY$BinMean + JackDeepCNY$SdEst*2), ylim=p2$y.limits, pch=1, type='o', lty=2, cex=0.7, lwd=1.5, col='blue')
+lpoints(x = JackDeepCNY$AvgDist, y = (JackDeepCNY$BinMean - JackDeepCNY$SdEst*2), ylim=p2$y.limits, pch=1, type='o', lty=2, cex=0.7, lwd=1.5, col='blue')
+trellis.unfocus()
+
+plot(p3d, split=c(1,2,4,3), more=T)
+plot(p3, split = c(1,2,4,3), more=T)
+trellis.focus('panel', 1,1)
+lpoints(x = JackENY$AvgDist, y = (JackENY$BinMean + JackENY$SdEst*2), ylim=p3$y.limits, pch=1, type='o', lty=2, cex=0.7, lwd=1.5, col='red')
+lpoints(x = JackENY$AvgDist, y = (JackENY$BinMean - JackENY$SdEst*2), ylim=p3$y.limits, pch=1, type='o', lty=2, cex=0.7, lwd=1.5, col='red')
+lpoints(x = JackDeepENY$AvgDist, y = (JackDeepENY$BinMean + JackDeepENY$SdEst*2), ylim=p3$y.limits, pch=1, type='o', lty=2, cex=0.7, lwd=1.5, col='blue')
+lpoints(x = JackDeepENY$AvgDist, y = (JackDeepENY$BinMean - JackDeepENY$SdEst*2), ylim=p3$y.limits, pch=1, type='o', lty=2, cex=0.7, lwd=1.5, col='blue')
+trellis.unfocus()
+
+plot(p4d, split=c(2,2,4,3), more=T)
+plot(p4, split = c(2,2,4,3), more=T)
+trellis.focus('panel', 1,1)
+lpoints(x = JackENYPA$AvgDist, y = (JackENYPA$BinMean + JackENYPA$SdEst*2), ylim=p4$y.limits, pch=1, type='o', lty=2, cex=0.7, lwd=1.5, col='red')
+lpoints(x = JackENYPA$AvgDist, y = (JackENYPA$BinMean - JackENYPA$SdEst*2), ylim=p4$y.limits, pch=1, type='o', lty=2, cex=0.7, lwd=1.5, col='red')
+lpoints(x = JackDeepENYPA$AvgDist, y = (JackDeepENYPA$BinMean + JackDeepENYPA$SdEst*2), ylim=p4$y.limits, pch=1, type='o', lty=2, cex=0.7, lwd=1.5, col='blue')
+lpoints(x = JackDeepENYPA$AvgDist, y = (JackDeepENYPA$BinMean - JackDeepENYPA$SdEst*2), ylim=p4$y.limits, pch=1, type='o', lty=2, cex=0.7, lwd=1.5, col='blue')
+trellis.unfocus()
+
+plot(p5d, split=c(3,1,4,3), more=T)
+plot(p5, split = c(3,1,4,3), more=T)
+trellis.focus('panel', 1,1)
+lpoints(x = JackNWPANY$AvgDist, y = (JackNWPANY$BinMean + JackNWPANY$SdEst*2), ylim=p5$y.limits, pch=1, type='o', lty=2, cex=0.7, lwd=1.5, col='red')
+lpoints(x = JackNWPANY$AvgDist, y = (JackNWPANY$BinMean - JackNWPANY$SdEst*2), ylim=p5$y.limits, pch=1, type='o', lty=2, cex=0.7, lwd=1.5, col='red')
+lpoints(x = JackDeepNWPANY$AvgDist, y = (JackDeepNWPANY$BinMean + JackDeepNWPANY$SdEst*2), ylim=p5$y.limits, pch=1, type='o', lty=2, cex=0.7, lwd=1.5, col='blue')
+lpoints(x = JackDeepNWPANY$AvgDist, y = (JackDeepNWPANY$BinMean - JackDeepNWPANY$SdEst*2), ylim=p5$y.limits, pch=1, type='o', lty=2, cex=0.7, lwd=1.5, col='blue')
+trellis.unfocus()
+
+plot(p6dz, split=c(3,2,4,3), more=T)
+plot(p6z, split = c(3,2,4,3), more=T)
+trellis.focus('panel', 1,1)
+lpoints(x = JackSWPA$AvgDist, y = (JackSWPA$BinMean + JackSWPA$SdEst*2), ylim=p6z$y.limits, pch=1, type='o', lty=2, cex=0.7, lwd=1.5, col='red')
+lpoints(x = JackSWPA$AvgDist, y = (JackSWPA$BinMean - JackSWPA$SdEst*2), ylim=p6z$y.limits, pch=1, type='o', lty=2, cex=0.7, lwd=1.5, col='red')
+lpoints(x = JackDeepSWPA$AvgDist, y = (JackDeepSWPA$BinMean + JackDeepSWPA$SdEst*2), ylim=p6z$y.limits, pch=1, type='o', lty=2, cex=0.7, lwd=1.5, col='blue')
+lpoints(x = JackDeepSWPA$AvgDist, y = (JackDeepSWPA$BinMean - JackDeepSWPA$SdEst*2), ylim=p6z$y.limits, pch=1, type='o', lty=2, cex=0.7, lwd=1.5, col='blue')
+trellis.unfocus()
+
+plot(p7dz, split=c(2,1,4,3), more=T)
+plot(p7z, split = c(2,1,4,3), more=T)
+trellis.focus('panel', 1,1)
+lpoints(x = JackWPA$AvgDist, y = (JackWPA$BinMean + JackWPA$SdEst*2), ylim=p7z$y.limits, pch=1, type='o', lty=2, cex=0.7, lwd=1.5, col='red')
+lpoints(x = JackWPA$AvgDist, y = (JackWPA$BinMean - JackWPA$SdEst*2), ylim=p7z$y.limits, pch=1, type='o', lty=2, cex=0.7, lwd=1.5, col='red')
+lpoints(x = JackDeepWPA$AvgDist, y = (JackDeepWPA$BinMean + JackDeepWPA$SdEst*2), ylim=p7z$y.limits, pch=1, type='o', lty=2, cex=0.7, lwd=1.5, col='blue')
+lpoints(x = JackDeepWPA$AvgDist, y = (JackDeepWPA$BinMean - JackDeepWPA$SdEst*2), ylim=p7z$y.limits, pch=1, type='o', lty=2, cex=0.7, lwd=1.5, col='blue')
+trellis.unfocus()
+
+plot(p8d, split=c(1,3,4,3), more=T)
+plot(p8, split = c(1,3,4,3), more=T)
+trellis.focus('panel', 1,1)
+lpoints(x = JackMT$AvgDist, y = (JackMT$BinMean + JackMT$SdEst*2), ylim=p8$y.limits, pch=1, type='o', lty=2, cex=0.7, lwd=1.5, col='red')
+lpoints(x = JackMT$AvgDist, y = (JackMT$BinMean - JackMT$SdEst*2), ylim=p8$y.limits, pch=1, type='o', lty=2, cex=0.7, lwd=1.5, col='red')
+lpoints(x = JackDeepMT$AvgDist, y = (JackDeepMT$BinMean + JackDeepMT$SdEst*2), ylim=p8$y.limits, pch=1, type='o', lty=2, cex=0.7, lwd=1.5, col='blue')
+lpoints(x = JackDeepMT$AvgDist, y = (JackDeepMT$BinMean - JackDeepMT$SdEst*2), ylim=p8$y.limits, pch=1, type='o', lty=2, cex=0.7, lwd=1.5, col='blue')
+trellis.unfocus()
+
+plot(p9d, split=c(4,2,4,3), more=T)
+plot(p9, split = c(4,2,4,3), more=T)
+trellis.focus('panel', 1,1)
+lpoints(x = JackCWV$AvgDist, y = (JackCWV$BinMean + JackCWV$SdEst*2), ylim=p9$y.limits, pch=1, type='o', lty=2, cex=0.7, lwd=1.5, col='red')
+lpoints(x = JackCWV$AvgDist, y = (JackCWV$BinMean - JackCWV$SdEst*2), ylim=p9$y.limits, pch=1, type='o', lty=2, cex=0.7, lwd=1.5, col='red')
+lpoints(x = JackDeepCWV$AvgDist, y = (JackDeepCWV$BinMean + JackDeepCWV$SdEst*2), ylim=p9$y.limits, pch=1, type='o', lty=2, cex=0.7, lwd=1.5, col='blue')
+lpoints(x = JackDeepCWV$AvgDist, y = (JackDeepCWV$BinMean - JackDeepCWV$SdEst*2), ylim=p9$y.limits, pch=1, type='o', lty=2, cex=0.7, lwd=1.5, col='blue')
+trellis.unfocus()
+
+plot(p10dz, split=c(2,3,4,3), more=T)
+plot(p10z, split = c(2,3,4,3), more=T)
+trellis.focus('panel', 1,1)
+lpoints(x = JackVR$AvgDist, y = (JackVR$BinMean + JackVR$SdEst*2), ylim=p10z$y.limits, pch=1, type='o', lty=2, cex=0.7, lwd=1.5, col='red')
+lpoints(x = JackVR$AvgDist, y = (JackVR$BinMean - JackVR$SdEst*2), ylim=p10z$y.limits, pch=1, type='o', lty=2, cex=0.7, lwd=1.5, col='red')
+lpoints(x = JackDeepVR$AvgDist, y = (JackDeepVR$BinMean + JackDeepVR$SdEst*2), ylim=p10z$y.limits, pch=1, type='o', lty=2, cex=0.7, lwd=1.5, col='blue')
+lpoints(x = JackDeepVR$AvgDist, y = (JackDeepVR$BinMean - JackDeepVR$SdEst*2), ylim=p10z$y.limits, pch=1, type='o', lty=2, cex=0.7, lwd=1.5, col='blue')
+trellis.unfocus()
 
 dev.off()
 
@@ -2621,6 +4517,10 @@ VarLagsTable[109:120,1] = 'Valley and Ridge'
 write.csv(VarLagsTable, file = 'TableVarianceLags.csv')
 
 #  Operator data----
+#Fixme: Loop over operators, remove them from the dataset, and see how variograms compare.
+# If there are significant differences, see if operator should be removed.
+# Careful that some operators may make up all of the data for a region.
+
 #Wow! This region becomes manageable with its variogram by removing these points
 #Add operators and Waco drilled wells to the dataset
 MT@data$Operator = ''
