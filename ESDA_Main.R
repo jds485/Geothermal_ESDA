@@ -539,7 +539,7 @@ for (i in 1:length(unique(PlotFinal_DeepBHTsLarge$SameSpot))){
     #Record used coordinates
     Coords = PlotFinal_DeepBHTsLarge[which(PlotFinal_DeepBHTsLarge$SameSpot == unique(PlotFinal_DeepBHTsLarge$SameSpot)[i]),][1,]
     #All others black
-    plot(rep(i,length(PlotFinal_DeepBHTsLarge$BHT[which(PlotFinal_DeepBHTsLarge$SameSpot == unique(PlotFinal_DeepBHTsLarge$SameSpot)[i])])), PlotFinal_DeepBHTsLarge$BHT[which(PlotFinal_DeepBHTsLarge$SameSpot == unique(PlotFinal_DeepBHTsLarge$SameSpot)[i])], type = 'o', col = 'black', pch = 16, xlim = c(0,length(unique(PlotFinal_DeepBHTsLarge$SameSpot))), ylim = c(0,140), xlab = 'Spatial Location', ylab = expression(paste('BHT (', degree, 'C)')), main = 'Deepest BHT is Largest', cex.axis = 1.5, cex.lab = 1.5)
+    plot(rep(i,length(PlotFinal_DeepBHTsLarge$BHT[which(PlotFinal_DeepBHTsLarge$SameSpot == unique(PlotFinal_DeepBHTsLarge$SameSpot)[i])])), PlotFinal_DeepBHTsLarge$BHT[which(PlotFinal_DeepBHTsLarge$SameSpot == unique(PlotFinal_DeepBHTsLarge$SameSpot)[i])], type = 'o', col = 'black', pch = 16, xlim = c(0,length(unique(PlotFinal_DeepBHTsLarge$SameSpot))), ylim = c(0,140), xlab = 'Sorted Location ID', ylab = expression(paste('BHT (', degree, 'C)')), main = 'Deepest BHT is Largest', cex.axis = 1.5, cex.lab = 1.5)
     par(new=TRUE)
     #Max depth wells red
     plot(rep(i, length(indsMaxDepth)), PlotFinal_DeepBHTsLarge$BHT[which(PlotFinal_DeepBHTsLarge$SameSpot == unique(PlotFinal_DeepBHTsLarge$SameSpot)[i])][indsMaxDepth], type = 'o', col = 'red', pch = 16, xlim = c(0,length(unique(PlotFinal_DeepBHTsLarge$SameSpot))), ylim = c(0,140), xlab = '', ylab = '', axes=FALSE)
@@ -565,7 +565,7 @@ for (i in 1:length(unique(PlotFinal_DeepBHTsSmall$SameSpot))){
     #Record used coordinates
     Coords = PlotFinal_DeepBHTsSmall[which(PlotFinal_DeepBHTsSmall$SameSpot == unique(PlotFinal_DeepBHTsSmall$SameSpot)[i]),][1,]
     #All others black
-    plot(rep(i,length(PlotFinal_DeepBHTsSmall$BHT[which(PlotFinal_DeepBHTsSmall$SameSpot == unique(PlotFinal_DeepBHTsSmall$SameSpot)[i])])), PlotFinal_DeepBHTsSmall$BHT[which(PlotFinal_DeepBHTsSmall$SameSpot == unique(PlotFinal_DeepBHTsSmall$SameSpot)[i])], type = 'o', col = 'black', pch = 16, xlim = c(0,length(unique(PlotFinal_DeepBHTsSmall$SameSpot))), ylim = c(0,140), xlab = 'Spatial Location', ylab = expression(paste('BHT (', degree, 'C)')), main = 'Deepest BHT is Not Largest', cex.axis = 1.5, cex.lab = 1.5)
+    plot(rep(i,length(PlotFinal_DeepBHTsSmall$BHT[which(PlotFinal_DeepBHTsSmall$SameSpot == unique(PlotFinal_DeepBHTsSmall$SameSpot)[i])])), PlotFinal_DeepBHTsSmall$BHT[which(PlotFinal_DeepBHTsSmall$SameSpot == unique(PlotFinal_DeepBHTsSmall$SameSpot)[i])], type = 'o', col = 'black', pch = 16, xlim = c(0,length(unique(PlotFinal_DeepBHTsSmall$SameSpot))), ylim = c(0,140), xlab = 'Sorted Location ID', ylab = expression(paste('BHT (', degree, 'C)')), main = 'Deepest BHT is Not Largest', cex.axis = 1.5, cex.lab = 1.5)
     par(new=TRUE)
     #Max depth wells red
     plot(rep(i, length(indsMaxDepth)), PlotFinal_DeepBHTsSmall$BHT[which(PlotFinal_DeepBHTsSmall$SameSpot == unique(PlotFinal_DeepBHTsSmall$SameSpot)[i])][indsMaxDepth], type = 'o', col = 'red', pch = 16, xlim = c(0,length(unique(PlotFinal_DeepBHTsSmall$SameSpot))), ylim = c(0,140), xlab = '', ylab = '', axes=FALSE)
@@ -921,11 +921,36 @@ rm(EDAPlots)
 
 #  Local Median and Local Average Deviation----
 #Uses the well data that has been sorted for unique spatial locations.
+
 DataTab = QsDev(Data = SortData$Sorted@data, Var = 'Qs', xName = 'coords_x1', yName = 'coords_x2', rad = 10000, max_pts = 25)
 #Add information to the original data
 SortData$Sorted@data = DataTab
 #Rename to shorter variable
 WellsSort = SortData$Sorted
+
+#Plot selected radius and points used in QsDev
+#the objective of this analysis is spatial coverage so that the threshold may be applied spatially
+png("HeatFlowEDA_WellsUsedOrNotUsed.png", width=6, height=6, units="in", res=600)
+par(mar = c(2,2.5,3,1.5), xaxs = 'i', yaxs = 'i')
+plot(WellsSort, pch = 16, cex = 0.2, col = 'white', main = 'Points Tested in Local Median Deviation ESDA Procedure')
+plot(Counties[which(Counties$STATEFP == 42 | Counties$STATEFP == 36 | Counties$STATEFP == 54 | Counties$STATEFP == 51| Counties$STATEFP == 24| Counties$STATEFP == 21),], add=TRUE, border = 'grey')
+plot(NY, lwd = 2, add=TRUE)
+plot(PA, lwd = 2, add=TRUE)
+plot(WV, lwd = 2, add=TRUE)
+plot(MD, lwd = 2, add=TRUE)
+plot(KY, lwd = 2, add=TRUE)
+plot(VA, lwd = 2, add=TRUE)
+north.arrow(-75, 37.5, 0.1, lab = 'N', col='black', cex = 1.5)
+degAxis(side = 2, seq(34, 46, 2), cex.axis = 1.5)
+degAxis(side = 2, seq(34, 46, 1), labels = FALSE)
+degAxis(side = 4, seq(34, 46, 1), labels = FALSE)
+degAxis(side = 1, seq(-70, -86, -2), cex.axis = 1.5)
+degAxis(side = 3, seq(-70, -86, -1), labels = FALSE)
+degAxis(side = 1, seq(-70, -86, -1), labels = FALSE)
+plot(WellsSort[WellsSort$Dist3 <= 10000,], pch = 16, cex = 0.2, add = T)
+plot(WellsSort[WellsSort$Dist3 > 10000,], pch = 16, cex = 0.2, col = 'red', add = T)
+legend('topleft', legend = c('Tested', 'Not Tested'), pch = 16, cex = 1.3, col = c('black', 'red'))
+dev.off()
 
 #These figures should be made with a dataset that has unique spatial locations, as completed above.
 
@@ -3124,11 +3149,16 @@ DeepVR = spTransform(WellsDeepWGS[VR_Bounded,], CRS('+init=epsg:26917'))
 DeepFL = rbind(DeepCT, DeepCWV, DeepCNY, DeepENY, DeepENYPA, DeepMT, DeepNWPANY, DeepSWPA, DeepWPA, DeepVR)
 
 #Compute variograms - All data, Data deeper than 1 km, Data that have been fully proessed. Plot all on same plot
+#Possible parameters for Universal Kriging / regression kriging are:
+# basement depth, surface temperature, BHT correction region, COSUNA section, Rome trough, spatial coordinates
+# These are challenging to select because a trend in space can be captured by most of those parameters
 #Use universal with Basement Depth for CT and WPA. Out to 30 km, not necessary to use universal for WPA.
+#CT - COSUNA_ID explains nearly same variance as BasementDepth
 #MT, CNY, SWPA do not need universal. NWPANY pobably not
 #SWPA could use BHT correction region, but doesn't explain too much, which is acutally good.
 #ENY universal with Basement Depth and COSUNA_ID. COSUNA is indicative of issues with local strat columns
 #ENYPA with coordinates and Basement depth
+#CWV COSUNA ID
 v.CT <- variogram(Qs~1, CT, cutoff=60000, width=60000/50)
 v.CNY <- variogram(Qs~1, CNY, cutoff=60000, width=60000/15)
 v.CWV <- variogram(Qs~1, CWV, cutoff=60000, width=60000/50)
@@ -3270,10 +3300,13 @@ p8 = plot(v.MT, plot.numbers=F, ylab=expression(Semivariance ~ (mW/m^2)^2), main
 p5 = plot(v.NWPANY, plot.numbers=F, ylab=expression(Semivariance ~ (mW/m^2)^2), main="Northwestern PA & NY", xlab = 'Separation Distance (m)', pch = 16, col = 'red', xlim = c(0,60000), ylim = c(0,500), cex=0.5)
 p6 = plot(v.SWPA, plot.numbers=F, ylab=expression(Semivariance ~ (mW/m^2)^2), main="Southwestern PA", xlab = 'Separation Distance (m)', pch = 16, col = 'red', xlim = c(0,60000), ylim = c(0,850), cex=0.5)
 p6z = plot(v.SWPA, plot.numbers=F, ylab=expression(Semivariance ~ (mW/m^2)^2), main="Southwestern PA Zoom", xlab = 'Separation Distance (m)', pch = 16, col = 'red', xlim = c(0,60000), ylim = c(0,60), cex=0.5)
+p6zz = plot(v.SWPA, plot.numbers=F, ylab=expression(Semivariance ~ (mW/m^2)^2), main="Southwestern PA", xlab = 'Separation Distance (m)', pch = 16, col = 'red', xlim = c(0,60000), ylim = c(0,60), cex=0.5)
 p10 = plot(v.VR, plot.numbers=F, ylab=expression(Semivariance ~ (mW/m^2)^2), main="Valley and Ridge", xlab = 'Separation Distance (m)', pch = 16, col = 'red', xlim = c(0,60000), ylim = c(0,11000), cex=0.5)
 p10z = plot(v.VR, plot.numbers=F, ylab=expression(Semivariance ~ (mW/m^2)^2), main="Valley and Ridge Zoom", xlab = 'Separation Distance (m)', pch = 16, col = 'red', xlim = c(0,60000), ylim = c(0,300), cex=0.5)
+p10zz = plot(v.VR, plot.numbers=F, ylab=expression(Semivariance ~ (mW/m^2)^2), main="Valley and Ridge", xlab = 'Separation Distance (m)', pch = 16, col = 'red', xlim = c(0,60000), ylim = c(0,300), cex=0.5)
 p7 = plot(v.WPA, plot.numbers=F, ylab=expression(Semivariance ~ (mW/m^2)^2), main="Western PA", xlab = 'Separation Distance (m)', pch = 16, col = 'red', xlim = c(0,60000), ylim = c(0,700), cex=0.5)
 p7z = plot(v.WPA, plot.numbers=F, ylab=expression(Semivariance ~ (mW/m^2)^2), main="Western PA Zoom", xlab = 'Separation Distance (m)', pch = 16, col = 'red', xlim = c(0,60000), ylim = c(0,50), cex=0.5)
+p7zz = plot(v.WPA, plot.numbers=F, ylab=expression(Semivariance ~ (mW/m^2)^2), main="Western PA", xlab = 'Separation Distance (m)', pch = 16, col = 'red', xlim = c(0,60000), ylim = c(0,50), cex=0.5)
 p11 = plot(v.FL, plot.numbers=F, ylab=expression(Semivariance ~ (mW/m^2)^2), main="Full Region", xlab = 'Separation Distance (m)', pch = 16, col = 'red', xlim = c(0,60000), ylim = c(0,1000), cex=0.5)
 
 kcols = c(adjustcolor('green', alpha.f = 0.1),adjustcolor('green', alpha.f = 0.2),adjustcolor('green', alpha.f = 0.3),adjustcolor('green', alpha.f = 0.4),adjustcolor('green', alpha.f = 0.6),adjustcolor('green', alpha.f = 0.7),adjustcolor('green', alpha.f = 0.8),adjustcolor('green', alpha.f = 0.9))
@@ -3286,11 +3319,11 @@ p4_k1p0 = plot(v.ENYPA_k1p0, plot.numbers=F, ylab=expression(Semivariance ~ (mW/
 p8_k1p0 = plot(v.MT_k1p0, plot.numbers=F, ylab=expression(Semivariance ~ (mW/m^2)^2), main="Western WV", xlab = 'Separation Distance (m)', pch = 16, col = kcols[1], xlim = c(0,60000), ylim = c(0,700), cex=0.5)
 p5_k1p0 = plot(v.NWPANY_k1p0, plot.numbers=F, ylab=expression(Semivariance ~ (mW/m^2)^2), main="Northwestern PA & NY", xlab = 'Separation Distance (m)', pch = 16, col = kcols[1], xlim = c(0,60000), ylim = c(0,500), cex=0.5)
 p6_k1p0 = plot(v.SWPA_k1p0, plot.numbers=F, ylab=expression(Semivariance ~ (mW/m^2)^2), main="Southwestern PA", xlab = 'Separation Distance (m)', pch = 16, col = kcols[1], xlim = c(0,60000), ylim = c(0,850), cex=0.5)
-p6z_k1p0 = plot(v.SWPA_k1p0, plot.numbers=F, ylab=expression(Semivariance ~ (mW/m^2)^2), main="Southwestern PA Zoom", xlab = 'Separation Distance (m)', pch = 16, col = kcols[1], xlim = c(0,60000), ylim = c(0,60), cex=0.5)
+p6z_k1p0 = plot(v.SWPA_k1p0, plot.numbers=F, ylab=expression(Semivariance ~ (mW/m^2)^2), main="Southwestern PA", xlab = 'Separation Distance (m)', pch = 16, col = kcols[1], xlim = c(0,60000), ylim = c(0,60), cex=0.5)
 p10_k1p0 = plot(v.VR_k1p0, plot.numbers=F, ylab=expression(Semivariance ~ (mW/m^2)^2), main="Valley and Ridge", xlab = 'Separation Distance (m)', pch = 16, col = kcols[1], xlim = c(0,60000), ylim = c(0,11000), cex=0.5)
-p10z_k1p0 = plot(v.VR_k1p0, plot.numbers=F, ylab=expression(Semivariance ~ (mW/m^2)^2), main="Valley and Ridge Zoom", xlab = 'Separation Distance (m)', pch = 16, col = kcols[1], xlim = c(0,60000), ylim = c(0,300), cex=0.5)
+p10z_k1p0 = plot(v.VR_k1p0, plot.numbers=F, ylab=expression(Semivariance ~ (mW/m^2)^2), main="Valley and Ridge", xlab = 'Separation Distance (m)', pch = 16, col = kcols[1], xlim = c(0,60000), ylim = c(0,300), cex=0.5)
 p7_k1p0 = plot(v.WPA_k1p0, plot.numbers=F, ylab=expression(Semivariance ~ (mW/m^2)^2), main="Western PA", xlab = 'Separation Distance (m)', pch = 16, col = kcols[1], xlim = c(0,60000), ylim = c(0,700), cex=0.5)
-p7z_k1p0 = plot(v.WPA_k1p0, plot.numbers=F, ylab=expression(Semivariance ~ (mW/m^2)^2), main="Western PA Zoom", xlab = 'Separation Distance (m)', pch = 16, col = kcols[1], xlim = c(0,60000), ylim = c(0,50), cex=0.5)
+p7z_k1p0 = plot(v.WPA_k1p0, plot.numbers=F, ylab=expression(Semivariance ~ (mW/m^2)^2), main="Western PA", xlab = 'Separation Distance (m)', pch = 16, col = kcols[1], xlim = c(0,60000), ylim = c(0,50), cex=0.5)
 p11_k1p0 = plot(v.FL_k1p0, plot.numbers=F, ylab=expression(Semivariance ~ (mW/m^2)^2), main="Full Region", xlab = 'Separation Distance (m)', pch = 16, col = kcols[1], xlim = c(0,60000), ylim = c(0,1000), cex=0.5)
 
 p1_k1p5 = plot(v.CT_k1p5, plot.numbers=F, ylab=expression(Semivariance ~ (mW/m^2)^2), main="Chautauqua, NY", xlab = 'Separation Distance (m)', pch = 16, ylim = c(0,50), col = kcols[2], xlim = c(0,60000), cex=0.5)
@@ -3301,11 +3334,11 @@ p4_k1p5 = plot(v.ENYPA_k1p5, plot.numbers=F, ylab=expression(Semivariance ~ (mW/
 p8_k1p5 = plot(v.MT_k1p5, plot.numbers=F, ylab=expression(Semivariance ~ (mW/m^2)^2), main="Western WV", xlab = 'Separation Distance (m)', pch = 16, col = kcols[2], xlim = c(0,60000), ylim = c(0,700), cex=0.5)
 p5_k1p5 = plot(v.NWPANY_k1p5, plot.numbers=F, ylab=expression(Semivariance ~ (mW/m^2)^2), main="Northwestern PA & NY", xlab = 'Separation Distance (m)', pch = 16, col = kcols[2], xlim = c(0,60000), ylim = c(0,500), cex=0.5)
 p6_k1p5 = plot(v.SWPA_k1p5, plot.numbers=F, ylab=expression(Semivariance ~ (mW/m^2)^2), main="Southwestern PA", xlab = 'Separation Distance (m)', pch = 16, col = kcols[2], xlim = c(0,60000), ylim = c(0,850), cex=0.5)
-p6z_k1p5 = plot(v.SWPA_k1p5, plot.numbers=F, ylab=expression(Semivariance ~ (mW/m^2)^2), main="Southwestern PA Zoom", xlab = 'Separation Distance (m)', pch = 16, col = kcols[2], xlim = c(0,60000), ylim = c(0,60), cex=0.5)
+p6z_k1p5 = plot(v.SWPA_k1p5, plot.numbers=F, ylab=expression(Semivariance ~ (mW/m^2)^2), main="Southwestern PA", xlab = 'Separation Distance (m)', pch = 16, col = kcols[2], xlim = c(0,60000), ylim = c(0,60), cex=0.5)
 p10_k1p5 = plot(v.VR_k1p5, plot.numbers=F, ylab=expression(Semivariance ~ (mW/m^2)^2), main="Valley and Ridge", xlab = 'Separation Distance (m)', pch = 16, col = kcols[2], xlim = c(0,60000), ylim = c(0,11000), cex=0.5)
-p10z_k1p5 = plot(v.VR_k1p5, plot.numbers=F, ylab=expression(Semivariance ~ (mW/m^2)^2), main="Valley and Ridge Zoom", xlab = 'Separation Distance (m)', pch = 16, col = kcols[2], xlim = c(0,60000), ylim = c(0,300), cex=0.5)
+p10z_k1p5 = plot(v.VR_k1p5, plot.numbers=F, ylab=expression(Semivariance ~ (mW/m^2)^2), main="Valley and Ridge", xlab = 'Separation Distance (m)', pch = 16, col = kcols[2], xlim = c(0,60000), ylim = c(0,300), cex=0.5)
 p7_k1p5 = plot(v.WPA_k1p5, plot.numbers=F, ylab=expression(Semivariance ~ (mW/m^2)^2), main="Western PA", xlab = 'Separation Distance (m)', pch = 16, col = kcols[2], xlim = c(0,60000), ylim = c(0,700), cex=0.5)
-p7z_k1p5 = plot(v.WPA_k1p5, plot.numbers=F, ylab=expression(Semivariance ~ (mW/m^2)^2), main="Western PA Zoom", xlab = 'Separation Distance (m)', pch = 16, col = kcols[2], xlim = c(0,60000), ylim = c(0,50), cex=0.5)
+p7z_k1p5 = plot(v.WPA_k1p5, plot.numbers=F, ylab=expression(Semivariance ~ (mW/m^2)^2), main="Western PA", xlab = 'Separation Distance (m)', pch = 16, col = kcols[2], xlim = c(0,60000), ylim = c(0,50), cex=0.5)
 p11_k1p5 = plot(v.FL_k1p5, plot.numbers=F, ylab=expression(Semivariance ~ (mW/m^2)^2), main="Full Region", xlab = 'Separation Distance (m)', pch = 16, col = kcols[2], xlim = c(0,60000), ylim = c(0,1000), cex=0.5)
 
 p1_k2p0 = plot(v.CT_k2p0, plot.numbers=F, ylab=expression(Semivariance ~ (mW/m^2)^2), main="Chautauqua, NY", xlab = 'Separation Distance (m)', pch = 16, ylim = c(0,50), col = kcols[3], xlim = c(0,60000), cex=0.5)
@@ -3316,11 +3349,11 @@ p4_k2p0 = plot(v.ENYPA_k2p0, plot.numbers=F, ylab=expression(Semivariance ~ (mW/
 p8_k2p0 = plot(v.MT_k2p0, plot.numbers=F, ylab=expression(Semivariance ~ (mW/m^2)^2), main="Western WV", xlab = 'Separation Distance (m)', pch = 16, col = kcols[3], xlim = c(0,60000), ylim = c(0,700), cex=0.5)
 p5_k2p0 = plot(v.NWPANY_k2p0, plot.numbers=F, ylab=expression(Semivariance ~ (mW/m^2)^2), main="Northwestern PA & NY", xlab = 'Separation Distance (m)', pch = 16, col = kcols[3], xlim = c(0,60000), ylim = c(0,500), cex=0.5)
 p6_k2p0 = plot(v.SWPA_k2p0, plot.numbers=F, ylab=expression(Semivariance ~ (mW/m^2)^2), main="Southwestern PA", xlab = 'Separation Distance (m)', pch = 16, col = kcols[3], xlim = c(0,60000), ylim = c(0,850), cex=0.5)
-p6z_k2p0 = plot(v.SWPA_k2p0, plot.numbers=F, ylab=expression(Semivariance ~ (mW/m^2)^2), main="Southwestern PA Zoom", xlab = 'Separation Distance (m)', pch = 16, col = kcols[3], xlim = c(0,60000), ylim = c(0,60), cex=0.5)
+p6z_k2p0 = plot(v.SWPA_k2p0, plot.numbers=F, ylab=expression(Semivariance ~ (mW/m^2)^2), main="Southwestern PA", xlab = 'Separation Distance (m)', pch = 16, col = kcols[3], xlim = c(0,60000), ylim = c(0,60), cex=0.5)
 p10_k2p0 = plot(v.VR_k2p0, plot.numbers=F, ylab=expression(Semivariance ~ (mW/m^2)^2), main="Valley and Ridge", xlab = 'Separation Distance (m)', pch = 16, col = kcols[3], xlim = c(0,60000), ylim = c(0,11000), cex=0.5)
-p10z_k2p0 = plot(v.VR_k2p0, plot.numbers=F, ylab=expression(Semivariance ~ (mW/m^2)^2), main="Valley and Ridge Zoom", xlab = 'Separation Distance (m)', pch = 16, col = kcols[3], xlim = c(0,60000), ylim = c(0,300), cex=0.5)
+p10z_k2p0 = plot(v.VR_k2p0, plot.numbers=F, ylab=expression(Semivariance ~ (mW/m^2)^2), main="Valley and Ridge", xlab = 'Separation Distance (m)', pch = 16, col = kcols[3], xlim = c(0,60000), ylim = c(0,300), cex=0.5)
 p7_k2p0 = plot(v.WPA_k2p0, plot.numbers=F, ylab=expression(Semivariance ~ (mW/m^2)^2), main="Western PA", xlab = 'Separation Distance (m)', pch = 16, col = kcols[3], xlim = c(0,60000), ylim = c(0,700), cex=0.5)
-p7z_k2p0 = plot(v.WPA_k2p0, plot.numbers=F, ylab=expression(Semivariance ~ (mW/m^2)^2), main="Western PA Zoom", xlab = 'Separation Distance (m)', pch = 16, col = kcols[3], xlim = c(0,60000), ylim = c(0,50), cex=0.5)
+p7z_k2p0 = plot(v.WPA_k2p0, plot.numbers=F, ylab=expression(Semivariance ~ (mW/m^2)^2), main="Western PA", xlab = 'Separation Distance (m)', pch = 16, col = kcols[3], xlim = c(0,60000), ylim = c(0,50), cex=0.5)
 p11_k2p0 = plot(v.FL_k2p0, plot.numbers=F, ylab=expression(Semivariance ~ (mW/m^2)^2), main="Full Region", xlab = 'Separation Distance (m)', pch = 16, col = kcols[3], xlim = c(0,60000), ylim = c(0,1000), cex=0.5)
 
 p1_k2p5 = plot(v.CT_k2p5, plot.numbers=F, ylab=expression(Semivariance ~ (mW/m^2)^2), main="Chautauqua, NY", xlab = 'Separation Distance (m)', pch = 16, ylim = c(0,50), col = kcols[4], xlim = c(0,60000), cex=0.5)
@@ -3331,11 +3364,11 @@ p4_k2p5 = plot(v.ENYPA_k2p5, plot.numbers=F, ylab=expression(Semivariance ~ (mW/
 p8_k2p5 = plot(v.MT_k2p5, plot.numbers=F, ylab=expression(Semivariance ~ (mW/m^2)^2), main="Western WV", xlab = 'Separation Distance (m)', pch = 16, col = kcols[4], xlim = c(0,60000), ylim = c(0,700), cex=0.5)
 p5_k2p5 = plot(v.NWPANY_k2p5, plot.numbers=F, ylab=expression(Semivariance ~ (mW/m^2)^2), main="Northwestern PA & NY", xlab = 'Separation Distance (m)', pch = 16, col = kcols[4], xlim = c(0,60000), ylim = c(0,500), cex=0.5)
 p6_k2p5 = plot(v.SWPA_k2p5, plot.numbers=F, ylab=expression(Semivariance ~ (mW/m^2)^2), main="Southwestern PA", xlab = 'Separation Distance (m)', pch = 16, col = kcols[4], xlim = c(0,60000), ylim = c(0,850), cex=0.5)
-p6z_k2p5 = plot(v.SWPA_k2p5, plot.numbers=F, ylab=expression(Semivariance ~ (mW/m^2)^2), main="Southwestern PA Zoom", xlab = 'Separation Distance (m)', pch = 16, col = kcols[4], xlim = c(0,60000), ylim = c(0,60), cex=0.5)
+p6z_k2p5 = plot(v.SWPA_k2p5, plot.numbers=F, ylab=expression(Semivariance ~ (mW/m^2)^2), main="Southwestern PA", xlab = 'Separation Distance (m)', pch = 16, col = kcols[4], xlim = c(0,60000), ylim = c(0,60), cex=0.5)
 p10_k2p5 = plot(v.VR_k2p5, plot.numbers=F, ylab=expression(Semivariance ~ (mW/m^2)^2), main="Valley and Ridge", xlab = 'Separation Distance (m)', pch = 16, col = kcols[4], xlim = c(0,60000), ylim = c(0,11000), cex=0.5)
-p10z_k2p5 = plot(v.VR_k2p5, plot.numbers=F, ylab=expression(Semivariance ~ (mW/m^2)^2), main="Valley and Ridge Zoom", xlab = 'Separation Distance (m)', pch = 16, col = kcols[4], xlim = c(0,60000), ylim = c(0,300), cex=0.5)
+p10z_k2p5 = plot(v.VR_k2p5, plot.numbers=F, ylab=expression(Semivariance ~ (mW/m^2)^2), main="Valley and Ridge", xlab = 'Separation Distance (m)', pch = 16, col = kcols[4], xlim = c(0,60000), ylim = c(0,300), cex=0.5)
 p7_k2p5 = plot(v.WPA_k2p5, plot.numbers=F, ylab=expression(Semivariance ~ (mW/m^2)^2), main="Western PA", xlab = 'Separation Distance (m)', pch = 16, col = kcols[4], xlim = c(0,60000), ylim = c(0,700), cex=0.5)
-p7z_k2p5 = plot(v.WPA_k2p5, plot.numbers=F, ylab=expression(Semivariance ~ (mW/m^2)^2), main="Western PA Zoom", xlab = 'Separation Distance (m)', pch = 16, col = kcols[4], xlim = c(0,60000), ylim = c(0,50), cex=0.5)
+p7z_k2p5 = plot(v.WPA_k2p5, plot.numbers=F, ylab=expression(Semivariance ~ (mW/m^2)^2), main="Western PA", xlab = 'Separation Distance (m)', pch = 16, col = kcols[4], xlim = c(0,60000), ylim = c(0,50), cex=0.5)
 p11_k2p5 = plot(v.FL_k2p5, plot.numbers=F, ylab=expression(Semivariance ~ (mW/m^2)^2), main="Full Region", xlab = 'Separation Distance (m)', pch = 16, col = kcols[4], xlim = c(0,60000), ylim = c(0,1000), cex=0.5)
 
 p1_k3p5 = plot(v.CT_k3p5, plot.numbers=F, ylab=expression(Semivariance ~ (mW/m^2)^2), main="Chautauqua, NY", xlab = 'Separation Distance (m)', pch = 16, ylim = c(0,50), col = kcols[5], xlim = c(0,60000), cex=0.5)
@@ -3346,11 +3379,11 @@ p4_k3p5 = plot(v.ENYPA_k3p5, plot.numbers=F, ylab=expression(Semivariance ~ (mW/
 p8_k3p5 = plot(v.MT_k3p5, plot.numbers=F, ylab=expression(Semivariance ~ (mW/m^2)^2), main="Western WV", xlab = 'Separation Distance (m)', pch = 16, col = kcols[5], xlim = c(0,60000), ylim = c(0,700), cex=0.5)
 p5_k3p5 = plot(v.NWPANY_k3p5, plot.numbers=F, ylab=expression(Semivariance ~ (mW/m^2)^2), main="Northwestern PA & NY", xlab = 'Separation Distance (m)', pch = 16, col = kcols[5], xlim = c(0,60000), ylim = c(0,500), cex=0.5)
 p6_k3p5 = plot(v.SWPA_k3p5, plot.numbers=F, ylab=expression(Semivariance ~ (mW/m^2)^2), main="Southwestern PA", xlab = 'Separation Distance (m)', pch = 16, col = kcols[5], xlim = c(0,60000), ylim = c(0,850), cex=0.5)
-p6z_k3p5 = plot(v.SWPA_k3p5, plot.numbers=F, ylab=expression(Semivariance ~ (mW/m^2)^2), main="Southwestern PA Zoom", xlab = 'Separation Distance (m)', pch = 16, col = kcols[5], xlim = c(0,60000), ylim = c(0,60), cex=0.5)
+p6z_k3p5 = plot(v.SWPA_k3p5, plot.numbers=F, ylab=expression(Semivariance ~ (mW/m^2)^2), main="Southwestern PA", xlab = 'Separation Distance (m)', pch = 16, col = kcols[5], xlim = c(0,60000), ylim = c(0,60), cex=0.5)
 p10_k3p5 = plot(v.VR_k3p5, plot.numbers=F, ylab=expression(Semivariance ~ (mW/m^2)^2), main="Valley and Ridge", xlab = 'Separation Distance (m)', pch = 16, col = kcols[5], xlim = c(0,60000), ylim = c(0,11000), cex=0.5)
-p10z_k3p5 = plot(v.VR_k3p5, plot.numbers=F, ylab=expression(Semivariance ~ (mW/m^2)^2), main="Valley and Ridge Zoom", xlab = 'Separation Distance (m)', pch = 16, col = kcols[5], xlim = c(0,60000), ylim = c(0,300), cex=0.5)
+p10z_k3p5 = plot(v.VR_k3p5, plot.numbers=F, ylab=expression(Semivariance ~ (mW/m^2)^2), main="Valley and Ridge", xlab = 'Separation Distance (m)', pch = 16, col = kcols[5], xlim = c(0,60000), ylim = c(0,300), cex=0.5)
 p7_k3p5 = plot(v.WPA_k3p5, plot.numbers=F, ylab=expression(Semivariance ~ (mW/m^2)^2), main="Western PA", xlab = 'Separation Distance (m)', pch = 16, col = kcols[5], xlim = c(0,60000), ylim = c(0,700), cex=0.5)
-p7z_k3p5 = plot(v.WPA_k3p5, plot.numbers=F, ylab=expression(Semivariance ~ (mW/m^2)^2), main="Western PA Zoom", xlab = 'Separation Distance (m)', pch = 16, col = kcols[5], xlim = c(0,60000), ylim = c(0,50), cex=0.5)
+p7z_k3p5 = plot(v.WPA_k3p5, plot.numbers=F, ylab=expression(Semivariance ~ (mW/m^2)^2), main="Western PA", xlab = 'Separation Distance (m)', pch = 16, col = kcols[5], xlim = c(0,60000), ylim = c(0,50), cex=0.5)
 p11_k3p5 = plot(v.FL_k3p5, plot.numbers=F, ylab=expression(Semivariance ~ (mW/m^2)^2), main="Full Region", xlab = 'Separation Distance (m)', pch = 16, col = kcols[5], xlim = c(0,60000), ylim = c(0,1000), cex=0.5)
 
 p1_k4p0 = plot(v.CT_k4p0, plot.numbers=F, ylab=expression(Semivariance ~ (mW/m^2)^2), main="Chautauqua, NY", xlab = 'Separation Distance (m)', pch = 16, ylim = c(0,50), col = kcols[6], xlim = c(0,60000), cex=0.5)
@@ -3361,11 +3394,11 @@ p4_k4p0 = plot(v.ENYPA_k4p0, plot.numbers=F, ylab=expression(Semivariance ~ (mW/
 p8_k4p0 = plot(v.MT_k4p0, plot.numbers=F, ylab=expression(Semivariance ~ (mW/m^2)^2), main="Western WV", xlab = 'Separation Distance (m)', pch = 16, col = kcols[6], xlim = c(0,60000), ylim = c(0,700), cex=0.5)
 p5_k4p0 = plot(v.NWPANY_k4p0, plot.numbers=F, ylab=expression(Semivariance ~ (mW/m^2)^2), main="Northwestern PA & NY", xlab = 'Separation Distance (m)', pch = 16, col = kcols[6], xlim = c(0,60000), ylim = c(0,500), cex=0.5)
 p6_k4p0 = plot(v.SWPA_k4p0, plot.numbers=F, ylab=expression(Semivariance ~ (mW/m^2)^2), main="Southwestern PA", xlab = 'Separation Distance (m)', pch = 16, col = kcols[6], xlim = c(0,60000), ylim = c(0,850), cex=0.5)
-p6z_k4p0 = plot(v.SWPA_k4p0, plot.numbers=F, ylab=expression(Semivariance ~ (mW/m^2)^2), main="Southwestern PA Zoom", xlab = 'Separation Distance (m)', pch = 16, col = kcols[6], xlim = c(0,60000), ylim = c(0,60), cex=0.5)
+p6z_k4p0 = plot(v.SWPA_k4p0, plot.numbers=F, ylab=expression(Semivariance ~ (mW/m^2)^2), main="Southwestern PA", xlab = 'Separation Distance (m)', pch = 16, col = kcols[6], xlim = c(0,60000), ylim = c(0,60), cex=0.5)
 p10_k4p0 = plot(v.VR_k4p0, plot.numbers=F, ylab=expression(Semivariance ~ (mW/m^2)^2), main="Valley and Ridge", xlab = 'Separation Distance (m)', pch = 16, col = kcols[6], xlim = c(0,60000), ylim = c(0,11000), cex=0.5)
-p10z_k4p0 = plot(v.VR_k4p0, plot.numbers=F, ylab=expression(Semivariance ~ (mW/m^2)^2), main="Valley and Ridge Zoom", xlab = 'Separation Distance (m)', pch = 16, col = kcols[6], xlim = c(0,60000), ylim = c(0,300), cex=0.5)
+p10z_k4p0 = plot(v.VR_k4p0, plot.numbers=F, ylab=expression(Semivariance ~ (mW/m^2)^2), main="Valley and Ridge", xlab = 'Separation Distance (m)', pch = 16, col = kcols[6], xlim = c(0,60000), ylim = c(0,300), cex=0.5)
 p7_k4p0 = plot(v.WPA_k4p0, plot.numbers=F, ylab=expression(Semivariance ~ (mW/m^2)^2), main="Western PA", xlab = 'Separation Distance (m)', pch = 16, col = kcols[6], xlim = c(0,60000), ylim = c(0,700), cex=0.5)
-p7z_k4p0 = plot(v.WPA_k4p0, plot.numbers=F, ylab=expression(Semivariance ~ (mW/m^2)^2), main="Western PA Zoom", xlab = 'Separation Distance (m)', pch = 16, col = kcols[6], xlim = c(0,60000), ylim = c(0,50), cex=0.5)
+p7z_k4p0 = plot(v.WPA_k4p0, plot.numbers=F, ylab=expression(Semivariance ~ (mW/m^2)^2), main="Western PA", xlab = 'Separation Distance (m)', pch = 16, col = kcols[6], xlim = c(0,60000), ylim = c(0,50), cex=0.5)
 p11_k4p0 = plot(v.FL_k4p0, plot.numbers=F, ylab=expression(Semivariance ~ (mW/m^2)^2), main="Full Region", xlab = 'Separation Distance (m)', pch = 16, col = kcols[6], xlim = c(0,60000), ylim = c(0,1000), cex=0.5)
 
 p1_k4p5 = plot(v.CT_k4p5, plot.numbers=F, ylab=expression(Semivariance ~ (mW/m^2)^2), main="Chautauqua, NY", xlab = 'Separation Distance (m)', pch = 16, ylim = c(0,50), col = kcols[7], xlim = c(0,60000), cex=0.5)
@@ -3376,11 +3409,11 @@ p4_k4p5 = plot(v.ENYPA_k4p5, plot.numbers=F, ylab=expression(Semivariance ~ (mW/
 p8_k4p5 = plot(v.MT_k4p5, plot.numbers=F, ylab=expression(Semivariance ~ (mW/m^2)^2), main="Western WV", xlab = 'Separation Distance (m)', pch = 16, col = kcols[7], xlim = c(0,60000), ylim = c(0,700), cex=0.5)
 p5_k4p5 = plot(v.NWPANY_k4p5, plot.numbers=F, ylab=expression(Semivariance ~ (mW/m^2)^2), main="Northwestern PA & NY", xlab = 'Separation Distance (m)', pch = 16, col = kcols[7], xlim = c(0,60000), ylim = c(0,500), cex=0.5)
 p6_k4p5 = plot(v.SWPA_k4p5, plot.numbers=F, ylab=expression(Semivariance ~ (mW/m^2)^2), main="Southwestern PA", xlab = 'Separation Distance (m)', pch = 16, col = kcols[7], xlim = c(0,60000), ylim = c(0,850), cex=0.5)
-p6z_k4p5 = plot(v.SWPA_k4p5, plot.numbers=F, ylab=expression(Semivariance ~ (mW/m^2)^2), main="Southwestern PA Zoom", xlab = 'Separation Distance (m)', pch = 16, col = kcols[7], xlim = c(0,60000), ylim = c(0,60), cex=0.5)
+p6z_k4p5 = plot(v.SWPA_k4p5, plot.numbers=F, ylab=expression(Semivariance ~ (mW/m^2)^2), main="Southwestern PA", xlab = 'Separation Distance (m)', pch = 16, col = kcols[7], xlim = c(0,60000), ylim = c(0,60), cex=0.5)
 p10_k4p5 = plot(v.VR_k4p5, plot.numbers=F, ylab=expression(Semivariance ~ (mW/m^2)^2), main="Valley and Ridge", xlab = 'Separation Distance (m)', pch = 16, col = kcols[7], xlim = c(0,60000), ylim = c(0,11000), cex=0.5)
-p10z_k4p5 = plot(v.VR_k4p5, plot.numbers=F, ylab=expression(Semivariance ~ (mW/m^2)^2), main="Valley and Ridge Zoom", xlab = 'Separation Distance (m)', pch = 16, col = kcols[7], xlim = c(0,60000), ylim = c(0,300), cex=0.5)
+p10z_k4p5 = plot(v.VR_k4p5, plot.numbers=F, ylab=expression(Semivariance ~ (mW/m^2)^2), main="Valley and Ridge", xlab = 'Separation Distance (m)', pch = 16, col = kcols[7], xlim = c(0,60000), ylim = c(0,300), cex=0.5)
 p7_k4p5 = plot(v.WPA_k4p5, plot.numbers=F, ylab=expression(Semivariance ~ (mW/m^2)^2), main="Western PA", xlab = 'Separation Distance (m)', pch = 16, col = kcols[7], xlim = c(0,60000), ylim = c(0,700), cex=0.5)
-p7z_k4p5 = plot(v.WPA_k4p5, plot.numbers=F, ylab=expression(Semivariance ~ (mW/m^2)^2), main="Western PA Zoom", xlab = 'Separation Distance (m)', pch = 16, col = kcols[7], xlim = c(0,60000), ylim = c(0,50), cex=0.5)
+p7z_k4p5 = plot(v.WPA_k4p5, plot.numbers=F, ylab=expression(Semivariance ~ (mW/m^2)^2), main="Western PA", xlab = 'Separation Distance (m)', pch = 16, col = kcols[7], xlim = c(0,60000), ylim = c(0,50), cex=0.5)
 p11_k4p5 = plot(v.FL_k4p5, plot.numbers=F, ylab=expression(Semivariance ~ (mW/m^2)^2), main="Full Region", xlab = 'Separation Distance (m)', pch = 16, col = kcols[7], xlim = c(0,60000), ylim = c(0,1000), cex=0.5)
 
 p1_k5p0 = plot(v.CT_k5p0, plot.numbers=F, ylab=expression(Semivariance ~ (mW/m^2)^2), main="Chautauqua, NY", xlab = 'Separation Distance (m)', pch = 16, ylim = c(0,50), col = kcols[8], xlim = c(0,60000), cex=0.5)
@@ -3391,11 +3424,11 @@ p4_k5p0 = plot(v.ENYPA_k5p0, plot.numbers=F, ylab=expression(Semivariance ~ (mW/
 p8_k5p0 = plot(v.MT_k5p0, plot.numbers=F, ylab=expression(Semivariance ~ (mW/m^2)^2), main="Western WV", xlab = 'Separation Distance (m)', pch = 16, col = kcols[8], xlim = c(0,60000), ylim = c(0,700), cex=0.5)
 p5_k5p0 = plot(v.NWPANY_k5p0, plot.numbers=F, ylab=expression(Semivariance ~ (mW/m^2)^2), main="Northwestern PA & NY", xlab = 'Separation Distance (m)', pch = 16, col = kcols[8], xlim = c(0,60000), ylim = c(0,500), cex=0.5)
 p6_k5p0 = plot(v.SWPA_k5p0, plot.numbers=F, ylab=expression(Semivariance ~ (mW/m^2)^2), main="Southwestern PA", xlab = 'Separation Distance (m)', pch = 16, col = kcols[8], xlim = c(0,60000), ylim = c(0,850), cex=0.5)
-p6z_k5p0 = plot(v.SWPA_k5p0, plot.numbers=F, ylab=expression(Semivariance ~ (mW/m^2)^2), main="Southwestern PA Zoom", xlab = 'Separation Distance (m)', pch = 16, col = kcols[8], xlim = c(0,60000), ylim = c(0,60), cex=0.5)
+p6z_k5p0 = plot(v.SWPA_k5p0, plot.numbers=F, ylab=expression(Semivariance ~ (mW/m^2)^2), main="Southwestern PA", xlab = 'Separation Distance (m)', pch = 16, col = kcols[8], xlim = c(0,60000), ylim = c(0,60), cex=0.5)
 p10_k5p0 = plot(v.VR_k5p0, plot.numbers=F, ylab=expression(Semivariance ~ (mW/m^2)^2), main="Valley and Ridge", xlab = 'Separation Distance (m)', pch = 16, col = kcols[8], xlim = c(0,60000), ylim = c(0,11000), cex=0.5)
-p10z_k5p0 = plot(v.VR_k5p0, plot.numbers=F, ylab=expression(Semivariance ~ (mW/m^2)^2), main="Valley and Ridge Zoom", xlab = 'Separation Distance (m)', pch = 16, col = kcols[8], xlim = c(0,60000), ylim = c(0,300), cex=0.5)
+p10z_k5p0 = plot(v.VR_k5p0, plot.numbers=F, ylab=expression(Semivariance ~ (mW/m^2)^2), main="Valley and Ridge", xlab = 'Separation Distance (m)', pch = 16, col = kcols[8], xlim = c(0,60000), ylim = c(0,300), cex=0.5)
 p7_k5p0 = plot(v.WPA_k5p0, plot.numbers=F, ylab=expression(Semivariance ~ (mW/m^2)^2), main="Western PA", xlab = 'Separation Distance (m)', pch = 16, col = kcols[8], xlim = c(0,60000), ylim = c(0,700), cex=0.5)
-p7z_k5p0 = plot(v.WPA_k5p0, plot.numbers=F, ylab=expression(Semivariance ~ (mW/m^2)^2), main="Western PA Zoom", xlab = 'Separation Distance (m)', pch = 16, col = kcols[8], xlim = c(0,60000), ylim = c(0,50), cex=0.5)
+p7z_k5p0 = plot(v.WPA_k5p0, plot.numbers=F, ylab=expression(Semivariance ~ (mW/m^2)^2), main="Western PA", xlab = 'Separation Distance (m)', pch = 16, col = kcols[8], xlim = c(0,60000), ylim = c(0,50), cex=0.5)
 p11_k5p0 = plot(v.FL_k5p0, plot.numbers=F, ylab=expression(Semivariance ~ (mW/m^2)^2), main="Full Region", xlab = 'Separation Distance (m)', pch = 16, col = kcols[8], xlim = c(0,60000), ylim = c(0,1000), cex=0.5)
 
 p1p = plot(v.PreCT, plot.numbers=F, ylab=expression(Semivariance ~ (mW/m^2)^2), main="Chautauqua, NY", xlab = 'Separation Distance (m)', pch = 16, ylim = c(0,50), col = 'black', xlim = c(0,60000), cex=0.5)
@@ -3419,10 +3452,13 @@ p8d = plot(v.DeepMT, plot.numbers=F, ylab=expression(Semivariance ~ (mW/m^2)^2),
 p5d = plot(v.DeepNWPANY, plot.numbers=F, ylab=expression(Semivariance ~ (mW/m^2)^2), main="Northwestern PA & NY", xlab = 'Separation Distance (m)', pch = 16, col = 'blue', xlim = c(0,60000), ylim = c(0,500), cex=0.5)
 p6d = plot(v.DeepSWPA, plot.numbers=F, ylab=expression(Semivariance ~ (mW/m^2)^2), main="Southwestern PA", xlab = 'Separation Distance (m)', pch = 16, col = 'blue', xlim = c(0,60000), ylim = c(0,850), cex=0.5)
 p6dz = plot(v.DeepSWPA, plot.numbers=F, ylab=expression(Semivariance ~ (mW/m^2)^2), main="Southwestern PA Zoom", xlab = 'Separation Distance (m)', pch = 16, col = 'blue', xlim = c(0,60000), ylim = c(0,60), cex=0.5)
+p6dzz = plot(v.DeepSWPA, plot.numbers=F, ylab=expression(Semivariance ~ (mW/m^2)^2), main="Southwestern PA", xlab = 'Separation Distance (m)', pch = 16, col = 'blue', xlim = c(0,60000), ylim = c(0,60), cex=0.5)
 p10d = plot(v.DeepVR, plot.numbers=F, ylab=expression(Semivariance ~ (mW/m^2)^2), main="Valley and Ridge", xlab = 'Separation Distance (m)', pch = 16, col = 'blue', xlim = c(0,60000), ylim = c(0,11000), cex=0.5)
 p10dz = plot(v.DeepVR, plot.numbers=F, ylab=expression(Semivariance ~ (mW/m^2)^2), main="Valley and Ridge Zoom", xlab = 'Separation Distance (m)', pch = 16, col = 'blue', xlim = c(0,60000), ylim = c(0,300), cex=0.5)
+p10dzz = plot(v.DeepVR, plot.numbers=F, ylab=expression(Semivariance ~ (mW/m^2)^2), main="Valley and Ridge", xlab = 'Separation Distance (m)', pch = 16, col = 'blue', xlim = c(0,60000), ylim = c(0,300), cex=0.5)
 p7d = plot(v.DeepWPA, plot.numbers=F, ylab=expression(Semivariance ~ (mW/m^2)^2), main="Western PA", xlab = 'Separation Distance (m)', pch = 16, col = 'blue', xlim = c(0,60000), ylim = c(0,700), cex=0.5)
 p7dz = plot(v.DeepWPA, plot.numbers=F, ylab=expression(Semivariance ~ (mW/m^2)^2), main="Western PA Zoom", xlab = 'Separation Distance (m)', pch = 16, col = 'blue', xlim = c(0,60000), ylim = c(0,50), cex=0.5)
+p7dzz = plot(v.DeepWPA, plot.numbers=F, ylab=expression(Semivariance ~ (mW/m^2)^2), main="Western PA", xlab = 'Separation Distance (m)', pch = 16, col = 'blue', xlim = c(0,60000), ylim = c(0,50), cex=0.5)
 p11d = plot(v.DeepFL, plot.numbers=F, ylab=expression(Semivariance ~ (mW/m^2)^2), main="Full Region", xlab = 'Separation Distance (m)', pch = 16, col = 'blue', xlim = c(0,60000), ylim = c(0,1000), cex=0.5)
 
 
@@ -3536,11 +3572,11 @@ plot(p4, split = c(2,2,4,3), more=T)
 plot(p5d, split=c(3,1,4,3), more=T)
 plot(p5, split = c(3,1,4,3), more=T)
 
-plot(p6dz, split=c(3,2,4,3), more=T)
-plot(p6z, split = c(3,2,4,3), more=T)
+plot(p6dzz, split=c(3,2,4,3), more=T)
+plot(p6zz, split = c(3,2,4,3), more=T)
 
-plot(p7dz, split=c(2,1,4,3), more=T)
-plot(p7z, split = c(2,1,4,3), more=T)
+plot(p7dzz, split=c(2,1,4,3), more=T)
+plot(p7zz, split = c(2,1,4,3), more=T)
 
 plot(p8d, split=c(1,3,4,3), more=T)
 plot(p8, split = c(1,3,4,3), more=T)
@@ -3548,8 +3584,8 @@ plot(p8, split = c(1,3,4,3), more=T)
 plot(p9d, split=c(4,2,4,3), more=T)
 plot(p9, split = c(4,2,4,3), more=T)
 
-plot(p10dz, split=c(2,3,4,3), more=T)
-plot(p10z, split = c(2,3,4,3), more=T)
+plot(p10dzz, split=c(2,3,4,3), more=T)
+plot(p10zz, split = c(2,3,4,3), more=T)
 
 dev.off()
 
@@ -3609,7 +3645,7 @@ plot(p5_k4p5, split = c(3,1,4,3), more=T)
 plot(p5_k5p0, split = c(3,1,4,3), more=T)
 plot(p5, split = c(3,1,4,3), more=T)
 
-plot(p6dz, split=c(3,2,4,3), more=T)
+plot(p6dzz, split=c(3,2,4,3), more=T)
 plot(p6z_k1p0, split = c(3,2,4,3), more=T)
 plot(p6z_k1p5, split = c(3,2,4,3), more=T)
 plot(p6z_k2p0, split = c(3,2,4,3), more=T)
@@ -3618,9 +3654,9 @@ plot(p6z_k3p5, split = c(3,2,4,3), more=T)
 plot(p6z_k4p0, split = c(3,2,4,3), more=T)
 plot(p6z_k4p5, split = c(3,2,4,3), more=T)
 plot(p6z_k5p0, split = c(3,2,4,3), more=T)
-plot(p6z, split = c(3,2,4,3), more=T)
+plot(p6zz, split = c(3,2,4,3), more=T)
 
-plot(p7dz, split=c(2,1,4,3), more=T)
+plot(p7dzz, split=c(2,1,4,3), more=T)
 plot(p7z_k1p0, split = c(2,1,4,3), more=T)
 plot(p7z_k1p5, split = c(2,1,4,3), more=T)
 plot(p7z_k2p0, split = c(2,1,4,3), more=T)
@@ -3629,7 +3665,7 @@ plot(p7z_k3p5, split = c(2,1,4,3), more=T)
 plot(p7z_k4p0, split = c(2,1,4,3), more=T)
 plot(p7z_k4p5, split = c(2,1,4,3), more=T)
 plot(p7z_k5p0, split = c(2,1,4,3), more=T)
-plot(p7z, split = c(2,1,4,3), more=T)
+plot(p7zz, split = c(2,1,4,3), more=T)
 
 plot(p8d, split=c(1,3,4,3), more=T)
 plot(p8_k1p0, split = c(1,3,4,3), more=T)
@@ -3653,7 +3689,7 @@ plot(p9_k4p5, split = c(4,2,4,3), more=T)
 plot(p9_k5p0, split = c(4,2,4,3), more=T)
 plot(p9, split = c(4,2,4,3), more=T)
 
-plot(p10dz, split=c(2,3,4,3), more=T)
+plot(p10dzz, split=c(2,3,4,3), more=T)
 plot(p10z_k1p0, split = c(2,3,4,3), more=T)
 plot(p10z_k1p5, split = c(2,3,4,3), more=T)
 plot(p10z_k2p0, split = c(2,3,4,3), more=T)
@@ -3662,7 +3698,7 @@ plot(p10z_k3p5, split = c(2,3,4,3), more=T)
 plot(p10z_k4p0, split = c(2,3,4,3), more=T)
 plot(p10z_k4p5, split = c(2,3,4,3), more=T)
 plot(p10z_k5p0, split = c(2,3,4,3), more=T)
-plot(p10z, split = c(2,3,4,3), more=T)
+plot(p10zz, split = c(2,3,4,3), more=T)
 
 dev.off()
 
@@ -4339,22 +4375,22 @@ lpoints(x = JackDeepNWPANY$AvgDist, y = (JackDeepNWPANY$BinMean + JackDeepNWPANY
 lpoints(x = JackDeepNWPANY$AvgDist, y = (JackDeepNWPANY$BinMean - JackDeepNWPANY$SdEst*2), ylim=p5$y.limits, pch=1, type='o', lty=2, cex=0.7, lwd=1.5, col='blue')
 trellis.unfocus()
 
-plot(p6dz, split=c(3,2,4,3), more=T)
-plot(p6z, split = c(3,2,4,3), more=T)
+plot(p6dzz, split=c(3,2,4,3), more=T)
+plot(p6zz, split = c(3,2,4,3), more=T)
 trellis.focus('panel', 1,1)
-lpoints(x = JackSWPA$AvgDist, y = (JackSWPA$BinMean + JackSWPA$SdEst*2), ylim=p6z$y.limits, pch=1, type='o', lty=2, cex=0.7, lwd=1.5, col='red')
-lpoints(x = JackSWPA$AvgDist, y = (JackSWPA$BinMean - JackSWPA$SdEst*2), ylim=p6z$y.limits, pch=1, type='o', lty=2, cex=0.7, lwd=1.5, col='red')
-lpoints(x = JackDeepSWPA$AvgDist, y = (JackDeepSWPA$BinMean + JackDeepSWPA$SdEst*2), ylim=p6z$y.limits, pch=1, type='o', lty=2, cex=0.7, lwd=1.5, col='blue')
-lpoints(x = JackDeepSWPA$AvgDist, y = (JackDeepSWPA$BinMean - JackDeepSWPA$SdEst*2), ylim=p6z$y.limits, pch=1, type='o', lty=2, cex=0.7, lwd=1.5, col='blue')
+lpoints(x = JackSWPA$AvgDist, y = (JackSWPA$BinMean + JackSWPA$SdEst*2), ylim=p6zz$y.limits, pch=1, type='o', lty=2, cex=0.7, lwd=1.5, col='red')
+lpoints(x = JackSWPA$AvgDist, y = (JackSWPA$BinMean - JackSWPA$SdEst*2), ylim=p6zz$y.limits, pch=1, type='o', lty=2, cex=0.7, lwd=1.5, col='red')
+lpoints(x = JackDeepSWPA$AvgDist, y = (JackDeepSWPA$BinMean + JackDeepSWPA$SdEst*2), ylim=p6zz$y.limits, pch=1, type='o', lty=2, cex=0.7, lwd=1.5, col='blue')
+lpoints(x = JackDeepSWPA$AvgDist, y = (JackDeepSWPA$BinMean - JackDeepSWPA$SdEst*2), ylim=p6zz$y.limits, pch=1, type='o', lty=2, cex=0.7, lwd=1.5, col='blue')
 trellis.unfocus()
 
-plot(p7dz, split=c(2,1,4,3), more=T)
-plot(p7z, split = c(2,1,4,3), more=T)
+plot(p7dzz, split=c(2,1,4,3), more=T)
+plot(p7zz, split = c(2,1,4,3), more=T)
 trellis.focus('panel', 1,1)
-lpoints(x = JackWPA$AvgDist, y = (JackWPA$BinMean + JackWPA$SdEst*2), ylim=p7z$y.limits, pch=1, type='o', lty=2, cex=0.7, lwd=1.5, col='red')
-lpoints(x = JackWPA$AvgDist, y = (JackWPA$BinMean - JackWPA$SdEst*2), ylim=p7z$y.limits, pch=1, type='o', lty=2, cex=0.7, lwd=1.5, col='red')
-lpoints(x = JackDeepWPA$AvgDist, y = (JackDeepWPA$BinMean + JackDeepWPA$SdEst*2), ylim=p7z$y.limits, pch=1, type='o', lty=2, cex=0.7, lwd=1.5, col='blue')
-lpoints(x = JackDeepWPA$AvgDist, y = (JackDeepWPA$BinMean - JackDeepWPA$SdEst*2), ylim=p7z$y.limits, pch=1, type='o', lty=2, cex=0.7, lwd=1.5, col='blue')
+lpoints(x = JackWPA$AvgDist, y = (JackWPA$BinMean + JackWPA$SdEst*2), ylim=p7zz$y.limits, pch=1, type='o', lty=2, cex=0.7, lwd=1.5, col='red')
+lpoints(x = JackWPA$AvgDist, y = (JackWPA$BinMean - JackWPA$SdEst*2), ylim=p7zz$y.limits, pch=1, type='o', lty=2, cex=0.7, lwd=1.5, col='red')
+lpoints(x = JackDeepWPA$AvgDist, y = (JackDeepWPA$BinMean + JackDeepWPA$SdEst*2), ylim=p7zz$y.limits, pch=1, type='o', lty=2, cex=0.7, lwd=1.5, col='blue')
+lpoints(x = JackDeepWPA$AvgDist, y = (JackDeepWPA$BinMean - JackDeepWPA$SdEst*2), ylim=p7zz$y.limits, pch=1, type='o', lty=2, cex=0.7, lwd=1.5, col='blue')
 trellis.unfocus()
 
 plot(p8d, split=c(1,3,4,3), more=T)
@@ -4375,13 +4411,13 @@ lpoints(x = JackDeepCWV$AvgDist, y = (JackDeepCWV$BinMean + JackDeepCWV$SdEst*2)
 lpoints(x = JackDeepCWV$AvgDist, y = (JackDeepCWV$BinMean - JackDeepCWV$SdEst*2), ylim=p9$y.limits, pch=1, type='o', lty=2, cex=0.7, lwd=1.5, col='blue')
 trellis.unfocus()
 
-plot(p10dz, split=c(2,3,4,3), more=T)
-plot(p10z, split = c(2,3,4,3), more=T)
+plot(p10dzz, split=c(2,3,4,3), more=T)
+plot(p10zz, split = c(2,3,4,3), more=T)
 trellis.focus('panel', 1,1)
-lpoints(x = JackVR$AvgDist, y = (JackVR$BinMean + JackVR$SdEst*2), ylim=p10z$y.limits, pch=1, type='o', lty=2, cex=0.7, lwd=1.5, col='red')
-lpoints(x = JackVR$AvgDist, y = (JackVR$BinMean - JackVR$SdEst*2), ylim=p10z$y.limits, pch=1, type='o', lty=2, cex=0.7, lwd=1.5, col='red')
-lpoints(x = JackDeepVR$AvgDist, y = (JackDeepVR$BinMean + JackDeepVR$SdEst*2), ylim=p10z$y.limits, pch=1, type='o', lty=2, cex=0.7, lwd=1.5, col='blue')
-lpoints(x = JackDeepVR$AvgDist, y = (JackDeepVR$BinMean - JackDeepVR$SdEst*2), ylim=p10z$y.limits, pch=1, type='o', lty=2, cex=0.7, lwd=1.5, col='blue')
+lpoints(x = JackVR$AvgDist, y = (JackVR$BinMean + JackVR$SdEst*2), ylim=p10zz$y.limits, pch=1, type='o', lty=2, cex=0.7, lwd=1.5, col='red')
+lpoints(x = JackVR$AvgDist, y = (JackVR$BinMean - JackVR$SdEst*2), ylim=p10zz$y.limits, pch=1, type='o', lty=2, cex=0.7, lwd=1.5, col='red')
+lpoints(x = JackDeepVR$AvgDist, y = (JackDeepVR$BinMean + JackDeepVR$SdEst*2), ylim=p10zz$y.limits, pch=1, type='o', lty=2, cex=0.7, lwd=1.5, col='blue')
+lpoints(x = JackDeepVR$AvgDist, y = (JackDeepVR$BinMean - JackDeepVR$SdEst*2), ylim=p10zz$y.limits, pch=1, type='o', lty=2, cex=0.7, lwd=1.5, col='blue')
 trellis.unfocus()
 
 dev.off()
@@ -4534,16 +4570,227 @@ for (i in 1:nrow(MT)){
 MT$Waco[MT$StateID == 'WV1336'] = 1
 rm(i)
 
-CWV@data$Operator = ''
-CWV@data$Waco = 0
-for (i in 1:nrow(CWV)){
-  CWV@data$Operator[i] = Operator$Operator[Operator$StateID == CWV@data$StateID[i]]
-  if (length(which(CWV$StateID[i] %in% Wacos$StateID)) > 0){
-    CWV@data$Waco[i] = 1
+DeepMT@data$Operator = ''
+DeepMT@data$Waco = 0
+for (i in 1:nrow(DeepMT)){
+  DeepMT@data$Operator[i] = Operator$Operator[Operator$StateID == DeepMT@data$StateID[i]]
+  if (length(which(DeepMT$StateID[i] %in% Wacos$StateID)) > 0){
+    DeepMT@data$Waco[i] = 1
+  }
+}
+DeepMT$Waco[DeepMT$StateID == 'WV1336'] = 1
+rm(i)
+
+DeepCWV@data$Operator = ''
+DeepCWV@data$Waco = 0
+for (i in 1:nrow(DeepCWV)){
+  DeepCWV@data$Operator[i] = Operator$Operator[Operator$StateID == DeepCWV@data$StateID[i]]
+  if (length(which(DeepCWV$StateID[i] %in% Wacos$StateID)) > 0){
+    DeepCWV@data$Waco[i] = 1
   }
 }
 rm(i)
 
+DeepSWPA@data$Operator = ''
+DeepSWPA@data$Waco = 0
+for (i in 1:nrow(DeepSWPA)){
+  DeepSWPA@data$Operator[i] = Operator$Operator[Operator$StateID == DeepSWPA@data$StateID[i]]
+}
+rm(i)
+
+DeepWPA@data$Operator = ''
+for (i in 1:nrow(DeepWPA)){
+  DeepWPA@data$Operator[i] = Operator$Operator[Operator$StateID == DeepWPA@data$StateID[i]]
+}
+rm(i)
+
+DeepCT@data$Operator = ''
+for (i in 1:nrow(DeepCT)){
+  DeepCT@data$Operator[i] = Operator$Operator[Operator$StateID == DeepCT@data$StateID[i]]
+}
+rm(i)
+
+DeepENYPA@data$Operator = ''
+for (i in 1:nrow(DeepENYPA)){
+  DeepENYPA@data$Operator[i] = Operator$Operator[Operator$StateID == DeepENYPA@data$StateID[i]]
+}
+rm(i)
+
+#Make ESDAs for operators in MT region
+BadOperatorDiagnostics = function(MT, #Spatial dataframe containing a column named "Operator" 
+                                  MT_WGS, #Spatial dataframe in WGS coordinates to make map
+                                  v.MT, #variogram for MT dataset using all data
+                                  Vcut, #variogram cutoff in m
+                                  Vbins, #Number of variogram bins
+                                  o,  #index for the operator to be left out
+                                  LowLim = 2, #Lower limit for number of wells drilled by an operator. Need at least LowLim wells to make a plot for the operator.
+                                  HistSep = 10, #x-axis bar separartion on histogram
+                                  Histylim = 300, #y-axis upper limit on histogram
+                                  RegName #Region name for figure
+                                  ){
+  #Unique operators
+  UniOps = unique(MT$Operator)
+  
+  #Only plot the operator if they have more than LowLim well. It doesn't make sense otherwise.
+  if(nrow(MT[MT$Operator == UniOps[o],]) >= LowLim){
+    png(paste0(RegName, '_OperatorESDA_', o, '.png'), res = 300, height = 8, width = 8, units = 'in')
+    layout(rbind(c(1,3), c(2,3)))
+    #Histogram showing difference between current operator (red) and all data (black)
+    hist(MT$Qs, col = 'black', main = UniOps[o], xlab = 'Heat Flow (mW/m^2)', ylab = 'Frequency', ylim = c(0,Histylim), xlim = c(0,round(max(MT$Qs + HistSep/2),-1)), breaks = seq(round(min(MT$Qs - HistSep/2),-1),round(max(MT$Qs + HistSep/2),-1),HistSep))
+    par(new=TRUE)
+    hist(MT$Qs[-which(MT$Operator == UniOps[o])], border = 'red', axes = FALSE, xlab = '', main = '', ylab = '', ylim = c(0,Histylim), xlim = c(0,round(max(MT$Qs + HistSep/2),-1)), breaks = seq(round(min(MT$Qs - HistSep/2),-1),round(max(MT$Qs + HistSep/2),-1),HistSep))
+    legend('topright', legend = c('All data', 'Operator Removed'), col = c('black', 'red'), pch = 15)
+    
+    #Variogram of region with and without operator
+    v.o = variogram(Qs~1, MT[-which(MT$Operator == UniOps[o]),], cutoff=Vcut, width = Vcut/Vbins)
+    plot(v.MT$dist, v.MT$gamma, ylim = c(0,round(max(v.MT$gamma),-1)), xlim = c(0,Vcut), xlab = 'Separation Distance', ylab = 'Semivariance (mW/m^2)^2')
+    par(new=TRUE)
+    plot(v.o$dist, v.o$gamma, ylim = c(0,round(max(v.MT$gamma),-1)), xlim = c(0,Vcut), xlab = '', ylab = '', col = 'red')
+    legend('bottomright', legend = c('All data', 'Operator Removed'), col = c('black', 'red'), pch = 1)
+    
+    #Map
+    plot(MT_WGS, pch = 16, cex = 0.4, col ='white')
+    plot(Counties[which(Counties$STATEFP == 42 | Counties$STATEFP == 36 | Counties$STATEFP == 54 | Counties$STATEFP == 51| Counties$STATEFP == 24| Counties$STATEFP == 21),], add=TRUE, border = 'grey')
+    plot(NY, lwd = 2, add=TRUE)
+    plot(PA, lwd = 2, add=TRUE)
+    plot(WV, lwd = 2, add=TRUE)
+    plot(MD, lwd = 2, add=TRUE)
+    plot(KY, lwd = 2, add=TRUE)
+    plot(VA, lwd = 2, add=TRUE)
+    north.arrow(-83.5, 37.8, 0.05, lab = 'N', cex.lab = 1.5, col='black', cex = 0.7)
+    degAxis(side = 2, seq(34, 46, 1), cex.axis = 1.5)
+    degAxis(side = 2, seq(34, 46, 1), labels = FALSE)
+    degAxis(side = 4, seq(34, 46, 1), labels = FALSE)
+    degAxis(side = 1, seq(-70, -86, -1), cex.axis = 1.5)
+    degAxis(side = 3, seq(-70, -86, -1), labels = FALSE)
+    degAxis(side = 1, seq(-70, -86, -1), labels = FALSE)
+    plot(MT_WGS, pch = 16, cex = 0.4, add = T)
+    plot(MT_WGS[which(MT$Operator == UniOps[o]),], pch = 16, cex = 0.4, add = T, col = 'red')
+    legend('topleft', legend = c(paste("Operator's Wells: N wells =", nrow(MT[which(MT$Operator == UniOps[o]),])), 'Other Wells'), col = c('red', 'black'), pch = 16, cex = 1.3)
+    
+    dev.off()
+  }
+}
+
+MT_WGS = spTransform(MT, CRS('+init=epsg:4326'))
+cl = makeCluster(detectCores() - 1)
+registerDoParallel(cl)
+temp = foreach(o = 1:length(unique(MT$Operator)), .packages = c('gstat', 'GISTools', 'sp')) %dopar% {
+  BadOperatorDiagnostics(MT = MT, o = o, LowLim = 2, MT_WGS = MT_WGS, v.MT = v.MT, Vcut = 60000, Vbins = 50, HistSep = 10, Histylim = 300, RegName = "MT")
+  a = o
+}
+stopCluster(cl)
+
+DeepMT_WGS = spTransform(DeepMT, CRS('+init=epsg:4326'))
+cl = makeCluster(detectCores() - 1)
+registerDoParallel(cl)
+temp = foreach(o = 1:length(unique(DeepMT$Operator)), .packages = c('gstat', 'GISTools', 'sp')) %dopar% {
+  BadOperatorDiagnostics(MT = DeepMT, o = o, LowLim = 2, MT_WGS = DeepMT_WGS, v.MT = v.DeepMT, Vcut = 60000, Vbins = 50, HistSep = 10, Histylim = 500, RegName = "DeepMT")
+  a = o
+}
+stopCluster(cl)
+
+#Waco is a clear bad operator because they logged wells upwards. Equitable Production Company had wells logged by Waco. Remove both.
+DeepMT_NoWaco = DeepMT[-which(DeepMT$Operator == 'Waco Oil & Gas Co., Inc.'),]
+DeepMT_NoWaco = DeepMT_NoWaco[-which(DeepMT_NoWaco$Operator == 'Equitable Production Company'),]
+DeepMT_WGS = spTransform(DeepMT_NoWaco, CRS('+init=epsg:4326'))
+v.DeepMT_NoWaco = variogram(Qs ~ 1, DeepMT_NoWaco, cutoff = 60000, width = 60000/50)
+
+cl = makeCluster(detectCores() - 1)
+registerDoParallel(cl)
+temp = foreach(o = 1:length(unique(DeepMT_NoWaco$Operator)), .packages = c('gstat', 'GISTools', 'sp')) %dopar% {
+  BadOperatorDiagnostics(MT = DeepMT_NoWaco, o = o, LowLim = 2, MT_WGS = DeepMT_WGS, v.MT = v.DeepMT_NoWaco, Vcut = 60000, Vbins = 50, HistSep = 10, Histylim = 300, RegName = "DeepMT_NoWaco")
+  a = o
+}
+stopCluster(cl)
+
+
+#CWV
+#Remove the 2 high points that were checked for being incorrect
+DeepCWV_DelHigh = DeepCWV[DeepCWV$Qs < 160,]
+#Remove Waco and Equitable Production Company
+DeepCWV_NoWaco = DeepCWV_DelHigh[-which(DeepCWV_DelHigh$Operator == "Waco Oil & Gas Co., Inc."),]
+v.DeepCWV_NoWaco = variogram(Qs~1, DeepCWV_NoWaco, cutoff = 60000, width = 60000/50)
+DeepCWV_WGS = spTransform(DeepCWV_NoWaco, CRS('+init=epsg:4326'))
+cl = makeCluster(detectCores() - 1)
+registerDoParallel(cl)
+temp = foreach(o = 1:length(unique(DeepCWV$Operator)), .packages = c('gstat', 'GISTools', 'sp')) %dopar% {
+  BadOperatorDiagnostics(MT = DeepCWV_NoWaco, o = o, LowLim = 2, MT_WGS = DeepCWV_WGS, v.MT = v.DeepCWV_NoWaco, Vcut = 60000, Vbins = 50, HistSep = 10, Histylim = 1300, RegName = "DeepCWV_NoWaco")
+  a = o
+}
+stopCluster(cl)
+
+DeepSWPA_WGS = spTransform(DeepSWPA, CRS('+init=epsg:4326'))
+cl = makeCluster(detectCores() - 1)
+registerDoParallel(cl)
+temp = foreach(o = 1:length(unique(DeepSWPA$Operator)), .packages = c('gstat', 'GISTools', 'sp')) %dopar% {
+  BadOperatorDiagnostics(MT = DeepSWPA, o = o, LowLim = 2, MT_WGS = DeepSWPA_WGS, v.MT = v.DeepSWPA, Vcut = 60000, Vbins = 50, HistSep = 10, Histylim = 1300, RegName = "DeepSWPA")
+  a = o
+}
+stopCluster(cl)
+
+#Seems like there are problem operators in WV for SWPA. Try to discover them.
+DeepSWPA_WGS = spTransform(DeepSWPA[DeepSWPA$State == 'WV',], CRS('+init=epsg:4326'))
+v.DeepSWPA_WV = variogram(Qs~1, DeepSWPA[DeepSWPA$State == 'WV',], cutoff = 60000, width = 60000/50)
+cl = makeCluster(detectCores() - 1)
+registerDoParallel(cl)
+temp = foreach(o = 1:length(unique(DeepSWPA$Operator[DeepSWPA$State == 'WV'])), .packages = c('gstat', 'GISTools', 'sp')) %dopar% {
+  BadOperatorDiagnostics(MT = DeepSWPA[DeepSWPA$State == 'WV',], o = o, LowLim = 2, MT_WGS = DeepSWPA_WGS, v.MT = v.DeepSWPA_WV, Vcut = 60000, Vbins = 50, HistSep = 10, Histylim = 1300, RegName = "DeepSWPA_WV")
+  a = o
+}
+stopCluster(cl)
+
+#Identified Petroleum Development Corp. as an operator that had some logs misinterpreted in AASG. Their logs are fine. EMAX wells logged up in this geologic region - remove.
+DeepSWPA_NoPDC = DeepSWPA[-which(DeepSWPA$Operator == 'Petroleum Development Corp.' | DeepSWPA$Operator == 'EMAX, Inc.'),]
+DeepSWPA_WGS = spTransform(DeepSWPA_NoPDC, CRS('+init=epsg:4326'))
+v.DeepSWPA_WV_NoPDC = variogram(Qs~1, DeepSWPA_NoPDC, cutoff = 60000, width = 60000/50)
+cl = makeCluster(detectCores() - 1)
+registerDoParallel(cl)
+temp = foreach(o = 1:length(unique(DeepSWPA_NoPDC$Operator)), .packages = c('gstat', 'GISTools', 'sp')) %dopar% {
+  BadOperatorDiagnostics(MT = DeepSWPA_NoPDC, o = o, LowLim = 2, MT_WGS = DeepSWPA_WGS, v.MT = v.DeepSWPA_WV_NoPDC, Vcut = 60000, Vbins = 50, HistSep = 10, Histylim = 2000, RegName = "DeepSWPA_WV_NoPDC")
+  a = o
+}
+stopCluster(cl)
+
+#Recheck WV
+#Still problem operators in WV for SWPA. Try to discover them. CNG Producing Co. and CNG Development Co. have temperature scales on their logs begining at low values for the depths they operate. 
+DeepSWPA_WGS = spTransform(DeepSWPA_NoPDC[DeepSWPA_NoPDC$State == 'WV',], CRS('+init=epsg:4326'))
+v.DeepSWPA_NoPDC_WV = variogram(Qs~1, DeepSWPA_NoPDC[DeepSWPA_NoPDC$State == 'WV',], cutoff = 60000, width = 60000/50)
+cl = makeCluster(detectCores() - 1)
+registerDoParallel(cl)
+temp = foreach(o = 1:length(unique(DeepSWPA_NoPDC$Operator[DeepSWPA_NoPDC$State == 'WV'])), .packages = c('gstat', 'GISTools', 'sp')) %dopar% {
+  BadOperatorDiagnostics(MT = DeepSWPA_NoPDC[DeepSWPA_NoPDC$State == 'WV',], o = o, LowLim = 2, MT_WGS = DeepSWPA_WGS, v.MT = v.DeepSWPA_NoPDC_WV, Vcut = 60000, Vbins = 50, HistSep = 10, Histylim = 300, RegName = "DeepSWPA_WV_NoPDC")
+  a = o
+}
+stopCluster(cl)
+
+
+DeepWPA_WGS = spTransform(DeepWPA, CRS('+init=epsg:4326'))
+cl = makeCluster(detectCores() - 1)
+registerDoParallel(cl)
+temp = foreach(o = 1:length(unique(DeepWPA$Operator)), .packages = c('gstat', 'GISTools', 'sp')) %dopar% {
+  BadOperatorDiagnostics(MT = DeepWPA, o = o, LowLim = 2, MT_WGS = DeepWPA_WGS, v.MT = v.DeepWPA, Vcut = 60000, Vbins = 50, HistSep = 5, Histylim = 800, RegName = "DeepWPA")
+  a = o
+}
+stopCluster(cl)
+
+DeepCT_WGS = spTransform(DeepCT, CRS('+init=epsg:4326'))
+cl = makeCluster(detectCores() - 1)
+registerDoParallel(cl)
+temp = foreach(o = 1:length(unique(DeepCT$Operator)), .packages = c('gstat', 'GISTools', 'sp')) %dopar% {
+  BadOperatorDiagnostics(MT = DeepCT, o = o, LowLim = 2, MT_WGS = DeepCT_WGS, v.MT = v.DeepCT, Vcut = 60000, Vbins = 50, HistSep = 10, Histylim = 800, RegName = "DeepCT")
+  a = o
+}
+stopCluster(cl)
+
+DeepENYPA_WGS = spTransform(DeepENYPA, CRS('+init=epsg:4326'))
+cl = makeCluster(detectCores() - 1)
+registerDoParallel(cl)
+temp = foreach(o = 1:length(unique(DeepENYPA$Operator)), .packages = c('gstat', 'GISTools', 'sp')) %dopar% {
+  BadOperatorDiagnostics(MT = DeepENYPA, o = o, LowLim = 2, MT_WGS = DeepENYPA_WGS, v.MT = v.DeepENYPA, Vcut = 60000, Vbins = 40, HistSep = 10, Histylim = 200, RegName = "DeepENYPA")
+  a = o
+}
+stopCluster(cl)
 
 #Map - the region with these wells still has data.
 plot(MT, pch = 16, cex = 0.1)
