@@ -1,5 +1,5 @@
 # Description----
-#Code for Smith et al. paper on Exploratory Spatial Data Analysis Framework for Geothermal Resource Assessments: An Appalachian Basin Case Study
+#Code for Smith et al. paper on Exploratory Spatial Data Analysis for Geothermal Resource Assessments: An Appalachian Basin Case Study
 
 #Outline of Script:
 # Load libraries and data
@@ -24,28 +24,39 @@ library(doParallel) #parallel package
 library(lattice) #for plotting variograms
 
 # Loading Code from Repositories ----
+#From this Github repository
 setwd("C:\\Users\\jsmif\\Documents\\Cornell\\Research\\Publications\\ESDA\\ESDACode\\Geothermal_ESDA")
 source('LocalDeviation.R')
 source('ColorFunctions.R')
+#From Geothermal_DataAnalysis_CrossSections Github repository
 setwd('C:\\Users\\jsmif\\Documents\\Cornell\\Research\\Publications\\DOE Grant\\ThermalConductivity\\Geothermal_DataAnalysis_CrossSections\\Geothermal_DataAnalysis_CrossSections')
 source("DealingWithDataInDuplicateLocations.R")
+#From geothermal_pfa Github repository
 setwd('C:\\Users\\jsmif\\Documents\\Cornell\\Research\\Publications\\DOE Grant\\CombiningRiskFactorCode\\geothermal_pfa\\outliers')
 source('outlier_identification.R')
+
 # Loading Data and Map Layers ----
-#Wells with surface heat flow and temperatures at depth calculated
-setwd("C:/Users/jsmif/Documents/Cornell/Research/Masters - Spatial Assessment/Figures")
-#Wells = read.csv('EDAWells_AllTempsThicksConds_BaseCorr.csv', stringsAsFactors=FALSE)
+#  Wells with surface heat flow and temperatures at depth calculated----
+setwd("C:\\Users\\jsmif\\Documents\\Cornell\\Research\\Publications\\ESDA\\ESDACode\\ESDA_Results")
 Wells = read.csv('EDAWells_AllTempsThicksConds_BaseCorr_2018.csv', stringsAsFactors=FALSE)
 coordinates(Wells) = c('LongDgr', 'LatDegr')
+#WGS84 coordinates
 proj4string(Wells) = CRS("+init=epsg:4326")
 
-#Operator data from original spreadsheet
+#  Add operator data to the well database from the original AASG spreadsheet----
 Operator = read.csv('Operators.csv', stringsAsFactors = FALSE)
-#Waco operator APIs
-Wacos = read.csv('WacoOperator.csv', stringsAsFactors = FALSE)
-#WV APIs to match the Waco data
-APIWV = read.csv('WV_APIs.csv', stringsAsFactors = FALSE)
+Wells$Operator = ''
+for (i in 1:nrow(Wells)){
+  Wells$Operator[i] = Operator$Operator[which(Operator$StateID == Wells$StateID[i])]
+}
+rm(i)
 
+#Waco Oil and Gas operator APIs 
+# these were identified as "bad" data because many logs were taken upwards, but interpreted as taken downward, 
+# providing erroneously high temperatures in WV.
+Wacos = read.csv('WacoOperatorAPIs.csv', stringsAsFactors = FALSE)
+#WV APIs to match the Waco data
+APIWV = read.csv('WV_APIs_StateIDs.csv', stringsAsFactors = FALSE)
 #Get the state ID for each API and place in Waco
 Wacos$StateID = ''
 APIWV$APInum = as.numeric(strsplit(APIWV$API, split = '0000a', fixed = TRUE))
@@ -54,10 +65,22 @@ for (i in 1:nrow(Wacos)){
     Wacos$StateID[i] = APIWV$StateID[APIWV$APInum == Wacos$API[i]]
   }
 }
+rm(i)
 
-#Horizontal and deviated wells for NY, PA, WV
-#NY - This database has some wells that are deviated by very little. May not be worth excluding these wells
+#  Horizontal and deviated wells for NY, PA, WV----
 setwd("C:\\Users\\jsmif\\Documents\\Cornell\\Research\\Publications\\ESDA\\DirectionalWellInvestigations")
+
+#Add directional well data from AASG database
+AASG_DeviatedWells = read.csv('DirectionalWells_AASG.csv', stringsAsFactors = FALSE)
+Wells$WellShape = ''
+for (i in 1:nrow(Wells)){
+  if(length(which(AASG_DeviatedWells$StateID == Wells$StateID[i])) > 0){
+    Wells$WellShape[i] = AASG_DeviatedWells$WellBoreShape[which(AASG_DeviatedWells$StateID == Wells$StateID[i])]
+  }
+}
+rm(i)
+
+#NY - This database has some wells that are deviated by very little. May not be worth excluding these wells.
 NY_DirWells = read.csv('DirectionalWellsNY.csv', stringsAsFactors = FALSE)
 APINY = read.csv('NY_APIs.csv', stringsAsFactors = FALSE)
 NY_DirWells$StateID = ''
@@ -77,16 +100,17 @@ for (i in 1:nrow(NY_DirWells)){
     }
   }
 }
-rm(i)
+rm(i,j)
 
-#Only the wells that match with StateID number are in the BHT dataset.
-NY_DirWells[which(NY_DirWells$StateID != ''),]
-
+#Only the wells that match with StateID number are in the AASG BHT dataset.
 plot(Wells, pch = 16, cex = 0.3)
 plot(Wells[Wells$StateID %in% NY_DirWells$StateID[NY_DirWells$StateID != ''],], pch = 16, cex = 0.3, col = 'red', add = T)
 
+#Add a column for state database deviated wells
+Wells$StateWellShape = ''
+Wells@data[Wells$StateID %in% NY_DirWells$StateID[NY_DirWells$StateID != ''],]$StateWellShape = 'H'
+
 #PA
-setwd("C:\\Users\\jsmif\\Documents\\Cornell\\Research\\Publications\\ESDA\\DirectionalWellInvestigations")
 PA_CDRs = read.csv('CDR_PALogsWithDirectionalLogs.csv', stringsAsFactors = FALSE)
 PA_DirWells = read.csv('DirectionalWellsPA.csv', stringsAsFactors = FALSE)
 APIPA = read.csv('PA_APIs.csv', stringsAsFactors = FALSE)
@@ -98,6 +122,7 @@ for (i in 1:nrow(PA_CDRs)){
     PA_CDRs$StateID[i] = APIPA$StateID[APIPA$API == PA_CDRs$API[i]]
   }
 }
+rm(i)
 for (i in 1:nrow(PA_DirWells)){
   if (length(which(APIPA$API == PA_DirWells$API[i])) > 0){
     PA_DirWells$StateID[i] = APIPA$StateID[APIPA$API == PA_DirWells$API[i]]
@@ -106,16 +131,17 @@ for (i in 1:nrow(PA_DirWells)){
 rm(i)
 
 #Only the wells that match with StateID number are in the BHT dataset.
-PA_CDRs[which(PA_CDRs$StateID != ''),]
-PA_DirWells[which(PA_DirWells$StateID != ''),]
 coordinates(PA_DirWells) = c('Longitude..Dec.', 'Latitude..Dec.')
 proj4string(PA_DirWells) = CRS = '+init=epsg:4326'
 PA_DirWells = spTransform(PA_DirWells, CRS = '+init=epsg:26917')
 
 plot(Wells, pch = 16, cex = 0.3)
-#plot(PA_DirWells, pch = 16, cex = 0.3, col = 'blue', add = T)
-plot(PA_DirWells[PA_DirWells$StateID != '',], pch = 16, cex = 0.3, col = 'red', add = T)
+plot(Wells[Wells$StateID %in% PA_DirWells$StateID[PA_DirWells$StateID != ''],], pch = 16, cex = 0.3, col = 'red', add = T)
 plot(Wells[Wells$StateID %in% PA_CDRs$StateID[PA_CDRs$StateID != ''],], pch = 16, cex = 0.3, col = 'red', add = T)
+
+#Add to column for state database deviated wells
+Wells@data[Wells$StateID %in% PA_DirWells$StateID[PA_DirWells$StateID != ''],]$StateWellShape = 'H'
+Wells@data[Wells$StateID %in% PA_CDRs$StateID[PA_CDRs$StateID != ''],]$StateWellShape = 'H'
 
 #WV
 setwd("C:\\Users\\jsmif\\Documents\\Cornell\\Research\\Publications\\CornellGeothermalProject\\WVUGrant\\LASdata&WellData\\LAS Files")
@@ -145,18 +171,30 @@ for (i in 1:nrow(WV_SurvsDirWells)){
 rm(i)
 
 #Only the wells that match with StateID number are in the BHT dataset.
-WV_CompDirWells[which(WV_CompDirWells$StateID != ''),]
-WV_PermDirWells[which(WV_PermDirWells$StateID != ''),]
-WV_SurvsDirWells[which(WV_SurvsDirWells$StateID != ''),]
-
-#WV_CompDirWells Contain all the direction wells. All checked. Only a couple may be rogue entries.
+#WV_CompDirWells Contain all the unique directional wells for the 3 datasets. 
+# All directional wells in BHT dataset were checked (16 total). Only a couple may be rogue entries.
 #Check how far deviated at minimum these wells are
 WV_CompDirWells$MinDev = sqrt((WV_CompDirWells$Surface.Loc.UTME - WV_CompDirWells$Btm.Hole.Loc.UTME)^2 + (WV_CompDirWells$Surface.Loc.UTMN - WV_CompDirWells$Btm.Hole.Loc.UTMN)^2)
 
 plot(Wells, pch = 16, cex = 0.3)
 plot(Wells[Wells$StateID %in% WV_CompDirWells$StateID[WV_CompDirWells$StateID != ''],], pch = 16, cex = 0.3, col = 'red', add = T)
 
-#Spicer equilibrium well temperature profiles
+#Add to column for state database deviated wells
+Wells@data[Wells$StateID %in% WV_CompDirWells$StateID[WV_CompDirWells$StateID != ''],]$StateWellShape = 'H'
+
+#Make a plot of the horizontal wells
+png('DeviatedWells.png', res = 300, height = 6, width = 6, units = 'in')
+plot(Wells, pch = 16, cex = 0.2)
+plot(Wells[grep(Wells$WellShape, pattern = 'ert'),], col = 'black', pch = 16, cex = 0.2, add = T)
+plot(Wells[Wells$WellShape == '',], col = 'yellow', pch = 16, cex = 0.2, add = T)
+plot(Wells[Wells$StateWellShape == 'H',], col = 'red', pch = 16, cex = 0.2, add = T)
+plot(Wells[grep(Wells$WellShape, pattern = 'zon'),], col = 'green', pch = 16, cex = 0.2, add = T)
+plot(Wells[grep(Wells$WellShape, pattern = 'via'),], col = 'green', pch = 16, cex = 0.2, add = T)
+plot(Wells[grep(Wells$WellShape, pattern = 'Up'),], col = 'green', pch = 16, cex = 0.2, add = T)
+plot(Wells[(Wells$DpthOfM - Wells$TruVrtc > 20) & Wells$TruVrtc > 0, ], col = 'blue', pch = 16, cex = 0.2, add = T)
+dev.off()
+
+#  Spicer equilibrium well temperature profiles----
 setwd('C:\\Users\\jsmif\\Documents\\Cornell\\Research\\Publications\\ESDA')
 Spicer = read_xlsx(path = paste0(getwd(), '/EquilibriumTempProfiles.xlsx'), sheet = 'Spicers')
 coordinates(Spicer) = c("Long", "Lat")
@@ -170,6 +208,68 @@ proj4string(Whealton) = CRS("+init=epsg:4326")
 #Whealton MS thesis identified BHTs
 setwd('C:\\Users\\jsmif\\Documents\\Cornell\\Research\\Publications\\ESDA')
 WhealtonBHTs = read.csv('WhealtonBHTsNYPA.csv', stringsAsFactors = FALSE)
+WhealtonBHTs = WhealtonBHTs[is.na(WhealtonBHTs$BHT) == FALSE,]
+WhealtonBHTs = WhealtonBHTs[is.na(WhealtonBHTs$LATITUDE) == FALSE,]
+WhealtonBHTs = WhealtonBHTs[is.na(WhealtonBHTs$LONGITUDE) == FALSE,]
+
+WhealtonBHTs$StateID = ''
+for (i in 1:nrow(WhealtonBHTs)){
+  if (length(which(APINY$API == WhealtonBHTs$API[i])) > 0){
+    if(length(APINY$StateID[APINY$API == WhealtonBHTs$API[i]]) > 1){
+      for (j in 1:length(APINY$StateID[APINY$API == WhealtonBHTs$API[i]])){
+        if (j == 1){
+          WhealtonBHTs$StateID[i] = APINY$StateID[APINY$API == WhealtonBHTs$API[i]][j]
+        }else{
+          WhealtonBHTs = rbind(WhealtonBHTs, WhealtonBHTs[i,])
+          WhealtonBHTs$StateID[nrow(WhealtonBHTs)] = APINY$StateID[APINY$API == WhealtonBHTs$API[i]][j]
+        }
+      }
+    }else{
+      WhealtonBHTs$StateID[i] = APINY$StateID[APINY$API == WhealtonBHTs$API[i]]
+    }
+  }
+}
+rm(i,j)
+for (i in 1:nrow(WhealtonBHTs)){
+  if (length(which(APIPA$API == WhealtonBHTs$API[i])) > 0){
+    if(length(APIPA$StateID[APIPA$API == WhealtonBHTs$API[i]]) > 1){
+      for (j in 1:length(APIPA$StateID[APIPA$API == WhealtonBHTs$API[i]])){
+        if (j == 1){
+          WhealtonBHTs$StateID[i] = APIPA$StateID[APIPA$API == WhealtonBHTs$API[i]][j]
+        }else{
+          WhealtonBHTs = rbind(WhealtonBHTs, WhealtonBHTs[i,])
+          WhealtonBHTs$StateID[nrow(WhealtonBHTs)] = APIPA$StateID[APIPA$API == WhealtonBHTs$API[i]][j]
+        }
+      }
+    }else{
+      WhealtonBHTs$StateID[i] = APIPA$StateID[APIPA$API == WhealtonBHTs$API[i]]
+    }
+  }
+}
+rm(i,j)
+
+coordinates(WhealtonBHTs) = c('LONGITUDE', 'LATITUDE')
+proj4string(WhealtonBHTs) = CRS('+init=epsg:4326')
+plot(WhealtonBHTs, pch = 16, col = 'orange', cex = 0.2, add = T)
+plot(Wells, pch = 16, cex = 0.2, add = T)
+
+#Fixme: Cross check these wells for being deviated.
+WhealtonBHTs$StateWellShape = ''
+for (i in 1:nrow(WhealtonBHTs)){
+  if (length(which(PA_CDRs$API == WhealtonBHTs$API[i])) > 0){
+    WhealtonBHTs$StateWellShape[i] = 'H'
+  }
+}
+rm(i)
+for (i in 1:nrow(WhealtonBHTs)){
+  if (length(which(PA_DirWells$API == WhealtonBHTs$API[i])) > 0){
+    WhealtonBHTs$StateWellShape[i] = 'H'
+  }
+}
+rm(i)
+
+#Fixme: Check that temperatures and depths of the wells that are the same match the AASG database.
+
 
 #Political boundaries
 setwd('C:/Users/jsmif/Documents/Cornell/Research/Masters - Spatial Assessment/GIS/Population Density/2013_us_state_500k')
@@ -1569,6 +1669,58 @@ NoOuts_min2k = spTransform(TestedOutliers_HeatFlow_min2k$NotOutliers, CRS = CRS(
 
 Outs_max2k = spTransform(TestedOutliers_HeatFlow_max2k$Outliers, CRS = CRS("+init=epsg:4326"))
 NoOuts_max2k = spTransform(TestedOutliers_HeatFlow_max2k$NotOutliers, CRS = CRS("+init=epsg:4326"))
+
+#Evaluate the impact of just removing the L lowest data points and H highest data points in a region
+# L and H are the number of outliers identified in the local spatial outlier algorithm for k = 3.
+OutsCT = Outs[InterpRegs[InterpRegs$Name == 'CT',],]
+OutsCT = DeepCT[order(DeepCT$Qs),][-c(1:sum(OutsCT$out_loc_lo),(nrow(DeepCT)-(sum(OutsCT$out_loc_hi)-1)):nrow(DeepCT)),]
+plot(variogram(Qs~1, OutsCT, cutoff = 60000, width = 60000/50), ylim = c(0,20), more = T, split = c(1,1,1,1))
+plot(variogram(Qs~1, CT, cutoff = 60000, width = 60000/50), ylim = c(0,20), split = c(1,1,1,1))
+
+OutsWPA = Outs[InterpRegs[InterpRegs$Name == 'WPA',],]
+OutsWPA = DeepWPA[order(DeepWPA$Qs),][-c(1:sum(OutsWPA$out_loc_lo),(nrow(DeepWPA)-(sum(OutsWPA$out_loc_hi)-1)):nrow(DeepWPA)),]
+plot(variogram(Qs~1, OutsWPA, cutoff = 60000, width = 60000/50), ylim = c(0,20), more = T, split = c(1,1,1,1))
+plot(variogram(Qs~1, WPA, cutoff = 60000, width = 60000/50), ylim = c(0,20), split = c(1,1,1,1))
+
+OutsSWPA = Outs[InterpRegs[InterpRegs$Name == 'SWPA',],]
+OutsSWPA = DeepSWPA[order(DeepSWPA$Qs),][-c(1:sum(OutsSWPA$out_loc_lo),(nrow(DeepSWPA)-(sum(OutsSWPA$out_loc_hi)-1)):nrow(DeepSWPA)),]
+plot(variogram(Qs~1, OutsSWPA, cutoff = 60000, width = 60000/50), ylim = c(0,60), more = T, split = c(1,1,1,1))
+plot(variogram(Qs~1, SWPA, cutoff = 60000, width = 60000/50), ylim = c(0,60), split = c(1,1,1,1))
+
+OutsCWV = Outs[CWV_Bounded,]
+OutsCWV = DeepCWV[order(DeepCWV$Qs),][-c(1:sum(OutsCWV$out_loc_lo),(nrow(DeepCWV)-(sum(OutsCWV$out_loc_hi)-1)):nrow(DeepCWV)),]
+plot(variogram(Qs~1, OutsCWV, cutoff = 60000, width = 60000/50), ylim = c(0,200), more = T, split = c(1,1,1,1))
+plot(variogram(Qs~1, CWV, cutoff = 60000, width = 60000/50), ylim = c(0,200), split = c(1,1,1,1))
+
+OutsMT = Outs[MT_Bounded,]
+OutsMT = DeepMT[order(DeepMT$Qs),][-c(1:sum(OutsMT$out_loc_lo),(nrow(DeepMT)-(sum(OutsMT$out_loc_hi)-1)):nrow(DeepMT)),]
+plot(variogram(Qs~1, OutsMT, cutoff = 60000, width = 60000/50), ylim = c(0,300), more = T, split = c(1,1,1,1))
+plot(variogram(Qs~1, MT, cutoff = 60000, width = 60000/50), ylim = c(0,300), split = c(1,1,1,1))
+
+OutsVR = Outs[VR_Bounded,]
+OutsVR = DeepVR[order(DeepVR$Qs),][-c(1:sum(OutsVR$out_loc_lo),(nrow(DeepVR)-(sum(OutsVR$out_loc_hi)-1)):nrow(DeepVR)),]
+plot(variogram(Qs~1, OutsVR, cutoff = 60000, width = 60000/10), ylim = c(0,300), more = T, split = c(1,1,1,1))
+plot(variogram(Qs~1, VR, cutoff = 60000, width = 60000/10), ylim = c(0,300), split = c(1,1,1,1))
+
+OutsCNY = Outs[InterpRegs[InterpRegs$Name == 'CNY',],]
+OutsCNY = DeepCNY[order(DeepCNY$Qs),][-c(1:sum(OutsCNY$out_loc_lo),(nrow(DeepCNY)-(sum(OutsCNY$out_loc_hi)-1)):nrow(DeepCNY)),]
+plot(variogram(Qs~1, OutsCNY, cutoff = 60000, width = 60000/20), ylim = c(0,50), more = T, split = c(1,1,1,1))
+plot(variogram(Qs~1, CNY, cutoff = 60000, width = 60000/20), ylim = c(0,50), split = c(1,1,1,1))
+
+OutsENY = Outs[InterpRegs[InterpRegs$Name == 'ENY',],]
+OutsENY = DeepENY[order(DeepENY$Qs),][-c(1:sum(OutsENY$out_loc_lo),(nrow(DeepENY)-(sum(OutsENY$out_loc_hi)-1)):nrow(DeepENY)),]
+plot(variogram(Qs~1, OutsENY, cutoff = 60000, width = 60000/20), ylim = c(0,50), more = T, split = c(1,1,1,1))
+plot(variogram(Qs~1, ENY, cutoff = 60000, width = 60000/20), ylim = c(0,50), split = c(1,1,1,1))
+
+OutsENYPA = Outs[InterpRegs[InterpRegs$Name == 'ENYPA',],]
+OutsENYPA = DeepENYPA[order(DeepENYPA$Qs),][-c(1:sum(OutsENYPA$out_loc_lo),(nrow(DeepENYPA)-(sum(OutsENYPA$out_loc_hi)-1)):nrow(DeepENYPA)),]
+plot(variogram(Qs~1, OutsENYPA, cutoff = 60000, width = 60000/30), ylim = c(0,150), more = T, split = c(1,1,1,1))
+plot(variogram(Qs~1, ENYPA, cutoff = 60000, width = 60000/30), ylim = c(0,150), split = c(1,1,1,1))
+
+OutsNWPANY = Outs[InterpRegs[InterpRegs$Name == 'NWPANY',],]
+OutsNWPANY = DeepNWPANY[order(DeepNWPANY$Qs),][-c(1:sum(OutsNWPANY$out_loc_lo),(nrow(DeepNWPANY)-(sum(OutsNWPANY$out_loc_hi)-1)):nrow(DeepNWPANY)),]
+plot(variogram(Qs~1, OutsNWPANY, cutoff = 60000, width = 60000/50), ylim = c(0,60), more = T, split = c(1,1,1,1))
+plot(variogram(Qs~1, NWPANY, cutoff = 60000, width = 60000/50), ylim = c(0,60), split = c(1,1,1,1))
 
 #   Map of outliers----
 #Colors
@@ -4620,6 +4772,7 @@ rm(i)
 BadOperatorDiagnostics = function(MT, #Spatial dataframe containing a column named "Operator" 
                                   MT_WGS, #Spatial dataframe in WGS coordinates to make map
                                   v.MT, #variogram for MT dataset using all data
+                                  rv.MT, #Cressie's robust variogram for MT dataset using all data
                                   Vcut, #variogram cutoff in m
                                   Vbins, #Number of variogram bins
                                   o,  #index for the operator to be left out
@@ -4634,18 +4787,25 @@ BadOperatorDiagnostics = function(MT, #Spatial dataframe containing a column nam
   #Only plot the operator if they have more than LowLim well. It doesn't make sense otherwise.
   if(nrow(MT[MT$Operator == UniOps[o],]) >= LowLim){
     png(paste0(RegName, '_OperatorESDA_', o, '.png'), res = 300, height = 8, width = 8, units = 'in')
-    layout(rbind(c(1,3), c(2,3)))
+    layout(rbind(c(1,4), c(2,3)))
     #Histogram showing difference between current operator (red) and all data (black)
-    hist(MT$Qs, col = 'black', main = UniOps[o], xlab = 'Heat Flow (mW/m^2)', ylab = 'Frequency', ylim = c(0,Histylim), xlim = c(0,round(max(MT$Qs + HistSep/2),-1)), breaks = seq(round(min(MT$Qs - HistSep/2),-1),round(max(MT$Qs + HistSep/2),-1),HistSep))
+    hist(MT$Qs, col = 'black', main = UniOps[o], xlab = expression(paste('Heat Flow (mW/m'^2,')')), ylab = 'Frequency', ylim = c(0,Histylim), xlim = c(0,round(max(MT$Qs + HistSep/2),-1)), breaks = seq(round(min(MT$Qs - HistSep/2),-1),round(max(MT$Qs + HistSep/2),-1),HistSep))
     par(new=TRUE)
     hist(MT$Qs[-which(MT$Operator == UniOps[o])], border = 'red', axes = FALSE, xlab = '', main = '', ylab = '', ylim = c(0,Histylim), xlim = c(0,round(max(MT$Qs + HistSep/2),-1)), breaks = seq(round(min(MT$Qs - HistSep/2),-1),round(max(MT$Qs + HistSep/2),-1),HistSep))
     legend('topright', legend = c('All data', 'Operator Removed'), col = c('black', 'red'), pch = 15)
     
     #Variogram of region with and without operator
     v.o = variogram(Qs~1, MT[-which(MT$Operator == UniOps[o]),], cutoff=Vcut, width = Vcut/Vbins)
-    plot(v.MT$dist, v.MT$gamma, ylim = c(0,round(max(v.MT$gamma),-1)), xlim = c(0,Vcut), xlab = 'Separation Distance', ylab = 'Semivariance (mW/m^2)^2')
+    plot(v.MT$dist, v.MT$gamma, ylim = c(0,round(max(v.MT$gamma),-1)), xlim = c(0,Vcut), xlab = 'Separation Distance', ylab = expression(paste('Semivariance (mW/m'^2,')'^2)), main = 'MOM Semi-variogram')
     par(new=TRUE)
     plot(v.o$dist, v.o$gamma, ylim = c(0,round(max(v.MT$gamma),-1)), xlim = c(0,Vcut), xlab = '', ylab = '', col = 'red')
+    legend('bottomright', legend = c('All data', 'Operator Removed'), col = c('black', 'red'), pch = 1)
+    
+    #Robust variogram of region with and without operator
+    rv.o = variogram(Qs~1, MT[-which(MT$Operator == UniOps[o]),], cutoff=Vcut, width = Vcut/Vbins, cressie = TRUE)
+    plot(rv.MT$dist, rv.MT$gamma, ylim = c(0,round(max(v.MT$gamma),-1)), xlim = c(0,Vcut), xlab = 'Separation Distance', ylab = expression(paste('Semivariance (mW/m'^2,')'^2)), main = 'Robust Semi-variogram')
+    par(new=TRUE)
+    plot(rv.o$dist, rv.o$gamma, ylim = c(0,round(max(v.MT$gamma),-1)), xlim = c(0,Vcut), xlab = '', ylab = '', col = 'red')
     legend('bottomright', legend = c('All data', 'Operator Removed'), col = c('black', 'red'), pch = 1)
     
     #Map
@@ -4666,7 +4826,7 @@ BadOperatorDiagnostics = function(MT, #Spatial dataframe containing a column nam
     degAxis(side = 1, seq(-70, -86, -1), labels = FALSE)
     plot(MT_WGS, pch = 16, cex = 0.4, add = T)
     plot(MT_WGS[which(MT$Operator == UniOps[o]),], pch = 16, cex = 0.4, add = T, col = 'red')
-    legend('topleft', legend = c(paste("Operator's Wells: N wells =", nrow(MT[which(MT$Operator == UniOps[o]),])), 'Other Wells'), col = c('red', 'black'), pch = 16, cex = 1.3)
+    legend('topleft', legend = c(paste("Operator's Wells: N wells =", nrow(MT[which(MT$Operator == UniOps[o]),])), 'Other Wells'), col = c('red', 'black'), pch = 16, cex = 0.7)
     
     dev.off()
   }
@@ -4682,10 +4842,11 @@ temp = foreach(o = 1:length(unique(MT$Operator)), .packages = c('gstat', 'GISToo
 stopCluster(cl)
 
 DeepMT_WGS = spTransform(DeepMT, CRS('+init=epsg:4326'))
+rv.DeepMT = variogram(Qs~1, DeepMT, cutoff = 60000, width = 60000/50, cressie = TRUE)
 cl = makeCluster(detectCores() - 1)
 registerDoParallel(cl)
 temp = foreach(o = 1:length(unique(DeepMT$Operator)), .packages = c('gstat', 'GISTools', 'sp')) %dopar% {
-  BadOperatorDiagnostics(MT = DeepMT, o = o, LowLim = 2, MT_WGS = DeepMT_WGS, v.MT = v.DeepMT, Vcut = 60000, Vbins = 50, HistSep = 10, Histylim = 500, RegName = "DeepMT")
+  BadOperatorDiagnostics(MT = DeepMT, o = o, LowLim = 2, MT_WGS = DeepMT_WGS, v.MT = v.DeepMT, rv.MT = rv.DeepMT, Vcut = 60000, Vbins = 50, HistSep = 10, Histylim = 500, RegName = "rDeepMT")
   a = o
 }
 stopCluster(cl)
@@ -4797,7 +4958,7 @@ plot(MT, pch = 16, cex = 0.1)
 plot(MT[-which(MT$Operator == 'Waco Oil & Gas Co., Inc.'),], col = 'red', add = T, pch = 16, cex = 0.2 )
 plot(MT[-which(MT$Waco == 1),], col = 'purple', add = T, pch = 16, cex = 0.2 )
 
-#Variogram cloud for Western West Virgiia region
+#Variogram cloud for Western West Virginia region
 plot(variogram(Qs~1, MT[-which(MT$Operator == 'Waco Oil & Gas Co., Inc.'),], cutoff=60000, cloud = TRUE))
 plot(variogram(Qs~1, MT[-which(MT$Waco == 1),], cutoff=60000, cloud = TRUE))
 
