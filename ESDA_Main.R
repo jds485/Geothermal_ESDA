@@ -36,6 +36,31 @@ setwd('C:\\Users\\jsmif\\Documents\\Cornell\\Research\\Publications\\DOE Grant\\
 source('outlier_identification.R')
 
 # Loading Data and Map Layers ----
+#  Political boundaries----
+setwd('C:/Users/jsmif/Documents/Cornell/Research/Masters - Spatial Assessment/GIS/Population Density/2013_us_state_500k')
+States = readOGR(dsn=getwd(), layer="us_state_WGS", stringsAsFactors=FALSE)
+NY = States[which(States$STATEFP == "36"),]
+PA = States[which(States$STATEFP == "42"),]
+WV = States[which(States$STATEFP == "54"),]
+MD = States[which(States$STATEFP == "24"),]
+KY = States[which(States$STATEFP == "21"),]
+VA = States[which(States$STATEFP == "51"),]
+setwd('C:/Users/jsmif/Documents/Cornell/Research/Masters - Spatial Assessment/GIS/Population Density/2013_us_countys_500k')
+Counties = readOGR(dsn=getwd(), layer="us_county_WGS", stringsAsFactors=FALSE) 
+rm(States)
+
+#  Geologic Regions / Spatial Interpolation Regions----
+InterpRegs = readOGR(dsn="C:/Users/jsmif/Documents/Cornell/Research/Masters - Spatial Assessment/Figures/BaseCorrWells", layer="AllSectionsMerged", stringsAsFactors=FALSE) 
+InterpRegs = spTransform(InterpRegs, CRS = CRS("+init=epsg:4326"))
+#50 km bounded regions within the potential field edges - only applies to the WV regions
+setwd("C:\\Users\\jsmif\\Documents\\Cornell\\Research\\Publications\\DOE Grant\\InterpolationDataset\\NewBoundaries\\NAD_InterpolationBounds")
+VR_Bounded = readOGR(dsn=getwd(), layer = 'BoundedVREdit6') 
+VR_Bounded = spTransform(VR_Bounded, CRS = CRS("+init=epsg:4326"))
+CWV_Bounded = readOGR(dsn = getwd(), layer = 'BoundedCWV_Edit3')
+CWV_Bounded = spTransform(CWV_Bounded, CRS = CRS("+init=epsg:4326"))
+MT_Bounded = readOGR(dsn = getwd(), layer = 'BoundedMT_Edit')
+MT_Bounded = spTransform(MT_Bounded, CRS = CRS("+init=epsg:4326"))
+
 #  Wells with surface heat flow and temperatures at depth calculated----
 setwd("C:\\Users\\jsmif\\Documents\\Cornell\\Research\\Publications\\ESDA\\ESDACode\\ESDA_Results")
 Wells = read.csv('EDAWells_AllTempsThicksConds_BaseCorr_2018.csv', stringsAsFactors=FALSE)
@@ -105,6 +130,7 @@ rm(i,j)
 #Only the wells that match with StateID number are in the AASG BHT dataset.
 plot(Wells, pch = 16, cex = 0.3)
 plot(Wells[Wells$StateID %in% NY_DirWells$StateID[NY_DirWells$StateID != ''],], pch = 16, cex = 0.3, col = 'red', add = T)
+dev.off()
 
 #Add a column for state database deviated wells
 Wells$StateWellShape = ''
@@ -132,19 +158,19 @@ rm(i)
 
 #Only the wells that match with StateID number are in the BHT dataset.
 coordinates(PA_DirWells) = c('Longitude..Dec.', 'Latitude..Dec.')
-proj4string(PA_DirWells) = CRS = '+init=epsg:4326'
-PA_DirWells = spTransform(PA_DirWells, CRS = '+init=epsg:26917')
+proj4string(PA_DirWells) = CRS('+init=epsg:4326')
 
 plot(Wells, pch = 16, cex = 0.3)
 plot(Wells[Wells$StateID %in% PA_DirWells$StateID[PA_DirWells$StateID != ''],], pch = 16, cex = 0.3, col = 'red', add = T)
 plot(Wells[Wells$StateID %in% PA_CDRs$StateID[PA_CDRs$StateID != ''],], pch = 16, cex = 0.3, col = 'red', add = T)
+plot(PA_DirWells, add = T, col = 'blue')
+dev.off()
 
 #Add to column for state database deviated wells
 Wells@data[Wells$StateID %in% PA_DirWells$StateID[PA_DirWells$StateID != ''],]$StateWellShape = 'H'
 Wells@data[Wells$StateID %in% PA_CDRs$StateID[PA_CDRs$StateID != ''],]$StateWellShape = 'H'
 
 #WV
-setwd("C:\\Users\\jsmif\\Documents\\Cornell\\Research\\Publications\\CornellGeothermalProject\\WVUGrant\\LASdata&WellData\\LAS Files")
 WV_CompDirWells = read.csv('CompletedDirectionalWells.csv', stringsAsFactors = FALSE)
 WV_PermDirWells = read.csv('PermittedDirectionalWells.csv', stringsAsFactors = FALSE)
 WV_SurvsDirWells = read.csv('SurveysforDirectionalWells.csv', stringsAsFactors = FALSE)
@@ -158,11 +184,13 @@ for (i in 1:nrow(WV_CompDirWells)){
     WV_CompDirWells$StateID[i] = APIWV$StateID[APIWV$APInum == WV_CompDirWells$API.Number[i]]
   }
 }
+rm(i)
 for (i in 1:nrow(WV_PermDirWells)){
   if (length(which(APIWV$APInum == WV_PermDirWells$API.Number[i])) > 0){
     WV_PermDirWells$StateID[i] = APIWV$StateID[APIWV$APInum == WV_PermDirWells$API.Number[i]]
   }
 }
+rm(i)
 for (i in 1:nrow(WV_SurvsDirWells)){
   if (length(which(APIWV$APInum == WV_SurvsDirWells$API1[i])) > 0){
     WV_SurvsDirWells$StateID[i] = APIWV$StateID[APIWV$APInum == WV_SurvsDirWells$API1[i]]
@@ -175,26 +203,51 @@ rm(i)
 # All directional wells in BHT dataset were checked (16 total). Only a couple may be rogue entries.
 #Check how far deviated at minimum these wells are
 WV_CompDirWells$MinDev = sqrt((WV_CompDirWells$Surface.Loc.UTME - WV_CompDirWells$Btm.Hole.Loc.UTME)^2 + (WV_CompDirWells$Surface.Loc.UTMN - WV_CompDirWells$Btm.Hole.Loc.UTMN)^2)
+hist(WV_CompDirWells$MinDev[WV_CompDirWells$StateID != ''])
 
 plot(Wells, pch = 16, cex = 0.3)
 plot(Wells[Wells$StateID %in% WV_CompDirWells$StateID[WV_CompDirWells$StateID != ''],], pch = 16, cex = 0.3, col = 'red', add = T)
+dev.off()
 
 #Add to column for state database deviated wells
 Wells@data[Wells$StateID %in% WV_CompDirWells$StateID[WV_CompDirWells$StateID != ''],]$StateWellShape = 'H'
 
 #Make a plot of the horizontal wells
-png('DeviatedWells.png', res = 300, height = 6, width = 6, units = 'in')
-plot(Wells, pch = 16, cex = 0.2)
-plot(Wells[grep(Wells$WellShape, pattern = 'ert'),], col = 'black', pch = 16, cex = 0.2, add = T)
-plot(Wells[Wells$WellShape == '',], col = 'yellow', pch = 16, cex = 0.2, add = T)
-plot(Wells[Wells$StateWellShape == 'H',], col = 'red', pch = 16, cex = 0.2, add = T)
-plot(Wells[grep(Wells$WellShape, pattern = 'zon'),], col = 'green', pch = 16, cex = 0.2, add = T)
-plot(Wells[grep(Wells$WellShape, pattern = 'via'),], col = 'green', pch = 16, cex = 0.2, add = T)
-plot(Wells[grep(Wells$WellShape, pattern = 'Up'),], col = 'green', pch = 16, cex = 0.2, add = T)
-plot(Wells[(Wells$DpthOfM - Wells$TruVrtc > 20) & Wells$TruVrtc > 0, ], col = 'blue', pch = 16, cex = 0.2, add = T)
+png('DeviatedWells.png', res = 600, height = 6, width = 6, units = 'in')
+par(mar = c(2,3,2,2))
+plot(Wells, pch = 16, cex = 0.1)
+plot(NY, add = T)
+plot(PA, add = T)
+plot(WV, add = T)
+plot(MD, add = T)
+plot(KY, add = T)
+plot(VA, add = T)
+north.arrow(xb = -75, yb = 37, len = 0.2, lab = 'N', col = 'black')
+degAxis(side = 2, seq(34, 46, 2), cex.axis = 1.5)
+degAxis(side = 2, seq(34, 46, 1), labels = FALSE)
+degAxis(side = 4, seq(34, 46, 1), labels = FALSE)
+degAxis(side = 1, seq(-70, -86, -2), cex.axis = 1.5)
+degAxis(side = 3, seq(-70, -86, -1), labels = FALSE)
+degAxis(side = 1, seq(-70, -86, -1), labels = FALSE)
+plot(Wells[grep(Wells$WellShape, pattern = 'ert'),], col = 'black', pch = 16, cex = 0.1, add = T)
+plot(Wells[Wells$WellShape == '',], col = 'yellow', pch = 16, cex = 0.1, add = T)
+plot(Wells[Wells$StateWellShape == 'H',], col = 'red', pch = 16, cex = 0.1, add = T)
+plot(Wells[grep(Wells$WellShape, pattern = 'zon'),], col = 'green', pch = 16, cex = 0.1, add = T)
+plot(Wells[grep(Wells$WellShape, pattern = 'via'),], col = 'green', pch = 16, cex = 0.1, add = T)
+plot(Wells[grep(Wells$WellShape, pattern = 'Up'),], col = 'green', pch = 16, cex = 0.1, add = T)
+plot(Wells[(Wells$DpthOfM - Wells$TruVrtc > 100) & Wells$TruVrtc > 0, ], col = 'blue', pch = 16, cex = 0.1, add = T)
+legend('topleft', legend=c('Vertical', 'Not Specified', 'Deviated: State Data', 'Deviated: AASG Data', "BHT Depth - TVD > 20'"), col = c('black', 'yellow', 'red', 'green', 'blue'), pch = 16)
 dev.off()
 
-#  Spicer equilibrium well temperature profiles----
+#Make a database that removes the deviated data of all types
+Wells_NoDeviation = Wells[-unique(c(grep(Wells$WellShape, pattern = 'zon'), grep(Wells$WellShape, pattern = 'via'), grep(Wells$WellShape, pattern = 'Up'), which(Wells$StateWellShape == 'H'))),]
+Wells_NoDeviation = Wells_NoDeviation[-which((Wells_NoDeviation$DpthOfM - Wells_NoDeviation$TruVrtc > 100) & Wells_NoDeviation$TruVrtc > 0), ]
+
+#Because some NY wells are not deviated much, try keeping those in.
+Wells_NoDeviationNY = Wells[-unique(c(grep(Wells$WellShape, pattern = 'zon'), grep(Wells$WellShape, pattern = 'via'), grep(Wells$WellShape, pattern = 'Up'), which((Wells$StateWellShape == 'H') & (Wells$State != 'NY')))),]
+Wells_NoDeviationNY = Wells_NoDeviationNY[-which((Wells_NoDeviationNY$DpthOfM - Wells_NoDeviationNY$TruVrtc > 100) & Wells_NoDeviationNY$TruVrtc > 0), ]
+
+#  Spicer equilibrium well temperature profiles - Saving for a different paper because these data are not public. Email authors for access.----
 setwd('C:\\Users\\jsmif\\Documents\\Cornell\\Research\\Publications\\ESDA')
 Spicer = read_xlsx(path = paste0(getwd(), '/EquilibriumTempProfiles.xlsx'), sheet = 'Spicers')
 coordinates(Spicer) = c("Long", "Lat")
@@ -250,7 +303,7 @@ rm(i,j)
 
 coordinates(WhealtonBHTs) = c('LONGITUDE', 'LATITUDE')
 proj4string(WhealtonBHTs) = CRS('+init=epsg:4326')
-plot(WhealtonBHTs, pch = 16, col = 'orange', cex = 0.2, add = T)
+plot(WhealtonBHTs, pch = 16, col = 'orange', cex = 0.2)
 plot(Wells, pch = 16, cex = 0.2, add = T)
 
 #Fixme: Cross check these wells for being deviated.
@@ -270,33 +323,11 @@ rm(i)
 
 #Fixme: Check that temperatures and depths of the wells that are the same match the AASG database.
 
+# Set working directory back to project directory----
+setwd("C:\\Users\\jsmif\\Documents\\Cornell\\Research\\Publications\\ESDA\\ESDACode\\ESDA_Results")
 
-#Political boundaries
-setwd('C:/Users/jsmif/Documents/Cornell/Research/Masters - Spatial Assessment/GIS/Population Density/2013_us_state_500k')
-States = readOGR(dsn=getwd(), layer="us_state_WGS", stringsAsFactors=FALSE)
-NY = States[which(States$STATEFP == "36"),]
-PA = States[which(States$STATEFP == "42"),]
-WV = States[which(States$STATEFP == "54"),]
-MD = States[which(States$STATEFP == "24"),]
-KY = States[which(States$STATEFP == "21"),]
-VA = States[which(States$STATEFP == "51"),]
-setwd('C:/Users/jsmif/Documents/Cornell/Research/Masters - Spatial Assessment/GIS/Population Density/2013_us_countys_500k')
-Counties = readOGR(dsn=getwd(), layer="us_county_WGS", stringsAsFactors=FALSE) 
-
-#Spatial interpolation regions
-InterpRegs = readOGR(dsn="C:/Users/jsmif/Documents/Cornell/Research/Masters - Spatial Assessment/Figures/BaseCorrWells", layer="AllSectionsMerged", stringsAsFactors=FALSE) 
-InterpRegs = spTransform(InterpRegs, CRS = CRS("+init=epsg:4326"))
-#50 km bounded regions within the potential field edges - only applies to the WV regions
-setwd("C:\\Users\\jsmif\\Documents\\Cornell\\Research\\Publications\\DOE Grant\\InterpolationDataset\\NewBoundaries\\NAD_InterpolationBounds")
-VR_Bounded = readOGR(dsn=getwd(), layer = 'BoundedVREdit6') 
-VR_Bounded = spTransform(VR_Bounded, CRS = CRS("+init=epsg:4326"))
-CWV_Bounded = readOGR(dsn = getwd(), layer = 'BoundedCWV_Edit3')
-CWV_Bounded = spTransform(CWV_Bounded, CRS = CRS("+init=epsg:4326"))
-MT_Bounded = readOGR(dsn = getwd(), layer = 'BoundedMT_Edit')
-MT_Bounded = spTransform(MT_Bounded, CRS = CRS("+init=epsg:4326"))
-
-#Set working directory back to project directory
-setwd("C:/Users/jsmif/Documents/Cornell/Research/Masters - Spatial Assessment/Figures")
+#Save input data to a file
+save.image("ESDA_Input_DeviatedWells.RData")
 
 # Remove Negative Gradient Wells ----
 NegsAll = Wells[Wells$Gradient <= 0,]
@@ -348,10 +379,10 @@ degAxis(side = 1, seq(-70, -86, -1), labels = FALSE)
 legend('bottomright', legend = c('Gradient < 0', 'Gradient < 0 Source Checked', 'Gradient > 0'), col = c('red', 'blue', 'black'), pch = 16)
 dev.off()
 
-
 #Remove the negative gradient wells before the sorting of wells in the same spatial locations:
 Wells_PosGrad = Wells[-which(Wells$Gradient <= 0),]
-
+Wells_NoDeviation_PosGrad = Wells_NoDeviation[-which(Wells_NoDeviation$Gradient <= 0),]
+Wells_NoDeviationNY_PosGrad = Wells_NoDeviationNY[-which(Wells_NoDeviationNY$Gradient <= 0),]
 
 # Identify Wells in Same Spatial Location ----
 #Note that this step is used here so that the QsDev function to calculate the local
@@ -360,6 +391,11 @@ Wells_PosGrad = Wells[-which(Wells$Gradient <= 0),]
 #Find all points that share the same location and take the deepest measurement.
 Same = SameSpot(Wells_PosGrad)
 SortData = SortingWells(Same$SameSpot, Same$StoreData_Frame, Wells_PosGrad, 'BHT', 'TruVrtc', 'DrllrTt', 'DpthOfM', 'WellDepth', 2)
+Same_NoDev = SameSpot(Wells_NoDeviation_PosGrad)
+SortData_NoDev = SortingWells(Same_NoDev$SameSpot, Same_NoDev$StoreData_Frame, Wells_NoDeviation_PosGrad, 'BHT', 'TruVrtc', 'DrllrTt', 'DpthOfM', 'WellDepth', 2)
+Same_NoDevNY = SameSpot(Wells_NoDeviationNY_PosGrad)
+SortData_NoDevNY = SortingWells(Same_NoDevNY$SameSpot, Same_NoDevNY$StoreData_Frame, Wells_NoDeviationNY_PosGrad, 'BHT', 'TruVrtc', 'DrllrTt', 'DpthOfM', 'WellDepth', 2)
+
 write.csv(SortData$Sorted, "SortedUniqueSpots_AllTemps_ESDA_2018.csv")
 write.csv(SortData$RerunWells, "RerunWells_AllTemps_ESDA_2018.csv")
 
@@ -388,8 +424,9 @@ nrow(unique(Wells_PosGrad@coords[unique(SortData$IndsCensTemp),]))
 Rerun = read.csv('SortedUniqueSpots_AllTemps_ESDA_RerunAdded.csv', stringsAsFactors = FALSE)
 Rerun = Rerun[c((nrow(Rerun) - (nrow(SortData$RerunWells) - 1)):nrow(Rerun)),]
 Rerun$APINo = SortData$RerunWells$APINo
-SortData$Sorted@data[c((nrow(SortData$Sorted) - (nrow(SortData$RerunWells) - 1)):nrow(SortData$Sorted)),] = Rerun[,-c(1,8,9,ncol(Rerun))]
-
+SortData$Sorted@data[c((nrow(SortData$Sorted) - (nrow(SortData$RerunWells) - 1)):nrow(SortData$Sorted)),seq(1,ncol(Rerun)-4,1)] = Rerun[,-c(1,8,9,ncol(Rerun))]
+SortData_NoDev$Sorted@data[c((nrow(SortData_NoDev$Sorted) - (nrow(SortData_NoDev$RerunWells) - 1)):nrow(SortData_NoDev$Sorted)),seq(1,ncol(Rerun)-4,1)] = Rerun[-nrow(Rerun),-c(1,8,9,ncol(Rerun))]
+SortData_NoDevNY$Sorted@data[c((nrow(SortData_NoDevNY$Sorted) - (nrow(SortData_NoDevNY$RerunWells) - 1)):nrow(SortData_NoDevNY$Sorted)),seq(1,ncol(Rerun)-4,1)] = Rerun[,-c(1,8,9,ncol(Rerun))]
 
 #Using IndsDeepSmallerBHT, check how many deeper data points have a greater temperature than shallower data points.
 # Wells_PosGrad[as.numeric(colnames(Same$StoreData_Frame[which(Same$StoreData_Frame[which(as.numeric(colnames(Same$StoreData_Frame)) == unique(SortData$IndsDeepSmallerBHT)[3]),] == 1)])),]
@@ -408,121 +445,133 @@ rm(Rows,BHTs,i,Depths)
 
 #Fixme: Add the equilibrium and pseudo-equilibrium well data to this plot, or make a new plot for these data
 
-# Make a copy of the database to track the wells in the same spatial location for this plot only.
-PlotSpots = Wells_PosGrad@data
-PlotSpots$LongDgr = Wells_PosGrad@coords[,1]
-PlotSpots$LatDegr = Wells_PosGrad@coords[,2]
-# The wells in the same spot will be assigned the same number in a field named SameSpot
-PlotSpots$SameSpot = NA
-
-count = 1
-
-for (i in 1:nrow(Same$StoreData_Frame)){
-  #Only take the unique spots that have more than 1 point
-  if ((any(Same$StoreData_Frame[i,] == 1) & is.na(PlotSpots$SameSpot[as.numeric(colnames(Same$StoreData_Frame)[i])])) == TRUE){
-    #Have not checked this spot yet. Gather all well indicies with the same spatial location.
-    Indxs = as.numeric(colnames(Same$StoreData_Frame[which(Same$StoreData_Frame[i,] == 1)]))
-    
-    #Assign a number to these wells in the same spot
-    PlotSpots$SameSpot[Indxs] = count
-    count = count + 1
-  }
-}
-rm(Indxs, count,i)
-
-#Sort by the same spot number
-PlotSpots = PlotSpots[order(PlotSpots$SameSpot),]
-
-#Retain only data in same spot as other data
-PlotSpots = PlotSpots[which(is.na(PlotSpots$SameSpot) == FALSE),]
-
-#Sort by the depth of the deepest well in the set of points
-for (i in 1:length(unique(PlotSpots$SameSpot))){
-  #Determine how many wells there are in the same spot
-  indxs = which(PlotSpots$SameSpot == i)
-  #Sort only these wells and place the sorted data in those rows
-  PlotSpots[indxs,] = PlotSpots[indxs,][order(PlotSpots$WellDepth[indxs]),]
-}
-rm(i, indxs)
-
-#Sort groups of wells by the shallowest well.
-#Obtain index of shallowest well for each location
-indxShallow = vector('numeric', length(unique(PlotSpots$SameSpot)))
-for (j in 1:length(unique(PlotSpots$SameSpot))){
-  indxShallow[j] = which(PlotSpots$SameSpot == j)[1]
-}
-for (i in 1:length(unique(PlotSpots$SameSpot))){
-  #Sort only these wells and place the sorted data in those rows
-  NewInds = PlotSpots$SameSpot[indxShallow][order(PlotSpots$WellDepth[indxShallow])]
-}
-rm(indxShallow, i, j)
-
-#Make new database for the final plotting of points.
-#All PlotFinal records will be overwritten or deleted in the following for loop.
-PlotFinal = PlotSpots
-
-#index of data in the PlotFinal database - removing duplicate records.
-len = 1
-LocCheck = 0
-RemCheck = 0
-for (i in 1:length(unique(PlotSpots$SameSpot))){
-  #Determine how many wells there are in the same spot
-  indxs = which(PlotSpots$SameSpot == NewInds[i])
+PlotSpots = function(Wells_PosGrad, #Must have a column named WellDepth
+                     Same){
+  # Make a copy of the database to track the wells in the same spatial location for this plot only.
+  PlotSpots = Wells_PosGrad@data
+  PlotSpots$LongDgr = Wells_PosGrad@coords[,1]
+  PlotSpots$LatDegr = Wells_PosGrad@coords[,2]
+  # The wells in the same spot will be assigned the same number in a field named SameSpot
+  PlotSpots$SameSpot = NA
   
-  if (anyDuplicated(PlotSpots$BHT[indxs]) != 0){
-    #Find the indices that have same BHT
-    res = which(PlotSpots$BHT[indxs] %in% unique(PlotSpots$BHT[indxs][duplicated(PlotSpots$BHT[indxs])]) == TRUE)
-    #Of those, find indices with the same well depth
-    dpth = which(PlotSpots$WellDepth[indxs][res] %in% unique(PlotSpots$WellDepth[indxs][res][duplicated(PlotSpots$WellDepth[indxs][res])]) == TRUE)
+  #Track number of locations
+  count = 1
+  
+  for (i in 1:nrow(Same$StoreData_Frame)){
+    #Only take the unique spots that have more than 1 point
+    if ((any(Same$StoreData_Frame[i,] == 1) & is.na(PlotSpots$SameSpot[as.numeric(colnames(Same$StoreData_Frame)[i])])) == TRUE){
+      #Have not checked this spot yet. Gather all well indicies with the same spatial location.
+      Indxs = as.numeric(colnames(Same$StoreData_Frame[which(Same$StoreData_Frame[i,] == 1)]))
+      
+      #Assign a number to these wells in the same spot
+      PlotSpots$SameSpot[Indxs] = count
+      count = count + 1
+    }
+  }
+  rm(Indxs, count,i)
+  
+  #Sort data by the same spot location number
+  PlotSpots = PlotSpots[order(PlotSpots$SameSpot),]
+  
+  #Retain only data in same spot as other data
+  PlotSpots = PlotSpots[which(is.na(PlotSpots$SameSpot) == FALSE),]
+  
+  #Sort by the depth of the deepest well in the set of points
+  for (i in 1:length(unique(PlotSpots$SameSpot))){
+    #Determine how many wells there are in the same spot
+    indxs = which(PlotSpots$SameSpot == i)
+    #Sort only these wells and place the sorted data in those rows
+    PlotSpots[indxs,] = PlotSpots[indxs,][order(PlotSpots$WellDepth[indxs]),]
+  }
+  rm(i, indxs)
+  
+  #Sort groups of wells by the shallowest well.
+  #Obtain index of shallowest well for each location
+  indxShallow = vector('numeric', length(unique(PlotSpots$SameSpot)))
+  for (j in 1:length(unique(PlotSpots$SameSpot))){
+    indxShallow[j] = which(PlotSpots$SameSpot == j)[1]
+  }
+  for (i in 1:length(unique(PlotSpots$SameSpot))){
+    #Sort only these wells and place the sorted data in those rows
+    NewInds = PlotSpots$SameSpot[indxShallow][order(PlotSpots$WellDepth[indxShallow])]
+  }
+  rm(indxShallow, i, j)
+  
+  #Make new database for the final plotting of points.
+  #All PlotFinal records will be overwritten or deleted in the following for loop.
+  PlotFinal = PlotSpots
+  
+  #index of data in the PlotFinal database - removing duplicate records.
+  len = 1
+  LocCheck = 0
+  RemCheck = 0
+  for (i in 1:length(unique(PlotSpots$SameSpot))){
+    #Determine how many wells there are in the same spot
+    indxs = which(PlotSpots$SameSpot == NewInds[i])
     
-    #If they all have the same BHT, check if they have the same depth.
-    if ((length(res) == length(indxs)) & (length(dpth) == length(indxs))){
-      #Check if there are two or more sets of duplicate records (e.g. 4 total records, 2 duplicates)
-      if (nrow(unique(PlotSpots[indxs, c('WellDepth', 'BHT')])) > 1){
-        #Retain the unique records, and drop the remaining
-        #Drop
-        Drop = nrow(PlotSpots[indxs, c('WellDepth', 'BHT')]) - nrow(unique(PlotSpots[indxs, c('WellDepth', 'BHT')]))
-        PlotFinal = PlotFinal[-((nrow(PlotFinal) - (Drop-1)):nrow(PlotFinal)),]
-        
+    if (anyDuplicated(PlotSpots$BHT[indxs]) != 0){
+      #Find the indices that have same BHT
+      res = which(PlotSpots$BHT[indxs] %in% unique(PlotSpots$BHT[indxs][duplicated(PlotSpots$BHT[indxs])]) == TRUE)
+      #Of those, find indices with the same well depth
+      dpth = which(PlotSpots$WellDepth[indxs][res] %in% unique(PlotSpots$WellDepth[indxs][res][duplicated(PlotSpots$WellDepth[indxs][res])]) == TRUE)
+      
+      #If they all have the same BHT, check if they have the same depth.
+      if ((length(res) == length(indxs)) & (length(dpth) == length(indxs))){
+        #Check if there are two or more sets of duplicate records (e.g. 4 total records, 2 duplicates)
+        if (nrow(unique(PlotSpots[indxs, c('WellDepth', 'BHT')])) > 1){
+          #Retain the unique records, and drop the remaining
+          #Drop
+          Drop = nrow(PlotSpots[indxs, c('WellDepth', 'BHT')]) - nrow(unique(PlotSpots[indxs, c('WellDepth', 'BHT')]))
+          PlotFinal = PlotFinal[-((nrow(PlotFinal) - (Drop-1)):nrow(PlotFinal)),]
+          
+          #Overwrite the records in PlotFinal. These are the new data.
+          indxs = indxs[which(rownames(PlotSpots[indxs, c('WellDepth', 'BHT')]) %in% rownames(unique(PlotSpots[indxs, c('WellDepth', 'BHT')])))]
+          PlotFinal[len:(len + (length(indxs)-1)),] = PlotSpots[indxs,]
+          len = len + length(indxs)
+          
+          RemCheck = RemCheck + Drop
+          
+        }else{
+          LocCheck = LocCheck + 1
+          #Do not record this in the PlotFinal database. Well has only 1 measurement. Remove the last length(indxs) rows. They are not needed.
+          PlotFinal = PlotFinal[-((nrow(PlotFinal) - (length(indxs)-1)):nrow(PlotFinal)),]
+          
+          RemCheck = RemCheck + length(indxs)
+        }
+      }else{
+        if (length(dpth) > 0){
+          #Remove duplicate records, except 1. Keep all others.
+          dups = which(duplicated(x = PlotSpots[indxs,c('BHT', 'WellDepth')]) == TRUE)
+          indxs = indxs[-dups]
+          # Remove the last length(dups) rows from the database. They are not needed.
+          PlotFinal = PlotFinal[-((nrow(PlotFinal) - (length(dups)-1)):nrow(PlotFinal)),]
+          
+          RemCheck = RemCheck + length(dups)
+        }
         #Overwrite the records in PlotFinal. These are the new data.
-        indxs = indxs[which(rownames(PlotSpots[indxs, c('WellDepth', 'BHT')]) %in% rownames(unique(PlotSpots[indxs, c('WellDepth', 'BHT')])))]
         PlotFinal[len:(len + (length(indxs)-1)),] = PlotSpots[indxs,]
         len = len + length(indxs)
-        
-        RemCheck = RemCheck + Drop
-        
-      }else{
-        LocCheck = LocCheck + 1
-        #Do not record this in the PlotFinal database. Well has only 1 measurement. Remove the last length(indxs) rows. They are not needed.
-        PlotFinal = PlotFinal[-((nrow(PlotFinal) - (length(indxs)-1)):nrow(PlotFinal)),]
-        
-        RemCheck = RemCheck + length(indxs)
       }
     }else{
-      if (length(dpth) > 0){
-        #Remove duplicate records, except 1. Keep all others.
-        dups = which(duplicated(x = PlotSpots[indxs,c('BHT', 'WellDepth')]) == TRUE)
-        indxs = indxs[-dups]
-        # Remove the last length(dups) rows from the database. They are not needed.
-        PlotFinal = PlotFinal[-((nrow(PlotFinal) - (length(dups)-1)):nrow(PlotFinal)),]
-        
-        RemCheck = RemCheck + length(dups)
-      }
       #Overwrite the records in PlotFinal. These are the new data.
       PlotFinal[len:(len + (length(indxs)-1)),] = PlotSpots[indxs,]
       len = len + length(indxs)
     }
-  }else{
-    #Overwrite the records in PlotFinal. These are the new data.
-    PlotFinal[len:(len + (length(indxs)-1)),] = PlotSpots[indxs,]
-    len = len + length(indxs)
   }
+  rm(PlotSpots, i, len, indxs, dpth, res, NewInds, Drop, dups)
+  
+  return(PlotFinal)
 }
-rm(PlotSpots, i, len, indxs, dpth, res, NewInds, Drop, dups)
+
+PlotFinal = PlotSpots(Wells_PosGrad, Same)
+PlotFinal_NoDev = PlotSpots(Wells_NoDeviation_PosGrad, Same_NoDev)
+PlotFinal_NoDevNY = PlotSpots(Wells_NoDeviationNY_PosGrad, Same_NoDevNY)
 
 #Colors by location, sorted by the highest Qs to lowest in shallowest measurement
 PlotColPal = colorRampPalette(colors = c('red', 'orange', 'yellow', 'green', 'blue', 'purple'))
 cols = PlotColPal(length(unique(PlotFinal$SameSpot)))
+cols_NoDev = PlotColPal(length(unique(PlotFinal_NoDev$SameSpot)))
+cols_NoDevNY = PlotColPal(length(unique(PlotFinal_NoDevNY$SameSpot)))
 
 #Make plot
 png('SameSpotWells_QsVsDepth_colrev.png', res = 600, units = 'in', width = 7, height = 7)
@@ -539,11 +588,46 @@ par(new = FALSE)
 minor.tick(nx=5,ny=5)
 legend('topright', legend = c('Shallowest BHT for Location is Shallow', '', '', 'Shallowest BHT for Location is Deep'), col = c('red', 'yellow', 'green', 'purple'), pch = 16, lty = 1)
 dev.off()
-rm(PlotColPal, cols)
+
+png('SameSpotWells_QsVsDepth_colrev_NoDevWells.png', res = 600, units = 'in', width = 7, height = 7)
+par(mar = c(4.5, 5, 1.5, 1.5), xaxs='i', yaxs='i')
+for (i in 1:length(unique(PlotFinal_NoDev$SameSpot))){
+  if (i == 1){
+    plot(PlotFinal_NoDev$WellDepth[which(PlotFinal_NoDev$SameSpot == PlotFinal_NoDev$SameSpot[length(unique(PlotFinal_NoDev$SameSpot)) + 1 - i])], PlotFinal_NoDev$Qs[which(PlotFinal_NoDev$SameSpot == PlotFinal_NoDev$SameSpot[length(unique(PlotFinal_NoDev$SameSpot)) + 1 - i])], type = 'o', col = cols[length(unique(PlotFinal_NoDev$SameSpot)) + 1 - i], pch = 16, xlim = c(0,3500), ylim = c(0,250), xlab = 'BHT Depth (m)', ylab = expression('Surface Heat Flow' ~ (mW/m^2)), cex.axis = 1.5, cex.lab = 1.5)
+  }else{
+    plot(PlotFinal_NoDev$WellDepth[which(PlotFinal_NoDev$SameSpot == PlotFinal_NoDev$SameSpot[length(unique(PlotFinal_NoDev$SameSpot)) + 1 - i])], PlotFinal_NoDev$Qs[which(PlotFinal_NoDev$SameSpot == PlotFinal_NoDev$SameSpot[length(unique(PlotFinal_NoDev$SameSpot)) + 1 - i])], type = 'o', col = cols[length(unique(PlotFinal_NoDev$SameSpot)) + 1 - i], pch = 16, xlim = c(0,3500), ylim = c(0,250), axes = FALSE, xlab = '', ylab = '')
+  }
+  par(new = TRUE)
+}
+par(new = FALSE)
+minor.tick(nx=5,ny=5)
+legend('topright', legend = c('Shallowest BHT for Location is Shallow', '', '', 'Shallowest BHT for Location is Deep'), col = c('red', 'yellow', 'green', 'purple'), pch = 16, lty = 1)
+dev.off()
+
+png('SameSpotWells_QsVsDepth_colrev_NoDevWellsNY.png', res = 600, units = 'in', width = 7, height = 7)
+par(mar = c(4.5, 5, 1.5, 1.5), xaxs='i', yaxs='i')
+for (i in 1:length(unique(PlotFinal_NoDevNY$SameSpot))){
+  if (i == 1){
+    plot(PlotFinal_NoDevNY$WellDepth[which(PlotFinal_NoDevNY$SameSpot == PlotFinal_NoDevNY$SameSpot[length(unique(PlotFinal_NoDevNY$SameSpot)) + 1 - i])], PlotFinal_NoDevNY$Qs[which(PlotFinal_NoDevNY$SameSpot == PlotFinal_NoDevNY$SameSpot[length(unique(PlotFinal_NoDevNY$SameSpot)) + 1 - i])], type = 'o', col = cols[length(unique(PlotFinal_NoDevNY$SameSpot)) + 1 - i], pch = 16, xlim = c(0,3500), ylim = c(0,250), xlab = 'BHT Depth (m)', ylab = expression('Surface Heat Flow' ~ (mW/m^2)), cex.axis = 1.5, cex.lab = 1.5)
+  }else{
+    plot(PlotFinal_NoDevNY$WellDepth[which(PlotFinal_NoDevNY$SameSpot == PlotFinal_NoDevNY$SameSpot[length(unique(PlotFinal_NoDevNY$SameSpot)) + 1 - i])], PlotFinal_NoDevNY$Qs[which(PlotFinal_NoDevNY$SameSpot == PlotFinal_NoDevNY$SameSpot[length(unique(PlotFinal_NoDevNY$SameSpot)) + 1 - i])], type = 'o', col = cols[length(unique(PlotFinal_NoDevNY$SameSpot)) + 1 - i], pch = 16, xlim = c(0,3500), ylim = c(0,250), axes = FALSE, xlab = '', ylab = '')
+  }
+  par(new = TRUE)
+}
+par(new = FALSE)
+minor.tick(nx=5,ny=5)
+legend('topright', legend = c('Shallowest BHT for Location is Shallow', '', '', 'Shallowest BHT for Location is Deep'), col = c('red', 'yellow', 'green', 'purple'), pch = 16, lty = 1)
+dev.off()
+
+rm(PlotColPal, cols, i)
 
 #Transform to spatial data
 coordinates(PlotFinal) = c('LongDgr', 'LatDegr')
 proj4string(PlotFinal) = CRS('+init=epsg:4326')
+coordinates(PlotFinal_NoDev) = c('LongDgr', 'LatDegr')
+proj4string(PlotFinal_NoDev) = CRS('+init=epsg:4326')
+coordinates(PlotFinal_NoDevNY) = c('LongDgr', 'LatDegr')
+proj4string(PlotFinal_NoDevNY) = CRS('+init=epsg:4326')
 
 #Map of which states have the most duplicate measurements
 png('Barplot_PointsSameSpatialLocationStates.png', res = 300, width = 8, height = 5, units = 'in')
@@ -573,6 +657,8 @@ rm(counts)
 
 #Sort by BHT 
 PlotFinal = PlotFinal[rev(order(PlotFinal$BHT)),]
+PlotFinal_NoDev = PlotFinal_NoDev[rev(order(PlotFinal_NoDev$BHT)),]
+PlotFinal_NoDevNY = PlotFinal_NoDevNY[rev(order(PlotFinal_NoDevNY$BHT)),]
 
 #Sort by Well Depth 
 #PlotFinal = PlotFinal[rev(order(PlotFinal$WellDepth)),]
@@ -604,28 +690,69 @@ for (i in 1:length(unique(PlotFinal$SameSpot))){
 par(new = FALSE)
 minor.tick(nx=5,ny=5)
 dev.off()
+
+png('SameSpotWells_BHTVsLocation_NoDeviation.png', res = 600, units = 'in', width = 7, height = 7)
+par(mar = c(4.5, 5, 1.5, 1.5))
+for (i in 1:length(unique(PlotFinal_NoDev$SameSpot))){
+  #Indices for the deepest wells at a location
+  indsMaxDepth = which(PlotFinal_NoDev$WellDepth[which(PlotFinal_NoDev$SameSpot == unique(PlotFinal_NoDev$SameSpot)[i])] == max(PlotFinal_NoDev$WellDepth[which(PlotFinal_NoDev$SameSpot == unique(PlotFinal_NoDev$SameSpot)[i])]))
+  if (i == 1){
+    #Record used coordinates
+    Coords = PlotFinal_NoDev[which(PlotFinal_NoDev$SameSpot == unique(PlotFinal_NoDev$SameSpot)[i]),][1,]
+    #All others black
+    plot(rep(i,length(PlotFinal_NoDev$BHT[which(PlotFinal_NoDev$SameSpot == unique(PlotFinal_NoDev$SameSpot)[i])])), PlotFinal_NoDev$BHT[which(PlotFinal_NoDev$SameSpot == unique(PlotFinal_NoDev$SameSpot)[i])], type = 'o', col = 'black', pch = 16, xlim = c(0,length(unique(PlotFinal_NoDev$SameSpot))), ylim = c(0,140), xlab = 'Same Spot Well', ylab = expression(paste('BHT (', degree, 'C)')), cex.axis = 1.5, cex.lab = 1.5)
+    par(new=TRUE)
+    #Max depth wells red
+    plot(rep(i, length(indsMaxDepth)), PlotFinal_NoDev$BHT[which(PlotFinal_NoDev$SameSpot == unique(PlotFinal_NoDev$SameSpot)[i])][indsMaxDepth], type = 'o', col = 'red', pch = 16, xlim = c(0,length(unique(PlotFinal_NoDev$SameSpot))), ylim = c(0,140), xlab = '', ylab = '', axes=FALSE)
+  }else if (nrow(zerodist(rbind(PlotFinal_NoDev[which(PlotFinal_NoDev$SameSpot == unique(PlotFinal_NoDev$SameSpot)[i]),][1,], Coords))) == 0){
+    #Record used coordinates
+    Coords = rbind(PlotFinal_NoDev[which(PlotFinal_NoDev$SameSpot == unique(PlotFinal_NoDev$SameSpot)[i]),][1,], Coords)
+    #All others black
+    plot(rep(i,length(PlotFinal_NoDev$BHT[which(PlotFinal_NoDev$SameSpot == unique(PlotFinal_NoDev$SameSpot)[i])])), PlotFinal_NoDev$BHT[which(PlotFinal_NoDev$SameSpot == unique(PlotFinal_NoDev$SameSpot)[i])], type = 'o', col = 'black', pch = 16, xlim = c(0,length(unique(PlotFinal_NoDev$SameSpot))), ylim = c(0,140), xlab = '', ylab = '', axes = FALSE)
+    par(new=TRUE)
+    #Max depth wells red
+    plot(rep(i, length(indsMaxDepth)), PlotFinal_NoDev$BHT[which(PlotFinal_NoDev$SameSpot == unique(PlotFinal_NoDev$SameSpot)[i])][indsMaxDepth], type = 'o', col = 'red', pch = 16, xlim = c(0,length(unique(PlotFinal_NoDev$SameSpot))), ylim = c(0,140), axes = FALSE, xlab = '', ylab = '')
+  }
+  par(new = TRUE)
+}
+par(new = FALSE)
+minor.tick(nx=5,ny=5)
+dev.off()
 rm(indsMaxDepth, Coords, i)
 
 #Split by wells that have deeper BHT as smaller value
 
 #Figure out which wells have the deeper BHT as smaller in value
-PlotFinal$IndsDeepSmallBHT = 0
-
-for (i in 1:length(unique(PlotFinal$SameSpot))){
-  #Indices for the deepest wells at a location
-  indsMaxDepth = which(PlotFinal$WellDepth[which(PlotFinal$SameSpot == unique(PlotFinal$SameSpot)[i])] == max(PlotFinal$WellDepth[which(PlotFinal$SameSpot == unique(PlotFinal$SameSpot)[i])]))
-  if (nrow(PlotFinal[which(PlotFinal$SameSpot == unique(PlotFinal$SameSpot)[i]),][-indsMaxDepth,]) >= 1){
-    for (temp in 1:length(indsMaxDepth)){
-      if (any(PlotFinal$BHT[which(PlotFinal$SameSpot == unique(PlotFinal$SameSpot)[i])][indsMaxDepth[temp]] < PlotFinal$BHT[which(PlotFinal$SameSpot == unique(PlotFinal$SameSpot)[i])][-indsMaxDepth])){
-        PlotFinal$IndsDeepSmallBHT[which(PlotFinal$SameSpot == unique(PlotFinal$SameSpot)[i])] = 1
+DeepBHTSmaller = function(PlotFinal){
+  PlotFinal$IndsDeepSmallBHT = 0
+  
+  for (i in 1:length(unique(PlotFinal$SameSpot))){
+    #Indices for the deepest wells at a location
+    indsMaxDepth = which(PlotFinal$WellDepth[which(PlotFinal$SameSpot == unique(PlotFinal$SameSpot)[i])] == max(PlotFinal$WellDepth[which(PlotFinal$SameSpot == unique(PlotFinal$SameSpot)[i])]))
+    if (nrow(PlotFinal[which(PlotFinal$SameSpot == unique(PlotFinal$SameSpot)[i]),][-indsMaxDepth,]) >= 1){
+      for (temp in 1:length(indsMaxDepth)){
+        if (any(PlotFinal$BHT[which(PlotFinal$SameSpot == unique(PlotFinal$SameSpot)[i])][indsMaxDepth[temp]] < PlotFinal$BHT[which(PlotFinal$SameSpot == unique(PlotFinal$SameSpot)[i])][-indsMaxDepth])){
+          PlotFinal$IndsDeepSmallBHT[which(PlotFinal$SameSpot == unique(PlotFinal$SameSpot)[i])] = 1
+        }
       }
     }
   }
+  rm(i, indsMaxDepth, temp)
+  
+  return(PlotFinal)
 }
-rm(i, indsMaxDepth, temp)
 
+PlotFinal = DeepBHTSmaller(PlotFinal)
 PlotFinal_DeepBHTsLarge = PlotFinal[PlotFinal$IndsDeepSmallBHT == 0,]
 PlotFinal_DeepBHTsSmall = PlotFinal[PlotFinal$IndsDeepSmallBHT == 1,]
+
+PlotFinal_NoDev = DeepBHTSmaller(PlotFinal_NoDev)
+PlotFinal_NoDev_DeepBHTsLarge = PlotFinal_NoDev[PlotFinal_NoDev$IndsDeepSmallBHT == 0,]
+PlotFinal_NoDev_DeepBHTsSmall = PlotFinal_NoDev[PlotFinal_NoDev$IndsDeepSmallBHT == 1,]
+
+PlotFinal_NoDevNY = DeepBHTSmaller(PlotFinal_NoDevNY)
+PlotFinal_NoDevNY_DeepBHTsLarge = PlotFinal_NoDevNY[PlotFinal_NoDevNY$IndsDeepSmallBHT == 0,]
+PlotFinal_NoDevNY_DeepBHTsSmall = PlotFinal_NoDevNY[PlotFinal_NoDevNY$IndsDeepSmallBHT == 1,]
 
 png('SameSpotWells_BHTVsLocation_SortDeepBHTSmaller.png', res = 600, units = 'in', width = 12, height = 6)
 par(mar = c(4.5, 5, 1.5, 1.5))
@@ -683,8 +810,66 @@ for (i in 1:length(unique(PlotFinal_DeepBHTsSmall$SameSpot))){
 par(new = FALSE)
 minor.tick(nx=5,ny=5)
 legend('topright', legend = c('Deepest BHTs', 'Other BHTs'), col = c('red', 'black'), pch = 16, lty = 1, cex = 1.5)
-
 dev.off()
+
+png('SameSpotWells_BHTVsLocation_SortDeepBHTSmaller_NoDeviation.png', res = 600, units = 'in', width = 12, height = 6)
+par(mar = c(4.5, 5, 1.5, 1.5))
+layout(rbind(c(1,2)))
+
+#Plot deep BHTs that are larger first
+for (i in 1:length(unique(PlotFinal_NoDev_DeepBHTsLarge$SameSpot))){
+  #Indices for the deepest wells at a location
+  indsMaxDepth = which(PlotFinal_NoDev_DeepBHTsLarge$WellDepth[which(PlotFinal_NoDev_DeepBHTsLarge$SameSpot == unique(PlotFinal_NoDev_DeepBHTsLarge$SameSpot)[i])] == max(PlotFinal_NoDev_DeepBHTsLarge$WellDepth[which(PlotFinal_NoDev_DeepBHTsLarge$SameSpot == unique(PlotFinal_NoDev_DeepBHTsLarge$SameSpot)[i])]))
+  if (i == 1){
+    #Record used coordinates
+    Coords = PlotFinal_NoDev_DeepBHTsLarge[which(PlotFinal_NoDev_DeepBHTsLarge$SameSpot == unique(PlotFinal_NoDev_DeepBHTsLarge$SameSpot)[i]),][1,]
+    #All others black
+    plot(rep(i,length(PlotFinal_NoDev_DeepBHTsLarge$BHT[which(PlotFinal_NoDev_DeepBHTsLarge$SameSpot == unique(PlotFinal_NoDev_DeepBHTsLarge$SameSpot)[i])])), PlotFinal_NoDev_DeepBHTsLarge$BHT[which(PlotFinal_NoDev_DeepBHTsLarge$SameSpot == unique(PlotFinal_NoDev_DeepBHTsLarge$SameSpot)[i])], type = 'o', col = 'black', pch = 16, xlim = c(0,length(unique(PlotFinal_NoDev_DeepBHTsLarge$SameSpot))), ylim = c(0,140), xlab = 'Sorted Location ID', ylab = expression(paste('BHT (', degree, 'C)')), main = 'Deepest BHT is Largest', cex.axis = 1.5, cex.lab = 1.5)
+    par(new=TRUE)
+    #Max depth wells red
+    plot(rep(i, length(indsMaxDepth)), PlotFinal_NoDev_DeepBHTsLarge$BHT[which(PlotFinal_NoDev_DeepBHTsLarge$SameSpot == unique(PlotFinal_NoDev_DeepBHTsLarge$SameSpot)[i])][indsMaxDepth], type = 'o', col = 'red', pch = 16, xlim = c(0,length(unique(PlotFinal_NoDev_DeepBHTsLarge$SameSpot))), ylim = c(0,140), xlab = '', ylab = '', axes=FALSE)
+  }else if (nrow(zerodist(rbind(PlotFinal_NoDev_DeepBHTsLarge[which(PlotFinal_NoDev_DeepBHTsLarge$SameSpot == unique(PlotFinal_NoDev_DeepBHTsLarge$SameSpot)[i]),][1,], Coords))) == 0){
+    #Record used coordinates
+    Coords = rbind(PlotFinal_NoDev_DeepBHTsLarge[which(PlotFinal_NoDev_DeepBHTsLarge$SameSpot == unique(PlotFinal_NoDev_DeepBHTsLarge$SameSpot)[i]),][1,], Coords)
+    #All others black
+    plot(rep(i,length(PlotFinal_NoDev_DeepBHTsLarge$BHT[which(PlotFinal_NoDev_DeepBHTsLarge$SameSpot == unique(PlotFinal_NoDev_DeepBHTsLarge$SameSpot)[i])])), PlotFinal_NoDev_DeepBHTsLarge$BHT[which(PlotFinal_NoDev_DeepBHTsLarge$SameSpot == unique(PlotFinal_NoDev_DeepBHTsLarge$SameSpot)[i])], type = 'o', col = 'black', pch = 16, xlim = c(0,length(unique(PlotFinal_NoDev_DeepBHTsLarge$SameSpot))), ylim = c(0,140), xlab = '', ylab = '', axes = FALSE)
+    par(new=TRUE)
+    #Max depth wells red
+    plot(rep(i, length(indsMaxDepth)), PlotFinal_NoDev_DeepBHTsLarge$BHT[which(PlotFinal_NoDev_DeepBHTsLarge$SameSpot == unique(PlotFinal_NoDev_DeepBHTsLarge$SameSpot)[i])][indsMaxDepth], type = 'o', col = 'red', pch = 16, xlim = c(0,length(unique(PlotFinal_NoDev_DeepBHTsLarge$SameSpot))), ylim = c(0,140), axes = FALSE, xlab = '', ylab = '')
+  }
+  par(new = TRUE)
+}
+par(new = FALSE)
+minor.tick(nx=5,ny=5)
+
+#Plot deep BHTs that are smaller
+for (i in 1:length(unique(PlotFinal_NoDev_DeepBHTsSmall$SameSpot))){
+  #Indices for the deepest wells at a location
+  indsMaxDepth = which(PlotFinal_NoDev_DeepBHTsSmall$WellDepth[which(PlotFinal_NoDev_DeepBHTsSmall$SameSpot == unique(PlotFinal_NoDev_DeepBHTsSmall$SameSpot)[i])] == max(PlotFinal_NoDev_DeepBHTsSmall$WellDepth[which(PlotFinal_NoDev_DeepBHTsSmall$SameSpot == unique(PlotFinal_NoDev_DeepBHTsSmall$SameSpot)[i])]))
+  if (i == 1){
+    #Record used coordinates
+    Coords = PlotFinal_NoDev_DeepBHTsSmall[which(PlotFinal_NoDev_DeepBHTsSmall$SameSpot == unique(PlotFinal_NoDev_DeepBHTsSmall$SameSpot)[i]),][1,]
+    #All others black
+    plot(rep(i,length(PlotFinal_NoDev_DeepBHTsSmall$BHT[which(PlotFinal_NoDev_DeepBHTsSmall$SameSpot == unique(PlotFinal_NoDev_DeepBHTsSmall$SameSpot)[i])])), PlotFinal_NoDev_DeepBHTsSmall$BHT[which(PlotFinal_NoDev_DeepBHTsSmall$SameSpot == unique(PlotFinal_NoDev_DeepBHTsSmall$SameSpot)[i])], type = 'o', col = 'black', pch = 16, xlim = c(0,length(unique(PlotFinal_NoDev_DeepBHTsSmall$SameSpot))), ylim = c(0,140), xlab = 'Sorted Location ID', ylab = expression(paste('BHT (', degree, 'C)')), main = 'Deepest BHT is Not Largest', cex.axis = 1.5, cex.lab = 1.5)
+    par(new=TRUE)
+    #Max depth wells red
+    plot(rep(i, length(indsMaxDepth)), PlotFinal_NoDev_DeepBHTsSmall$BHT[which(PlotFinal_NoDev_DeepBHTsSmall$SameSpot == unique(PlotFinal_NoDev_DeepBHTsSmall$SameSpot)[i])][indsMaxDepth], type = 'o', col = 'red', pch = 16, xlim = c(0,length(unique(PlotFinal_NoDev_DeepBHTsSmall$SameSpot))), ylim = c(0,140), xlab = '', ylab = '', axes=FALSE)
+  }else if (nrow(zerodist(rbind(PlotFinal_NoDev_DeepBHTsSmall[which(PlotFinal_NoDev_DeepBHTsSmall$SameSpot == unique(PlotFinal_NoDev_DeepBHTsSmall$SameSpot)[i]),][1,], Coords))) == 0){
+    #Record used coordinates
+    Coords = rbind(PlotFinal_NoDev_DeepBHTsSmall[which(PlotFinal_NoDev_DeepBHTsSmall$SameSpot == unique(PlotFinal_NoDev_DeepBHTsSmall$SameSpot)[i]),][1,], Coords)
+    #All others black
+    plot(rep(i,length(PlotFinal_NoDev_DeepBHTsSmall$BHT[which(PlotFinal_NoDev_DeepBHTsSmall$SameSpot == unique(PlotFinal_NoDev_DeepBHTsSmall$SameSpot)[i])])), PlotFinal_NoDev_DeepBHTsSmall$BHT[which(PlotFinal_NoDev_DeepBHTsSmall$SameSpot == unique(PlotFinal_NoDev_DeepBHTsSmall$SameSpot)[i])], type = 'o', col = 'black', pch = 16, xlim = c(0,length(unique(PlotFinal_NoDev_DeepBHTsSmall$SameSpot))), ylim = c(0,140), xlab = '', ylab = '', axes = FALSE)
+    par(new=TRUE)
+    #Max depth wells red
+    plot(rep(i, length(indsMaxDepth)), PlotFinal_NoDev_DeepBHTsSmall$BHT[which(PlotFinal_NoDev_DeepBHTsSmall$SameSpot == unique(PlotFinal_NoDev_DeepBHTsSmall$SameSpot)[i])][indsMaxDepth], type = 'o', col = 'red', pch = 16, xlim = c(0,length(unique(PlotFinal_NoDev_DeepBHTsSmall$SameSpot))), ylim = c(0,140), axes = FALSE, xlab = '', ylab = '')
+  }
+  par(new = TRUE)
+}
+par(new = FALSE)
+minor.tick(nx=5,ny=5)
+legend('topright', legend = c('Deepest BHTs', 'Other BHTs'), col = c('red', 'black'), pch = 16, lty = 1, cex = 1.5)
+dev.off()
+
 rm(i, indsMaxDepth, Coords)
 
 #Check how many of the Deep BHTs that are smaller are greater than 2 degrees or so
@@ -825,7 +1010,6 @@ LocsNugs_Deeper1km$Reg[as.numeric(rownames(LocsNugs_Deeper1km[InterpRegs[9,],]@d
 LocsNugs_Deeper1km$Reg[as.numeric(rownames(LocsNugs_Deeper1km[MT_Bounded,]@data))] = InterpRegs$Name[4]
 LocsNugs_Deeper1km$Reg[as.numeric(rownames(LocsNugs_Deeper1km[CWV_Bounded,]@data))] = InterpRegs$Name[7]
 LocsNugs_Deeper1km$Reg[as.numeric(rownames(LocsNugs_Deeper1km[VR_Bounded,]@data))] = 'VR'
-
 
 #One point is not in the interpolation regions. Will not be used in plots.
 LocsNugs = LocsNugs[is.na(LocsNugs$Reg) == FALSE,]
@@ -1022,11 +1206,20 @@ rm(EDAPlots)
 #  Local Median and Local Average Deviation----
 #Uses the well data that has been sorted for unique spatial locations.
 
+#Fixme: parallelize this function.
 DataTab = QsDev(Data = SortData$Sorted@data, Var = 'Qs', xName = 'coords_x1', yName = 'coords_x2', rad = 10000, max_pts = 25)
 #Add information to the original data
 SortData$Sorted@data = DataTab
 #Rename to shorter variable
 WellsSort = SortData$Sorted
+
+DataTab_NoDev = QsDev(Data = SortData_NoDev$Sorted@data, Var = 'Qs', xName = 'coords_x1', yName = 'coords_x2', rad = 10000, max_pts = 25)
+SortData_NoDev$Sorted@data = DataTab_NoDev
+WellsSort_NoDev = SortData_NoDev$Sorted
+
+DataTab_NoDevNY = QsDev(Data = SortData_NoDevNY$Sorted@data, Var = 'Qs', xName = 'coords_x1', yName = 'coords_x2', rad = 10000, max_pts = 25)
+SortData_NoDevNY$Sorted@data = DataTab_NoDevNY
+WellsSort_NoDevNY = SortData_NoDevNY$Sorted
 
 #Plot selected radius and points used in QsDev
 #the objective of this analysis is spatial coverage so that the threshold may be applied spatially
@@ -1052,7 +1245,27 @@ plot(WellsSort[WellsSort$Dist3 > 10000,], pch = 16, cex = 0.2, col = 'red', add 
 legend('topleft', legend = c('Tested', 'Not Tested'), pch = 16, cex = 1.3, col = c('black', 'red'))
 dev.off()
 
-#These figures should be made with a dataset that has unique spatial locations, as completed above.
+png("HeatFlowEDA_WellsUsedOrNotUsed_NoDevNY.png", width=6, height=6, units="in", res=600)
+par(mar = c(2,2.5,3,1.5), xaxs = 'i', yaxs = 'i')
+plot(WellsSort_NoDevNY, pch = 16, cex = 0.2, col = 'white', main = 'Points Tested in Local Median Deviation ESDA Procedure')
+plot(Counties[which(Counties$STATEFP == 42 | Counties$STATEFP == 36 | Counties$STATEFP == 54 | Counties$STATEFP == 51| Counties$STATEFP == 24| Counties$STATEFP == 21),], add=TRUE, border = 'grey')
+plot(NY, lwd = 2, add=TRUE)
+plot(PA, lwd = 2, add=TRUE)
+plot(WV, lwd = 2, add=TRUE)
+plot(MD, lwd = 2, add=TRUE)
+plot(KY, lwd = 2, add=TRUE)
+plot(VA, lwd = 2, add=TRUE)
+north.arrow(-75, 37.5, 0.1, lab = 'N', col='black', cex = 1.5)
+degAxis(side = 2, seq(34, 46, 2), cex.axis = 1.5)
+degAxis(side = 2, seq(34, 46, 1), labels = FALSE)
+degAxis(side = 4, seq(34, 46, 1), labels = FALSE)
+degAxis(side = 1, seq(-70, -86, -2), cex.axis = 1.5)
+degAxis(side = 3, seq(-70, -86, -1), labels = FALSE)
+degAxis(side = 1, seq(-70, -86, -1), labels = FALSE)
+plot(WellsSort_NoDevNY[WellsSort_NoDevNY$Dist3 <= 10000,], pch = 16, cex = 0.2, add = T)
+plot(WellsSort_NoDevNY[WellsSort_NoDevNY$Dist3 > 10000,], pch = 16, cex = 0.2, col = 'red', add = T)
+legend('topleft', legend = c('Tested', 'Not Tested'), pch = 16, cex = 1.3, col = c('black', 'red'))
+dev.off()
 
 #Color function parameters for plotting the heat flow data map
 colPal = colorRampPalette(colors = rev(c('red', 'orange', 'yellow', 'green', 'blue')))
@@ -1239,19 +1452,31 @@ dev.off()
 png("HeatFlow_LocMedDiff_Zoom.png", width=8, height=8, units="in", res=600)
 par(mar=c(4,5.5,3,2), xaxs = 'i', yaxs = 'i')
 EDAPlotsMed = function(DataAll, Var, Unit, ymin, ymax){
-  plot(DataAll$WellDepth[which(DataAll$State == "NY" & DataAll$RegMed > -9999)], DataAll@data[which(DataAll$State == "NY" & DataAll$RegMed > -9999), Var] - DataAll@data[which(DataAll$State == "NY" & DataAll$RegMed > -9999), 'RegMed'], col = "blue", pch=16, xlim=c(0,7000), ylim=c(ymin,ymax), ylab=Unit, xlab='Temperature Measurement Depth (m)', main='Local Median Deviation by Depth', cex.main=2, cex.axis=1.5, cex.lab=2, axes = FALSE)
+  plot(DataAll$WellDepth[which(DataAll$State == "NY" & DataAll$RegMed > -9999)], DataAll@data[which(DataAll$State == "NY" & DataAll$RegMed > -9999), Var] - DataAll@data[which(DataAll$State == "NY" & DataAll$RegMed > -9999), 'RegMed'], col = "blue", pch=16, xlim=c(0,7000), ylim=c(ymin,ymax), ylab=Unit, xlab='Temperature Measurement Depth (m)', main='Local Median Deviation by Depth', cex.main=2, cex.axis=1.5, cex.lab=2, axes = FALSE, cex = 0.2)
   par(new=T)
-  plot(DataAll$WellDepth[which(DataAll$State == "WV" & DataAll$RegMed > -9999)], DataAll@data[which(DataAll$State == "WV" & DataAll$RegMed > -9999), Var] - DataAll@data[which(DataAll$State == "WV" & DataAll$RegMed > -9999), 'RegMed'], col = "green", pch=16, xlim=c(0,7000), ylim=c(ymin,ymax), ylab='', xlab='', main='', axes=FALSE)
+  plot(DataAll$WellDepth[which(DataAll$State == "WV" & DataAll$RegMed > -9999)], DataAll@data[which(DataAll$State == "WV" & DataAll$RegMed > -9999), Var] - DataAll@data[which(DataAll$State == "WV" & DataAll$RegMed > -9999), 'RegMed'], col = "green", pch=16, xlim=c(0,7000), ylim=c(ymin,ymax), ylab='', xlab='', main='', axes=FALSE, cex = 0.2)
   par(new=T)
-  plot(DataAll$WellDepth[which(DataAll$State == "PA" & DataAll$RegMed > -9999)], DataAll@data[which(DataAll$State == "PA" & DataAll$RegMed > -9999), Var] - DataAll@data[which(DataAll$State == "PA" & DataAll$RegMed > -9999), 'RegMed'], col = "red", pch=16, xlim=c(0,7000), ylim=c(ymin,ymax), ylab='', xlab='', main='', axes=FALSE)
+  plot(DataAll$WellDepth[which(DataAll$State == "PA" & DataAll$RegMed > -9999)], DataAll@data[which(DataAll$State == "PA" & DataAll$RegMed > -9999), Var] - DataAll@data[which(DataAll$State == "PA" & DataAll$RegMed > -9999), 'RegMed'], col = "red", pch=16, xlim=c(0,7000), ylim=c(ymin,ymax), ylab='', xlab='', main='', axes=FALSE, cex = 0.2)
   par(new=T)
-  plot(DataAll$WellDepth[which(DataAll$State == "KY" & DataAll$RegMed > -9999)], DataAll@data[which(DataAll$State == "KY" & DataAll$RegMed > -9999), Var] - DataAll@data[which(DataAll$State == "KY" & DataAll$RegMed > -9999), 'RegMed'], col = "purple", pch=16, xlim=c(0,7000), ylim=c(ymin,ymax), ylab='', xlab='', main='', axes=FALSE)
+  plot(DataAll$WellDepth[which(DataAll$State == "KY" & DataAll$RegMed > -9999)], DataAll@data[which(DataAll$State == "KY" & DataAll$RegMed > -9999), Var] - DataAll@data[which(DataAll$State == "KY" & DataAll$RegMed > -9999), 'RegMed'], col = "purple", pch=16, xlim=c(0,7000), ylim=c(ymin,ymax), ylab='', xlab='', main='', axes=FALSE, cex = 0.2)
   par(new=T)
-  plot(DataAll$WellDepth[which(DataAll$State == "VA" & DataAll$RegMed > -9999)], DataAll@data[which(DataAll$State == "VA" & DataAll$RegMed > -9999), Var] - DataAll@data[which(DataAll$State == "VA" & DataAll$RegMed > -9999), 'RegMed'], col = "yellow", pch=16, xlim=c(0,7000), ylim=c(ymin,ymax), ylab='', xlab='', main='', axes=FALSE)
+  plot(DataAll$WellDepth[which(DataAll$State == "VA" & DataAll$RegMed > -9999)], DataAll@data[which(DataAll$State == "VA" & DataAll$RegMed > -9999), Var] - DataAll@data[which(DataAll$State == "VA" & DataAll$RegMed > -9999), 'RegMed'], col = "yellow", pch=16, xlim=c(0,7000), ylim=c(ymin,ymax), ylab='', xlab='', main='', axes=FALSE, cex = 0.2)
   par(new=T)
-  plot(DataAll$WellDepth[which(DataAll$State == "MD" & DataAll$RegMed > -9999)], DataAll@data[which(DataAll$State == "MD" & DataAll$RegMed > -9999), Var] - DataAll@data[which(DataAll$State == "MD" & DataAll$RegMed > -9999), 'RegMed'], col = "orange", pch=16, xlim=c(0,7000), ylim=c(ymin,ymax), ylab='', xlab='', main='', axes=FALSE)
+  plot(DataAll$WellDepth[which(DataAll$State == "MD" & DataAll$RegMed > -9999)], DataAll@data[which(DataAll$State == "MD" & DataAll$RegMed > -9999), Var] - DataAll@data[which(DataAll$State == "MD" & DataAll$RegMed > -9999), 'RegMed'], col = "orange", pch=16, xlim=c(0,7000), ylim=c(ymin,ymax), ylab='', xlab='', main='', axes=FALSE, cex = 0.2)
 }
 EDAPlotsMed(WellsSort, "Qs", Unit=expression(paste("Local Median Deviation", "(mW/m"^2, ")")),-100, 150)
+axis(side = 1, at = seq(0,7000,1000), labels = TRUE, cex.axis = 1.5)
+axis(side = 2, at = seq(-200,1300,50), labels=TRUE, cex.axis=1.5)
+minor.tick(nx = 5, ny = 10)
+lines(c(-100,10000), c(0,0), lwd = 2)
+lines(c(1000,1000),c(-1000,2000), lwd = 3)
+lines(c(600,600),c(-1000,2000), lty=2, lwd = 3)
+legend('topright', legend=c("New York", "Pennsylvania", "West Virginia", "Kentucky", "Maryland", "Virginia", "600 m", "1000 m"), pch=c(rep(16, 6),NA,NA), lty = c(rep(NA, 6), 2,1), lwd = 3, col=c("blue", "red", "green", "purple","orange","yellow","black", "black"), cex=1.7)
+dev.off()
+
+png("HeatFlow_LocMedDiff_Zoom_NoDevNY.png", width=8, height=8, units="in", res=600)
+par(mar=c(4,5.5,3,2), xaxs = 'i', yaxs = 'i')
+EDAPlotsMed(WellsSort_NoDevNY, "Qs", Unit=expression(paste("Local Median Deviation", "(mW/m"^2, ")")),-100, 150)
 axis(side = 1, at = seq(0,7000,1000), labels = TRUE, cex.axis = 1.5)
 axis(side = 2, at = seq(-200,1300,50), labels=TRUE, cex.axis=1.5)
 minor.tick(nx = 5, ny = 10)
@@ -1270,17 +1495,17 @@ WellsSort_600@data = DataTab_600
 png("HeatFlow_LocMedDiff_600.png", width=8, height=8, units="in", res=600)
 par(mar=c(4,5.5,3,2), xaxs = 'i', yaxs = 'i')
 EDAPlotsMed = function(DataAll, Var, Unit, ymin, ymax){
-  plot(DataAll$WellDepth[which(DataAll$State == "NY" & DataAll$RegMed > -9999)], DataAll@data[which(DataAll$State == "NY" & DataAll$RegMed > -9999), Var] - DataAll@data[which(DataAll$State == "NY" & DataAll$RegMed > -9999), 'RegMed'], col = "blue", pch=16, xlim=c(0,7000), ylim=c(ymin,ymax), ylab=Unit, xlab='Temperature Measurement Depth (m)', main='Local Median Deviation by Depth', cex.main=2, cex.axis=1.5, cex.lab=2, axes = FALSE)
+  plot(DataAll$WellDepth[which(DataAll$State == "NY" & DataAll$RegMed > -9999)], DataAll@data[which(DataAll$State == "NY" & DataAll$RegMed > -9999), Var] - DataAll@data[which(DataAll$State == "NY" & DataAll$RegMed > -9999), 'RegMed'], col = "blue", pch=16, xlim=c(0,7000), ylim=c(ymin,ymax), ylab=Unit, xlab='Temperature Measurement Depth (m)', main='Local Median Deviation by Depth', cex.main=2, cex.axis=1.5, cex.lab=2, axes = FALSE, cex = 0.2)
   par(new=T)
-  plot(DataAll$WellDepth[which(DataAll$State == "WV" & DataAll$RegMed > -9999)], DataAll@data[which(DataAll$State == "WV" & DataAll$RegMed > -9999), Var] - DataAll@data[which(DataAll$State == "WV" & DataAll$RegMed > -9999), 'RegMed'], col = "green", pch=16, xlim=c(0,7000), ylim=c(ymin,ymax), ylab='', xlab='', main='', axes=FALSE)
+  plot(DataAll$WellDepth[which(DataAll$State == "WV" & DataAll$RegMed > -9999)], DataAll@data[which(DataAll$State == "WV" & DataAll$RegMed > -9999), Var] - DataAll@data[which(DataAll$State == "WV" & DataAll$RegMed > -9999), 'RegMed'], col = "green", pch=16, xlim=c(0,7000), ylim=c(ymin,ymax), ylab='', xlab='', main='', axes=FALSE, cex = 0.2)
   par(new=T)
-  plot(DataAll$WellDepth[which(DataAll$State == "PA" & DataAll$RegMed > -9999)], DataAll@data[which(DataAll$State == "PA" & DataAll$RegMed > -9999), Var] - DataAll@data[which(DataAll$State == "PA" & DataAll$RegMed > -9999), 'RegMed'], col = "red", pch=16, xlim=c(0,7000), ylim=c(ymin,ymax), ylab='', xlab='', main='', axes=FALSE)
+  plot(DataAll$WellDepth[which(DataAll$State == "PA" & DataAll$RegMed > -9999)], DataAll@data[which(DataAll$State == "PA" & DataAll$RegMed > -9999), Var] - DataAll@data[which(DataAll$State == "PA" & DataAll$RegMed > -9999), 'RegMed'], col = "red", pch=16, xlim=c(0,7000), ylim=c(ymin,ymax), ylab='', xlab='', main='', axes=FALSE, cex = 0.2)
   par(new=T)
-  plot(DataAll$WellDepth[which(DataAll$State == "KY" & DataAll$RegMed > -9999)], DataAll@data[which(DataAll$State == "KY" & DataAll$RegMed > -9999), Var] - DataAll@data[which(DataAll$State == "KY" & DataAll$RegMed > -9999), 'RegMed'], col = "purple", pch=16, xlim=c(0,7000), ylim=c(ymin,ymax), ylab='', xlab='', main='', axes=FALSE)
+  plot(DataAll$WellDepth[which(DataAll$State == "KY" & DataAll$RegMed > -9999)], DataAll@data[which(DataAll$State == "KY" & DataAll$RegMed > -9999), Var] - DataAll@data[which(DataAll$State == "KY" & DataAll$RegMed > -9999), 'RegMed'], col = "purple", pch=16, xlim=c(0,7000), ylim=c(ymin,ymax), ylab='', xlab='', main='', axes=FALSE, cex = 0.2)
   par(new=T)
-  plot(DataAll$WellDepth[which(DataAll$State == "VA" & DataAll$RegMed > -9999)], DataAll@data[which(DataAll$State == "VA" & DataAll$RegMed > -9999), Var] - DataAll@data[which(DataAll$State == "VA" & DataAll$RegMed > -9999), 'RegMed'], col = "yellow", pch=16, xlim=c(0,7000), ylim=c(ymin,ymax), ylab='', xlab='', main='', axes=FALSE)
+  plot(DataAll$WellDepth[which(DataAll$State == "VA" & DataAll$RegMed > -9999)], DataAll@data[which(DataAll$State == "VA" & DataAll$RegMed > -9999), Var] - DataAll@data[which(DataAll$State == "VA" & DataAll$RegMed > -9999), 'RegMed'], col = "yellow", pch=16, xlim=c(0,7000), ylim=c(ymin,ymax), ylab='', xlab='', main='', axes=FALSE, cex = 0.2)
   par(new=T)
-  plot(DataAll$WellDepth[which(DataAll$State == "MD" & DataAll$RegMed > -9999)], DataAll@data[which(DataAll$State == "MD" & DataAll$RegMed > -9999), Var] - DataAll@data[which(DataAll$State == "MD" & DataAll$RegMed > -9999), 'RegMed'], col = "orange", pch=16, xlim=c(0,7000), ylim=c(ymin,ymax), ylab='', xlab='', main='', axes=FALSE)
+  plot(DataAll$WellDepth[which(DataAll$State == "MD" & DataAll$RegMed > -9999)], DataAll@data[which(DataAll$State == "MD" & DataAll$RegMed > -9999), Var] - DataAll@data[which(DataAll$State == "MD" & DataAll$RegMed > -9999), 'RegMed'], col = "orange", pch=16, xlim=c(0,7000), ylim=c(ymin,ymax), ylab='', xlab='', main='', axes=FALSE, cex = 0.2)
 }
 EDAPlotsMed(WellsSort_600, "Qs", Unit=expression(paste("Local Median Deviation", "(mW/m"^2, ")")),-100, 150)
 axis(side = 1, at = seq(0,7000,1000), labels = TRUE, cex.axis = 1.5)
@@ -1301,17 +1526,17 @@ WellsSort_1000@data = DataTab_1000
 png("HeatFlow_LocMedDiff_1000.png", width=8, height=8, units="in", res=600)
 par(mar=c(4,5.5,3,2), xaxs = 'i', yaxs = 'i')
 EDAPlotsMed = function(DataAll, Var, Unit, ymin, ymax){
-  plot(DataAll$WellDepth[which(DataAll$State == "NY" & DataAll$RegMed > -9999)], DataAll@data[which(DataAll$State == "NY" & DataAll$RegMed > -9999), Var] - DataAll@data[which(DataAll$State == "NY" & DataAll$RegMed > -9999), 'RegMed'], col = "blue", pch=16, xlim=c(0,7000), ylim=c(ymin,ymax), ylab=Unit, xlab='Temperature Measurement Depth (m)', main='Local Median Deviation by Depth', cex.main=2, cex.axis=1.5, cex.lab=2, axes = FALSE)
+  plot(DataAll$WellDepth[which(DataAll$State == "NY" & DataAll$RegMed > -9999)], DataAll@data[which(DataAll$State == "NY" & DataAll$RegMed > -9999), Var] - DataAll@data[which(DataAll$State == "NY" & DataAll$RegMed > -9999), 'RegMed'], col = "blue", pch=16, xlim=c(0,7000), ylim=c(ymin,ymax), ylab=Unit, xlab='Temperature Measurement Depth (m)', main='Local Median Deviation by Depth', cex.main=2, cex.axis=1.5, cex.lab=2, axes = FALSE, cex = 0.2)
   par(new=T)
-  plot(DataAll$WellDepth[which(DataAll$State == "WV" & DataAll$RegMed > -9999)], DataAll@data[which(DataAll$State == "WV" & DataAll$RegMed > -9999), Var] - DataAll@data[which(DataAll$State == "WV" & DataAll$RegMed > -9999), 'RegMed'], col = "green", pch=16, xlim=c(0,7000), ylim=c(ymin,ymax), ylab='', xlab='', main='', axes=FALSE)
+  plot(DataAll$WellDepth[which(DataAll$State == "WV" & DataAll$RegMed > -9999)], DataAll@data[which(DataAll$State == "WV" & DataAll$RegMed > -9999), Var] - DataAll@data[which(DataAll$State == "WV" & DataAll$RegMed > -9999), 'RegMed'], col = "green", pch=16, xlim=c(0,7000), ylim=c(ymin,ymax), ylab='', xlab='', main='', axes=FALSE, cex = 0.2)
   par(new=T)
-  plot(DataAll$WellDepth[which(DataAll$State == "PA" & DataAll$RegMed > -9999)], DataAll@data[which(DataAll$State == "PA" & DataAll$RegMed > -9999), Var] - DataAll@data[which(DataAll$State == "PA" & DataAll$RegMed > -9999), 'RegMed'], col = "red", pch=16, xlim=c(0,7000), ylim=c(ymin,ymax), ylab='', xlab='', main='', axes=FALSE)
+  plot(DataAll$WellDepth[which(DataAll$State == "PA" & DataAll$RegMed > -9999)], DataAll@data[which(DataAll$State == "PA" & DataAll$RegMed > -9999), Var] - DataAll@data[which(DataAll$State == "PA" & DataAll$RegMed > -9999), 'RegMed'], col = "red", pch=16, xlim=c(0,7000), ylim=c(ymin,ymax), ylab='', xlab='', main='', axes=FALSE, cex = 0.2)
   par(new=T)
-  plot(DataAll$WellDepth[which(DataAll$State == "KY" & DataAll$RegMed > -9999)], DataAll@data[which(DataAll$State == "KY" & DataAll$RegMed > -9999), Var] - DataAll@data[which(DataAll$State == "KY" & DataAll$RegMed > -9999), 'RegMed'], col = "purple", pch=16, xlim=c(0,7000), ylim=c(ymin,ymax), ylab='', xlab='', main='', axes=FALSE)
+  plot(DataAll$WellDepth[which(DataAll$State == "KY" & DataAll$RegMed > -9999)], DataAll@data[which(DataAll$State == "KY" & DataAll$RegMed > -9999), Var] - DataAll@data[which(DataAll$State == "KY" & DataAll$RegMed > -9999), 'RegMed'], col = "purple", pch=16, xlim=c(0,7000), ylim=c(ymin,ymax), ylab='', xlab='', main='', axes=FALSE, cex = 0.2)
   par(new=T)
-  plot(DataAll$WellDepth[which(DataAll$State == "VA" & DataAll$RegMed > -9999)], DataAll@data[which(DataAll$State == "VA" & DataAll$RegMed > -9999), Var] - DataAll@data[which(DataAll$State == "VA" & DataAll$RegMed > -9999), 'RegMed'], col = "yellow", pch=16, xlim=c(0,7000), ylim=c(ymin,ymax), ylab='', xlab='', main='', axes=FALSE)
+  plot(DataAll$WellDepth[which(DataAll$State == "VA" & DataAll$RegMed > -9999)], DataAll@data[which(DataAll$State == "VA" & DataAll$RegMed > -9999), Var] - DataAll@data[which(DataAll$State == "VA" & DataAll$RegMed > -9999), 'RegMed'], col = "yellow", pch=16, xlim=c(0,7000), ylim=c(ymin,ymax), ylab='', xlab='', main='', axes=FALSE, cex = 0.2)
   par(new=T)
-  plot(DataAll$WellDepth[which(DataAll$State == "MD" & DataAll$RegMed > -9999)], DataAll@data[which(DataAll$State == "MD" & DataAll$RegMed > -9999), Var] - DataAll@data[which(DataAll$State == "MD" & DataAll$RegMed > -9999), 'RegMed'], col = "orange", pch=16, xlim=c(0,7000), ylim=c(ymin,ymax), ylab='', xlab='', main='', axes=FALSE)
+  plot(DataAll$WellDepth[which(DataAll$State == "MD" & DataAll$RegMed > -9999)], DataAll@data[which(DataAll$State == "MD" & DataAll$RegMed > -9999), Var] - DataAll@data[which(DataAll$State == "MD" & DataAll$RegMed > -9999), 'RegMed'], col = "orange", pch=16, xlim=c(0,7000), ylim=c(ymin,ymax), ylab='', xlab='', main='', axes=FALSE, cex = 0.2)
 }
 EDAPlotsMed(WellsSort_1000, "Qs", Unit=expression(paste("Local Median Deviation", "(mW/m"^2, ")")),-100, 150)
 axis(side = 1, at = seq(0,7000,1000), labels = TRUE, cex.axis = 1.5)
@@ -1330,11 +1555,17 @@ OrderedWells = WellsSort[order(WellsSort$WellDepth),]
 #Compute the changepoint as a depth series. Remove NA values from points with too few neighbors to be tested.
 cpt.mean((OrderedWells$Qs - OrderedWells$RegMed)[-which(is.na(OrderedWells$Qs - OrderedWells$RegMed))], test.stat = "CUSUM", penalty = 'None', method = 'AMOC')
 #767 m is changepoint detected depth with AMOC
-OrderedWells$WellDepth[3859]
+#853 m for absolute value of the difference. Same value obtained with variance using nonparametric cumulative sum of squares (CSS) test
+cpt.var((OrderedWells$Qs - OrderedWells$RegMed)[-which(is.na(OrderedWells$Qs - OrderedWells$RegMed))], penalty = 'None', mu = 0, know.mean = TRUE, test.stat = 'Normal', method = "AMOC")
+#973 m for variance using normal test with known mean of 0, which is likely good for this dataset.
 
 #   Add shallow data back into dataset for PA region ----
 WellsSort$LatDeg = WellsSort@coords[,2]
 WellsSort$LngDegr = WellsSort@coords[,1]
+WellsSort_NoDev$LatDeg = WellsSort_NoDev@coords[,2]
+WellsSort_NoDev$LngDegr = WellsSort_NoDev@coords[,1]
+WellsSort_NoDevNY$LatDeg = WellsSort_NoDevNY@coords[,2]
+WellsSort_NoDevNY$LngDegr = WellsSort_NoDevNY@coords[,1]
   
 #Northwestern PA - All constraints are to focus on only the region of interest, and excludes all other wells in these counties.
 sets = rbind(c(1,2,8,8), c(3,4,7,7), c(5,6,7,7))
@@ -1466,6 +1697,25 @@ WellsDeep = rbind(WellsDeep, WellsSort[which(WellsSort$WellDepth > 750 & WellsSo
 
 writeOGR(WellsDeep, dsn=getwd(), layer="WellsForOutlierTest_ESDA_2018", driver="ESRI Shapefile")
 
+WellsDeep_NoDev = WellsSort_NoDev[-which(WellsSort_NoDev$WellDepth < 1000),]
+#Then add back the PA wells.
+WellsDeep_NoDev = rbind(WellsDeep_NoDev, WellsSort_NoDev[which(WellsSort_NoDev$WellDepth > 750 & WellsSort_NoDev$County == 'MC KEAN' & WellsSort_NoDev$State == 'PA' & WellsSort_NoDev$WellDepth < 1000),])
+WellsDeep_NoDev = rbind(WellsDeep_NoDev, WellsSort_NoDev[which(WellsSort_NoDev$WellDepth > 750 & WellsSort_NoDev$WellDepth < 1000 & WellsSort_NoDev$County == 'ELK' & WellsSort_NoDev$State == 'PA'),])
+WellsDeep_NoDev = rbind(WellsDeep_NoDev, WellsSort_NoDev[which(WellsSort_NoDev$WellDepth > 750 & WellsSort_NoDev$WellDepth < 1000 & WellsSort_NoDev$County == 'WARREN' & WellsSort_NoDev$State == 'PA' & WellsSort_NoDev$LongDgr > -79.4),])
+WellsDeep_NoDev = rbind(WellsDeep_NoDev, WellsSort_NoDev[which(WellsSort_NoDev$WellDepth > 750 & WellsSort_NoDev$WellDepth < 1000 & WellsSort_NoDev$County == 'FOREST' & WellsSort_NoDev$State == 'PA'),])
+WellsDeep_NoDev = rbind(WellsDeep_NoDev, WellsSort_NoDev[which(WellsSort_NoDev$WellDepth > 750 & WellsSort_NoDev$WellDepth < 1000 & WellsSort_NoDev$County == 'CLARION' & WellsSort_NoDev$State == 'PA' & WellsSort_NoDev$LatDegr > 41.3),])
+WellsDeep_NoDev = rbind(WellsDeep_NoDev, WellsSort_NoDev[which(WellsSort_NoDev$WellDepth > 750 & WellsSort_NoDev$WellDepth < 1000 & WellsSort_NoDev$County == 'JEFFERSON' & WellsSort_NoDev$State == 'PA' & WellsSort_NoDev$LatDegr <= 41.16776),])
+
+WellsDeep_NoDevNY = WellsSort_NoDevNY[-which(WellsSort_NoDevNY$WellDepth < 1000),]
+#Then add back the PA wells.
+WellsDeep_NoDevNY = rbind(WellsDeep_NoDevNY, WellsSort_NoDevNY[which(WellsSort_NoDevNY$WellDepth > 750 & WellsSort_NoDevNY$County == 'MC KEAN' & WellsSort_NoDevNY$State == 'PA' & WellsSort_NoDevNY$WellDepth < 1000),])
+WellsDeep_NoDevNY = rbind(WellsDeep_NoDevNY, WellsSort_NoDevNY[which(WellsSort_NoDevNY$WellDepth > 750 & WellsSort_NoDevNY$WellDepth < 1000 & WellsSort_NoDevNY$County == 'ELK' & WellsSort_NoDevNY$State == 'PA'),])
+WellsDeep_NoDevNY = rbind(WellsDeep_NoDevNY, WellsSort_NoDevNY[which(WellsSort_NoDevNY$WellDepth > 750 & WellsSort_NoDevNY$WellDepth < 1000 & WellsSort_NoDevNY$County == 'WARREN' & WellsSort_NoDevNY$State == 'PA' & WellsSort_NoDevNY$LongDgr > -79.4),])
+WellsDeep_NoDevNY = rbind(WellsDeep_NoDevNY, WellsSort_NoDevNY[which(WellsSort_NoDevNY$WellDepth > 750 & WellsSort_NoDevNY$WellDepth < 1000 & WellsSort_NoDevNY$County == 'FOREST' & WellsSort_NoDevNY$State == 'PA'),])
+WellsDeep_NoDevNY = rbind(WellsDeep_NoDevNY, WellsSort_NoDevNY[which(WellsSort_NoDevNY$WellDepth > 750 & WellsSort_NoDevNY$WellDepth < 1000 & WellsSort_NoDevNY$County == 'CLARION' & WellsSort_NoDevNY$State == 'PA' & WellsSort_NoDevNY$LatDegr > 41.3),])
+WellsDeep_NoDevNY = rbind(WellsDeep_NoDevNY, WellsSort_NoDevNY[which(WellsSort_NoDevNY$WellDepth > 750 & WellsSort_NoDevNY$WellDepth < 1000 & WellsSort_NoDevNY$County == 'JEFFERSON' & WellsSort_NoDevNY$State == 'PA' & WellsSort_NoDevNY$LatDegr <= 41.16776),])
+
+
 png("WellsRemoved_PAWellsAddedBack.png", width=6, height=6, units='in', res=150)
 plot(WellsSort, pch=16, col='red')
 plot(WellsDeep, pch=16, add=TRUE)
@@ -1478,8 +1728,940 @@ plot(VA, add=TRUE)
 dev.off()
 
 rm(sets, Pal, scaleBy, scaleRange)
+#  Operator Analysis----
+# Some operators may have practices that make their data unusual. Use these diagnostics to detect them.
+# If there are significant differences, see if operator should be removed.
+# Careful that some operators may make up all of the data for a region.
+
+#ESDA procedure for finding possibly bad operators
+BadOperatorDiagnostics = function(MT, #Spatial dataframe containing a column named "Operator" 
+                                  MT_WGS, #Spatial dataframe in WGS coordinates to make map
+                                  v.MT, #variogram for MT dataset using all data
+                                  rv.MT, #Cressie's robust variogram for MT dataset using all data
+                                  Vcut, #variogram cutoff in m
+                                  Vbins, #Number of variogram bins
+                                  o,  #index for the operator to be left out
+                                  LowLim = 2, #Lower limit for number of wells drilled by an operator. Need at least LowLim wells to make a plot for the operator.
+                                  HistSep = 10, #x-axis bar separartion on histogram
+                                  Histylim = 300, #y-axis upper limit on histogram
+                                  RegName, #Region name for figure
+                                  res = 300, #png resolution
+                                  height = 8, #png height in inches
+                                  width = 8, #png width in inches
+                                  MaxLagDist #maximum lag separation distance for which to compute jackknife distance metrics
+){
+  #Unique operators
+  UniOps = unique(MT$Operator)
+  
+  #Only plot the operator if they have more than LowLim well. It doesn't make sense otherwise.
+  if(nrow(MT[MT$Operator == UniOps[o],]) >= LowLim){
+    png(paste0(RegName, '_OperatorESDA_', o, '.png'), res = res, height = height, width = width, units = 'in')
+    #Histograms Overlain
+    #layout(rbind(c(1,4), c(2,3)))
+    #Histogram showing difference between current operator (red) and all data (black)
+    #hist(MT$Qs, col = 'black', main = UniOps[o], xlab = expression(paste('Heat Flow (mW/m'^2,')')), ylab = 'Frequency', ylim = c(0,Histylim), xlim = c(0,round(max(MT$Qs + HistSep/2),-1)), breaks = seq(round(min(MT$Qs - HistSep/2),-1),round(max(MT$Qs + HistSep/2),-1),HistSep))
+    #par(new=TRUE)
+    #hist(MT$Qs[-which(MT$Operator == UniOps[o])], border = 'red', axes = FALSE, xlab = '', main = '', ylab = '', ylim = c(0,Histylim), xlim = c(0,round(max(MT$Qs + HistSep/2),-1)), breaks = seq(round(min(MT$Qs - HistSep/2),-1),round(max(MT$Qs + HistSep/2),-1),HistSep))
+    #legend('topright', legend = c('All data', 'Operator Removed'), col = c('black', 'red'), pch = 15)
+    
+    #Histograms on separate plots
+    #layout(rbind(c(1,5), c(2,5), c(3,4), c(3,4)))
+    #hist(MT$Qs, col = 'black', main = UniOps[o], xlab = expression(paste('Heat Flow (mW/m'^2,')')), ylab = 'Frequency', ylim = c(0,Histylim), xlim = c(0,round(max(MT$Qs + HistSep/2),-1)), breaks = seq(round(min(MT$Qs - HistSep/2),-1),round(max(MT$Qs + HistSep/2),-1),HistSep))
+    #par(new=TRUE)
+    #hist(MT$Qs[-which(MT$Operator == UniOps[o])], border = 'red', axes = FALSE, xlab = '', main = '', ylab = '', ylim = c(0,Histylim), xlim = c(0,round(max(MT$Qs + HistSep/2),-1)), breaks = seq(round(min(MT$Qs - HistSep/2),-1),round(max(MT$Qs + HistSep/2),-1),HistSep))
+    #legend('topright', legend = c('All data', 'Operator Removed'), col = c('black', 'red'), pch = 15)
+
+    #Boxplot
+    layout(rbind(c(1,4), c(2,3)))
+    boxplot(horizontal = TRUE, x = MT$Qs, main = UniOps[o], xlab = expression(paste('Heat Flow (mW/m'^2,')')), ylim = c(0,round(max(MT$Qs + HistSep/2),-1)), at = 1, xlim = c(0,2))
+    par(new = TRUE)
+    #All red
+    #plot(x = MT$Qs[which(MT$Operator == UniOps[o])], y = jitter(rep(1, length(MT$Qs[which(MT$Operator == UniOps[o])])), amount = 0.4), col = 'red', xlab = '', ylab = '', axes = FALSE, xlim = c(0,round(max(MT$Qs + HistSep/2),-1)), ylim = c(0,2))
+    #Colored by value of heat flow
+    plot(x = MT$Qs[which(MT$Operator == UniOps[o])], y = jitter(rep(1, length(MT$Qs[which(MT$Operator == UniOps[o])])), amount = 0.4), col = colFun(MT$Qs[which(MT$Operator == UniOps[o])]), xlab = '', ylab = '', axes = FALSE, xlim = c(0,round(max(MT$Qs + HistSep/2),-1)), ylim = c(0,2))
+    legend('topright', legend = c(paste("All Wells: N wells =", nrow(MT)), paste("Operator's Wells: N wells =", nrow(MT[which(MT$Operator == UniOps[o]),]))), col = c('black', 'red'), lty = c(1,NA), pch = c(NA,1))
+    
+    #Variogram of region with and without operator
+    par(mar = c(5,5,2,1))
+    v.o = variogram(Qs~1, MT[-which(MT$Operator == UniOps[o]),], cutoff=Vcut, width = Vcut/Vbins)
+    plot(v.MT$dist, v.MT$gamma, ylim = c(0,round(max(v.MT$gamma),-1)), xlim = c(0,Vcut), xlab = 'Separation Distance (m)', ylab = expression(paste('Semivariance (mW/m'^2,')'^2)), main = 'MOM Semi-variogram')
+    par(new=TRUE)
+    plot(v.o$dist, v.o$gamma, ylim = c(0,round(max(v.MT$gamma),-1)), xlim = c(0,Vcut), xlab = '', ylab = '', col = 'red')
+    legend('bottomright', legend = c('All Wells', 'Operator Removed'), col = c('black', 'red'), pch = 1)
+    
+    #Robust variogram of region with and without operator
+    rv.o = variogram(Qs~1, MT[-which(MT$Operator == UniOps[o]),], cutoff=Vcut, width = Vcut/Vbins, cressie = TRUE)
+    plot(rv.MT$dist, rv.MT$gamma, ylim = c(0,round(max(v.MT$gamma),-1)), xlim = c(0,Vcut), xlab = 'Separation Distance (m)', ylab = expression(paste('Semivariance (mW/m'^2,')'^2)), main = 'Robust Semi-variogram')
+    par(new=TRUE)
+    plot(rv.o$dist, rv.o$gamma, ylim = c(0,round(max(v.MT$gamma),-1)), xlim = c(0,Vcut), xlab = '', ylab = '', col = 'red')
+    legend('bottomright', legend = c('All Wells', 'Operator Removed'), col = c('black', 'red'), pch = 1)
+    
+    #Map
+    plot(MT_WGS, pch = 16, cex = 0.4, col ='white')
+    plot(Counties[which(Counties$STATEFP == 42 | Counties$STATEFP == 36 | Counties$STATEFP == 54 | Counties$STATEFP == 51| Counties$STATEFP == 24| Counties$STATEFP == 21),], add=TRUE, border = 'grey')
+    plot(NY, lwd = 2, add=TRUE)
+    plot(PA, lwd = 2, add=TRUE)
+    plot(WV, lwd = 2, add=TRUE)
+    plot(MD, lwd = 2, add=TRUE)
+    plot(KY, lwd = 2, add=TRUE)
+    plot(VA, lwd = 2, add=TRUE)
+    north.arrow(-83.5, 37.8, 0.05, lab = 'N', cex.lab = 1.5, col='black', cex = 0.7)
+    degAxis(side = 2, seq(34, 46, 1), cex.axis = 1.5)
+    degAxis(side = 2, seq(34, 46, 1), labels = FALSE)
+    degAxis(side = 4, seq(34, 46, 1), labels = FALSE)
+    degAxis(side = 1, seq(-70, -86, -1), cex.axis = 1.5)
+    degAxis(side = 3, seq(-70, -86, -1), labels = FALSE)
+    degAxis(side = 1, seq(-70, -86, -1), labels = FALSE)
+    plot(MT_WGS, pch = 16, cex = 0.4, add = T)
+    #All red
+    #plot(MT_WGS[which(MT$Operator == UniOps[o]),], pch = 16, cex = 0.4, add = T, col = 'red')
+    #Colored by heat flow value. Deeper on top of shallower where there are overlaps in space.
+    plot(MT_WGS[which(MT$Operator == UniOps[o]),][order(MT_WGS[which(MT$Operator == UniOps[o]),]$WellDepth, decreasing = FALSE),], pch = 16, cex = 0.4, add = T, col = colFun(MT_WGS$Qs[which(MT_WGS$Operator == UniOps[o])][order(MT_WGS[which(MT$Operator == UniOps[o]),]$WellDepth, decreasing = FALSE)]))
+    legend('topleft', legend = c('Other Wells', "Operator's Wells"), col = c('black', 'red'), pch = 16, cex = 1)
+    dev.off()
+    
+    #Number of operator wells
+    Nop = length(which(MT$Operator == UniOps[o]))
+    
+    #Return the sum of the difference between the variograms with and without operator over the spatial area that they operate
+    #Using only the full dataset to define the lags computed because when an operator is left out is may result in changing the lag distance slightly.
+    #Weighting by the difference per well
+    DiffMOM = sum((v.MT$gamma - v.o$gamma)[v.MT$dist <= MaxLagDist])/Nop
+    DiffRobust = sum((rv.MT$gamma - rv.o$gamma)[rv.MT$dist <= MaxLagDist])/Nop
+    
+    #Weighting by the separation distance lags
+    weights = v.MT$np[which(v.MT$dist <= MaxLagDist)]*(v.MT$dist[which(v.MT$dist <= MaxLagDist)]^(-2))
+    weights = weights/sum(weights)
+    DiffMOMW = sum((v.MT$gamma - v.o$gamma)[v.MT$dist <= MaxLagDist]*weights)
+    DiffRobustW = sum((rv.MT$gamma - rv.o$gamma)[rv.MT$dist <= MaxLagDist]*weights)
+    
+    #This metric is not recommended because it can make increases in semi-variances seem like decreases.
+    #DiffMOM_Jack = sum((v.MT$gamma - v.o$gamma*(nrow(MT) - Nop)/nrow(MT))[v.MT$dist <= MaxLagDist])
+    #DiffRobust_Jack = sum((rv.MT$gamma - rv.o$gamma*(nrow(MT) - Nop)/nrow(MT))[rv.MT$dist <= MaxLagDist])
+    #This metric is better because it adjusts for number of points for each operator, but it may not be meaningful.
+    DiffMOM_Jack = sum((v.MT$gamma - v.o$gamma)[v.MT$dist <= MaxLagDist])*(nrow(MT) - Nop)/nrow(MT)
+    DiffRobust_Jack = sum((rv.MT$gamma - rv.o$gamma)[rv.MT$dist <= MaxLagDist])*(nrow(MT) - Nop)/nrow(MT)
+    
+    #Return the mean of the full dataset and the operator's dataset
+    DiffMeans = mean(MT$Qs) - mean(MT$Qs[which(MT$Operator == UniOps[o])])
+    t_diff = t.test(x = MT$Qs[-which(MT$Operator == UniOps[o])], y = MT$Qs[which(MT$Operator == UniOps[o])], alternative = 'two.sided', mu = 0)$p.value
+    w_diff = wilcox.test(x = MT$Qs[-which(MT$Operator == UniOps[o])], y = MT$Qs[which(MT$Operator == UniOps[o])], alternative = 'two.sided', mu = 0, correct = TRUE)$p.value
+    
+    #Return the mean and scaled mean of the operator-left-out dataset
+    DiffMeanRmOp = mean(MT$Qs) - mean(MT$Qs[-which(MT$Operator == UniOps[o])])
+    ScaledDiffMeanRmOp = mean(MT$Qs) - ((nrow(MT) - Nop)*mean(MT$Qs[-which(MT$Operator == UniOps[o])]))/nrow(MT)
+    #2-sample t-test for difference in means. These are large samples. Reporting wilcoxon alternative anyway.
+    t_RmOp = t.test(x = MT$Qs, y = MT$Qs[-which(MT$Operator == UniOps[o])], alternative = 'two.sided', mu = 0)$p.value
+    w_RmOp = wilcox.test(x = MT$Qs, y = MT$Qs[-which(MT$Operator == UniOps[o])], alternative = 'two.sided', mu = 0, correct = TRUE)$p.value
+    
+    lst = data.frame(Op = UniOps[o], OpNum = o, DiffMOM = DiffMOM, DiffMOMW = DiffMOMW, DiffMOM_Jack = DiffMOM_Jack, DiffRobust = DiffRobust, DiffRobustW = DiffRobustW, DiffRobust_Jack = DiffRobust_Jack, DiffMeans = DiffMeans, pt_DiffMean = t_diff, pw_DiffMean = w_diff, DiffMeanRmOp = DiffMeanRmOp, pt_DiffRmOp = t_RmOp, pw_DiffRmOp = w_RmOp, ScaledDiffMeanRmOp = ScaledDiffMeanRmOp, NumWells = Nop, stringsAsFactors = FALSE)
+    return(lst)
+  }
+}
+
+#Well data in WGS84 NAD83
+WellsDeepWGS = spTransform(WellsDeep, CRSobj = CRS('+init=epsg:4326'))
+WellsDeepWGS_NoDev = spTransform(WellsDeep_NoDev, CRSobj = CRS('+init=epsg:4326'))
+WellsDeepWGS_NoDevNY = spTransform(WellsDeep_NoDevNY, CRSobj = CRS('+init=epsg:4326'))
+
+#Using oringal dataset for points without negative gradients, and no points in same spatial location
+DeepCT = spTransform(WellsDeepWGS[InterpRegs[InterpRegs$Name == 'CT',],], CRS('+init=epsg:26917'))
+DeepCNY = spTransform(WellsDeepWGS[InterpRegs[InterpRegs$Name == 'CNY',],], CRS('+init=epsg:26917'))
+DeepCWV = spTransform(WellsDeepWGS[CWV_Bounded,], CRS('+init=epsg:26917'))
+DeepENY = spTransform(WellsDeepWGS[InterpRegs[InterpRegs$Name == 'ENY',],], CRS('+init=epsg:26917'))
+DeepENYPA = spTransform(WellsDeepWGS[InterpRegs[InterpRegs$Name == 'ENYPA',],], CRS('+init=epsg:26917'))
+DeepMT = spTransform(WellsDeepWGS[MT_Bounded,], CRS('+init=epsg:26917'))
+DeepNWPANY = spTransform(WellsDeepWGS[InterpRegs[InterpRegs$Name == 'NWPANY',],], CRS('+init=epsg:26917'))
+DeepSWPA = spTransform(WellsDeepWGS[InterpRegs[InterpRegs$Name == 'SWPA',],], CRS('+init=epsg:26917'))
+DeepWPA = spTransform(WellsDeepWGS[InterpRegs[InterpRegs$Name == 'WPA',],], CRS('+init=epsg:26917'))
+DeepVR = spTransform(WellsDeepWGS[VR_Bounded,], CRS('+init=epsg:26917'))
+DeepFL = rbind(DeepCT, DeepCWV, DeepCNY, DeepENY, DeepENYPA, DeepMT, DeepNWPANY, DeepSWPA, DeepWPA, DeepVR)
+
+DeepCT_NoDevNY = spTransform(WellsDeepWGS_NoDevNY[InterpRegs[InterpRegs$Name == 'CT',],], CRS('+init=epsg:26917'))
+DeepCNY_NoDevNY = spTransform(WellsDeepWGS_NoDevNY[InterpRegs[InterpRegs$Name == 'CNY',],], CRS('+init=epsg:26917'))
+DeepCWV_NoDevNY = spTransform(WellsDeepWGS_NoDevNY[CWV_Bounded,], CRS('+init=epsg:26917'))
+DeepENY_NoDevNY = spTransform(WellsDeepWGS_NoDevNY[InterpRegs[InterpRegs$Name == 'ENY',],], CRS('+init=epsg:26917'))
+DeepENYPA_NoDevNY = spTransform(WellsDeepWGS_NoDevNY[InterpRegs[InterpRegs$Name == 'ENYPA',],], CRS('+init=epsg:26917'))
+DeepMT_NoDevNY = spTransform(WellsDeepWGS_NoDevNY[MT_Bounded,], CRS('+init=epsg:26917'))
+DeepNWPANY_NoDevNY = spTransform(WellsDeepWGS_NoDevNY[InterpRegs[InterpRegs$Name == 'NWPANY',],], CRS('+init=epsg:26917'))
+DeepSWPA_NoDevNY = spTransform(WellsDeepWGS_NoDevNY[InterpRegs[InterpRegs$Name == 'SWPA',],], CRS('+init=epsg:26917'))
+DeepWPA_NoDevNY = spTransform(WellsDeepWGS_NoDevNY[InterpRegs[InterpRegs$Name == 'WPA',],], CRS('+init=epsg:26917'))
+DeepVR_NoDevNY = spTransform(WellsDeepWGS_NoDevNY[VR_Bounded,], CRS('+init=epsg:26917'))
+DeepFL_NoDevNY = rbind(DeepCT_NoDevNY, DeepCWV_NoDevNY, DeepCNY_NoDevNY, DeepENY_NoDevNY, DeepENYPA_NoDevNY, DeepMT_NoDevNY, DeepNWPANY_NoDevNY, DeepSWPA_NoDevNY, DeepWPA_NoDevNY, DeepVR_NoDevNY)
+
+#Seems like removing the possibly deviated data in NY doesn't make much of a difference. 
+
+#Variograms for deep data
+v.DeepCT <- variogram(Qs~1, DeepCT, cutoff=60000, width=60000/50) 
+v.DeepCNY <- variogram(Qs~1, DeepCNY, cutoff=60000, width=60000/15) 
+v.DeepCWV <- variogram(Qs~1, DeepCWV, cutoff=60000, width=60000/50)
+v.DeepENY <- variogram(Qs~1, DeepENY, cutoff=60000, width=60000/15)
+v.DeepENYPA <- variogram(Qs~1, DeepENYPA, cutoff=60000, width=60000/40)
+v.DeepMT <- variogram(Qs~1, DeepMT, cutoff=60000, width=60000/50)
+v.DeepNWPANY <- variogram(Qs~1, DeepNWPANY, cutoff=60000, width=60000/20) 
+v.DeepSWPA <- variogram(Qs~1, DeepSWPA, cutoff=60000, width=60000/50) 
+v.DeepWPA <- variogram(Qs~1, DeepWPA, cutoff=60000, width=60000/50) 
+v.DeepVR <- variogram(Qs~1, DeepVR, cutoff=60000, width=60000/20) 
+v.DeepFL <- variogram(Qs~1, DeepFL, cutoff=60000, width=60000/200)
+
+v.DeepCT_NoDevNY <- variogram(Qs~1, DeepCT_NoDevNY, cutoff=60000, width=60000/50) 
+v.DeepCNY_NoDevNY <- variogram(Qs~1, DeepCNY_NoDevNY, cutoff=60000, width=60000/15) 
+v.DeepCWV_NoDevNY <- variogram(Qs~1, DeepCWV_NoDevNY, cutoff=60000, width=60000/50)
+v.DeepENY_NoDevNY <- variogram(Qs~1, DeepENY_NoDevNY, cutoff=60000, width=60000/15)
+v.DeepENYPA_NoDevNY <- variogram(Qs~1, DeepENYPA_NoDevNY, cutoff=60000, width=60000/40)
+v.DeepMT_NoDevNY <- variogram(Qs~1, DeepMT_NoDevNY, cutoff=60000, width=60000/50)
+v.DeepNWPANY_NoDevNY <- variogram(Qs~1, DeepNWPANY_NoDevNY, cutoff=60000, width=60000/20) 
+v.DeepSWPA_NoDevNY <- variogram(Qs~1, DeepSWPA_NoDevNY, cutoff=60000, width=60000/50) 
+v.DeepWPA_NoDevNY <- variogram(Qs~1, DeepWPA_NoDevNY, cutoff=60000, width=60000/50) 
+v.DeepVR_NoDevNY <- variogram(Qs~1, DeepVR_NoDevNY, cutoff=60000, width=60000/20) 
+v.DeepFL_NoDevNY <- variogram(Qs~1, DeepFL_NoDevNY, cutoff=60000, width=60000/200)
+
+#Run diagnostics
+
+#Colors for heat flow on maps
+colPal = colorRampPalette(colors = rev(c('red', 'orange', 'yellow', 'green', 'blue')))
+scaleRange = c(30,80)
+scaleBy = 10
+Pal = colPal((scaleRange[2] - scaleRange[1])/scaleBy + 1)
+
+#MT - Deviated wells do not look incorrect here.
+DeepMT_WGS = spTransform(DeepMT, CRS('+init=epsg:4326'))
+rv.DeepMT = variogram(Qs~1, DeepMT, cutoff = 60000, width = 60000/50, cressie = TRUE)
+DeepMT_WGS_NoDevNY = spTransform(DeepMT_NoDevNY, CRS('+init=epsg:4326'))
+rv.DeepMT_NoDevNY = variogram(Qs~1, DeepMT_NoDevNY, cutoff = 60000, width = 60000/50, cressie = TRUE)
+cl = makeCluster(detectCores() - 1)
+registerDoParallel(cl)
+OpDiag_DeepMT = foreach(o = 1:length(unique(DeepMT$Operator)), .packages = c('gstat', 'GISTools', 'sp'), .combine = 'rbind') %dopar% {
+  a = BadOperatorDiagnostics(MT = DeepMT, o = o, LowLim = 2, MT_WGS = DeepMT_WGS, v.MT = v.DeepMT, rv.MT = rv.DeepMT, Vcut = 60000, Vbins = 50, HistSep = 10, Histylim = 500, RegName = "bDeepMT", MaxLagDist = 30000)
+  a
+}
+OpDiag_DeepMT_NoDevNY = foreach(o = 1:length(unique(DeepMT_NoDevNY$Operator)), .packages = c('gstat', 'GISTools', 'sp'), .combine = 'rbind') %dopar% {
+  a = BadOperatorDiagnostics(MT = DeepMT_NoDevNY, o = o, LowLim = 2, MT_WGS = DeepMT_WGS_NoDevNY, v.MT = v.DeepMT_NoDevNY, rv.MT = rv.DeepMT_NoDevNY, Vcut = 60000, Vbins = 50, HistSep = 10, Histylim = 500, RegName = "bDeepMT_NoDevNY", MaxLagDist = 30000)
+  a
+}
+stopCluster(cl)
+
+#Testing metric's sensitvity to the searching distance
+cl = makeCluster(detectCores() - 1)
+registerDoParallel(cl)
+OpDiag_DeepMT_2p5 = foreach(o = 1:length(unique(DeepMT$Operator)), .packages = c('gstat', 'GISTools', 'sp'), .combine = 'rbind') %dopar% {
+  a = BadOperatorDiagnostics(MT = DeepMT, o = o, LowLim = 2, MT_WGS = DeepMT_WGS, v.MT = v.DeepMT, rv.MT = rv.DeepMT, Vcut = 60000, Vbins = 50, HistSep = 10, Histylim = 500, RegName = "bDeepMT_2p5", MaxLagDist = 2500)
+  a
+}
+OpDiag_DeepMT_5 = foreach(o = 1:length(unique(DeepMT$Operator)), .packages = c('gstat', 'GISTools', 'sp'), .combine = 'rbind') %dopar% {
+  a = BadOperatorDiagnostics(MT = DeepMT, o = o, LowLim = 2, MT_WGS = DeepMT_WGS, v.MT = v.DeepMT, rv.MT = rv.DeepMT, Vcut = 60000, Vbins = 50, HistSep = 10, Histylim = 500, RegName = "bDeepMT_5", MaxLagDist = 5000)
+  a
+}
+OpDiag_DeepMT_7p5 = foreach(o = 1:length(unique(DeepMT$Operator)), .packages = c('gstat', 'GISTools', 'sp'), .combine = 'rbind') %dopar% {
+  a = BadOperatorDiagnostics(MT = DeepMT, o = o, LowLim = 2, MT_WGS = DeepMT_WGS, v.MT = v.DeepMT, rv.MT = rv.DeepMT, Vcut = 60000, Vbins = 50, HistSep = 10, Histylim = 500, RegName = "bDeepMT_7p5", MaxLagDist = 7500)
+  a
+}
+OpDiag_DeepMT_10 = foreach(o = 1:length(unique(DeepMT$Operator)), .packages = c('gstat', 'GISTools', 'sp'), .combine = 'rbind') %dopar% {
+  a = BadOperatorDiagnostics(MT = DeepMT, o = o, LowLim = 2, MT_WGS = DeepMT_WGS, v.MT = v.DeepMT, rv.MT = rv.DeepMT, Vcut = 60000, Vbins = 50, HistSep = 10, Histylim = 500, RegName = "bDeepMT_10", MaxLagDist = 10000)
+  a
+}
+OpDiag_DeepMT_12p5 = foreach(o = 1:length(unique(DeepMT$Operator)), .packages = c('gstat', 'GISTools', 'sp'), .combine = 'rbind') %dopar% {
+  a = BadOperatorDiagnostics(MT = DeepMT, o = o, LowLim = 2, MT_WGS = DeepMT_WGS, v.MT = v.DeepMT, rv.MT = rv.DeepMT, Vcut = 60000, Vbins = 50, HistSep = 10, Histylim = 500, RegName = "bDeepMT_12p5", MaxLagDist = 12500)
+  a
+}
+OpDiag_DeepMT_15 = foreach(o = 1:length(unique(DeepMT$Operator)), .packages = c('gstat', 'GISTools', 'sp'), .combine = 'rbind') %dopar% {
+  a = BadOperatorDiagnostics(MT = DeepMT, o = o, LowLim = 2, MT_WGS = DeepMT_WGS, v.MT = v.DeepMT, rv.MT = rv.DeepMT, Vcut = 60000, Vbins = 50, HistSep = 10, Histylim = 500, RegName = "bDeepMT_15", MaxLagDist = 15000)
+  a
+}
+OpDiag_DeepMT_17p5 = foreach(o = 1:length(unique(DeepMT$Operator)), .packages = c('gstat', 'GISTools', 'sp'), .combine = 'rbind') %dopar% {
+  a = BadOperatorDiagnostics(MT = DeepMT, o = o, LowLim = 2, MT_WGS = DeepMT_WGS, v.MT = v.DeepMT, rv.MT = rv.DeepMT, Vcut = 60000, Vbins = 50, HistSep = 10, Histylim = 500, RegName = "bDeepMT_17p5", MaxLagDist = 17500)
+  a
+}
+OpDiag_DeepMT_20 = foreach(o = 1:length(unique(DeepMT$Operator)), .packages = c('gstat', 'GISTools', 'sp'), .combine = 'rbind') %dopar% {
+  a = BadOperatorDiagnostics(MT = DeepMT, o = o, LowLim = 2, MT_WGS = DeepMT_WGS, v.MT = v.DeepMT, rv.MT = rv.DeepMT, Vcut = 60000, Vbins = 50, HistSep = 10, Histylim = 500, RegName = "bDeepMT_20", MaxLagDist = 20000)
+  a
+}
+OpDiag_DeepMT_22p5 = foreach(o = 1:length(unique(DeepMT$Operator)), .packages = c('gstat', 'GISTools', 'sp'), .combine = 'rbind') %dopar% {
+  a = BadOperatorDiagnostics(MT = DeepMT, o = o, LowLim = 2, MT_WGS = DeepMT_WGS, v.MT = v.DeepMT, rv.MT = rv.DeepMT, Vcut = 60000, Vbins = 50, HistSep = 10, Histylim = 500, RegName = "bDeepMT_22p5", MaxLagDist = 22500)
+  a
+}
+OpDiag_DeepMT_25 = foreach(o = 1:length(unique(DeepMT$Operator)), .packages = c('gstat', 'GISTools', 'sp'), .combine = 'rbind') %dopar% {
+  a = BadOperatorDiagnostics(MT = DeepMT, o = o, LowLim = 2, MT_WGS = DeepMT_WGS, v.MT = v.DeepMT, rv.MT = rv.DeepMT, Vcut = 60000, Vbins = 50, HistSep = 10, Histylim = 500, RegName = "bDeepMT_25", MaxLagDist = 25000)
+  a
+}
+OpDiag_DeepMT_27p5 = foreach(o = 1:length(unique(DeepMT$Operator)), .packages = c('gstat', 'GISTools', 'sp'), .combine = 'rbind') %dopar% {
+  a = BadOperatorDiagnostics(MT = DeepMT, o = o, LowLim = 2, MT_WGS = DeepMT_WGS, v.MT = v.DeepMT, rv.MT = rv.DeepMT, Vcut = 60000, Vbins = 50, HistSep = 10, Histylim = 500, RegName = "bDeepMT_27p5", MaxLagDist = 27500)
+  a
+}
+OpDiag_DeepMT_30 = foreach(o = 1:length(unique(DeepMT$Operator)), .packages = c('gstat', 'GISTools', 'sp'), .combine = 'rbind') %dopar% {
+  a = BadOperatorDiagnostics(MT = DeepMT, o = o, LowLim = 2, MT_WGS = DeepMT_WGS, v.MT = v.DeepMT, rv.MT = rv.DeepMT, Vcut = 60000, Vbins = 50, HistSep = 10, Histylim = 500, RegName = "bDeepMT_30", MaxLagDist = 30000)
+  a
+}
+OpDiag_DeepMT_32p5 = foreach(o = 1:length(unique(DeepMT$Operator)), .packages = c('gstat', 'GISTools', 'sp'), .combine = 'rbind') %dopar% {
+  a = BadOperatorDiagnostics(MT = DeepMT, o = o, LowLim = 2, MT_WGS = DeepMT_WGS, v.MT = v.DeepMT, rv.MT = rv.DeepMT, Vcut = 60000, Vbins = 50, HistSep = 10, Histylim = 500, RegName = "bDeepMT_32p5", MaxLagDist = 32500)
+  a
+}
+OpDiag_DeepMT_35 = foreach(o = 1:length(unique(DeepMT$Operator)), .packages = c('gstat', 'GISTools', 'sp'), .combine = 'rbind') %dopar% {
+  a = BadOperatorDiagnostics(MT = DeepMT, o = o, LowLim = 2, MT_WGS = DeepMT_WGS, v.MT = v.DeepMT, rv.MT = rv.DeepMT, Vcut = 60000, Vbins = 50, HistSep = 10, Histylim = 500, RegName = "bDeepMT_35", MaxLagDist = 35000)
+  a
+}
+OpDiag_DeepMT_37p5 = foreach(o = 1:length(unique(DeepMT$Operator)), .packages = c('gstat', 'GISTools', 'sp'), .combine = 'rbind') %dopar% {
+  a = BadOperatorDiagnostics(MT = DeepMT, o = o, LowLim = 2, MT_WGS = DeepMT_WGS, v.MT = v.DeepMT, rv.MT = rv.DeepMT, Vcut = 60000, Vbins = 50, HistSep = 10, Histylim = 500, RegName = "bDeepMT_37p5", MaxLagDist = 37500)
+  a
+}
+OpDiag_DeepMT_40 = foreach(o = 1:length(unique(DeepMT$Operator)), .packages = c('gstat', 'GISTools', 'sp'), .combine = 'rbind') %dopar% {
+  a = BadOperatorDiagnostics(MT = DeepMT, o = o, LowLim = 2, MT_WGS = DeepMT_WGS, v.MT = v.DeepMT, rv.MT = rv.DeepMT, Vcut = 60000, Vbins = 50, HistSep = 10, Histylim = 500, RegName = "bDeepMT_40", MaxLagDist = 40000)
+  a
+}
+OpDiag_DeepMT_42p5 = foreach(o = 1:length(unique(DeepMT$Operator)), .packages = c('gstat', 'GISTools', 'sp'), .combine = 'rbind') %dopar% {
+  a = BadOperatorDiagnostics(MT = DeepMT, o = o, LowLim = 2, MT_WGS = DeepMT_WGS, v.MT = v.DeepMT, rv.MT = rv.DeepMT, Vcut = 60000, Vbins = 50, HistSep = 10, Histylim = 500, RegName = "bDeepMT_42p5", MaxLagDist = 42500)
+  a
+}
+OpDiag_DeepMT_45 = foreach(o = 1:length(unique(DeepMT$Operator)), .packages = c('gstat', 'GISTools', 'sp'), .combine = 'rbind') %dopar% {
+  a = BadOperatorDiagnostics(MT = DeepMT, o = o, LowLim = 2, MT_WGS = DeepMT_WGS, v.MT = v.DeepMT, rv.MT = rv.DeepMT, Vcut = 60000, Vbins = 50, HistSep = 10, Histylim = 500, RegName = "bDeepMT_45", MaxLagDist = 45000)
+  a
+}
+OpDiag_DeepMT_47p5 = foreach(o = 1:length(unique(DeepMT$Operator)), .packages = c('gstat', 'GISTools', 'sp'), .combine = 'rbind') %dopar% {
+  a = BadOperatorDiagnostics(MT = DeepMT, o = o, LowLim = 2, MT_WGS = DeepMT_WGS, v.MT = v.DeepMT, rv.MT = rv.DeepMT, Vcut = 60000, Vbins = 50, HistSep = 10, Histylim = 500, RegName = "bDeepMT_47p5", MaxLagDist = 47500)
+  a
+}
+OpDiag_DeepMT_50 = foreach(o = 1:length(unique(DeepMT$Operator)), .packages = c('gstat', 'GISTools', 'sp'), .combine = 'rbind') %dopar% {
+  a = BadOperatorDiagnostics(MT = DeepMT, o = o, LowLim = 2, MT_WGS = DeepMT_WGS, v.MT = v.DeepMT, rv.MT = rv.DeepMT, Vcut = 60000, Vbins = 50, HistSep = 10, Histylim = 500, RegName = "bDeepMT_50", MaxLagDist = 50000)
+  a
+}
+OpDiag_DeepMT_52p5 = foreach(o = 1:length(unique(DeepMT$Operator)), .packages = c('gstat', 'GISTools', 'sp'), .combine = 'rbind') %dopar% {
+  a = BadOperatorDiagnostics(MT = DeepMT, o = o, LowLim = 2, MT_WGS = DeepMT_WGS, v.MT = v.DeepMT, rv.MT = rv.DeepMT, Vcut = 60000, Vbins = 50, HistSep = 10, Histylim = 500, RegName = "bDeepMT_52p5", MaxLagDist = 52500)
+  a
+}
+OpDiag_DeepMT_55 = foreach(o = 1:length(unique(DeepMT$Operator)), .packages = c('gstat', 'GISTools', 'sp'), .combine = 'rbind') %dopar% {
+  a = BadOperatorDiagnostics(MT = DeepMT, o = o, LowLim = 2, MT_WGS = DeepMT_WGS, v.MT = v.DeepMT, rv.MT = rv.DeepMT, Vcut = 60000, Vbins = 50, HistSep = 10, Histylim = 500, RegName = "bDeepMT_55", MaxLagDist = 55000)
+  a
+}
+OpDiag_DeepMT_57p5 = foreach(o = 1:length(unique(DeepMT$Operator)), .packages = c('gstat', 'GISTools', 'sp'), .combine = 'rbind') %dopar% {
+  a = BadOperatorDiagnostics(MT = DeepMT, o = o, LowLim = 2, MT_WGS = DeepMT_WGS, v.MT = v.DeepMT, rv.MT = rv.DeepMT, Vcut = 60000, Vbins = 50, HistSep = 10, Histylim = 500, RegName = "bDeepMT_57p5", MaxLagDist = 57500)
+  a
+}
+OpDiag_DeepMT_60 = foreach(o = 1:length(unique(DeepMT$Operator)), .packages = c('gstat', 'GISTools', 'sp'), .combine = 'rbind') %dopar% {
+  a = BadOperatorDiagnostics(MT = DeepMT, o = o, LowLim = 2, MT_WGS = DeepMT_WGS, v.MT = v.DeepMT, rv.MT = rv.DeepMT, Vcut = 60000, Vbins = 50, HistSep = 10, Histylim = 500, RegName = "bDeepMT_60", MaxLagDist = 60000)
+  a
+}
+
+colPal = colorRampPalette(colors = rev(c('red', 'orange', 'yellow', 'green', 'blue')))
+scaleRange = c(0,0.2)
+scaleBy = 0.05
+Pal = colPal((scaleRange[2] - scaleRange[1])/scaleBy + 1)
+
+#Sensitivity Plot for All Metrics
+#Make matrices that are plotted for each metric
+RankOpDiag_MOMmat = cbind(order(OpDiag_DeepMT_2p5$DiffMOM, decreasing = TRUE),
+                      order(OpDiag_DeepMT_5$DiffMOM, decreasing = TRUE),
+                      order(OpDiag_DeepMT_7p5$DiffMOM, decreasing = TRUE),
+                      order(OpDiag_DeepMT_10$DiffMOM, decreasing = TRUE),
+                      order(OpDiag_DeepMT_12p5$DiffMOM, decreasing = TRUE),
+                      order(OpDiag_DeepMT_15$DiffMOM, decreasing = TRUE),
+                      order(OpDiag_DeepMT_17p5$DiffMOM, decreasing = TRUE),
+                      order(OpDiag_DeepMT_20$DiffMOM, decreasing = TRUE),
+                      order(OpDiag_DeepMT_22p5$DiffMOM, decreasing = TRUE),
+                      order(OpDiag_DeepMT_25$DiffMOM, decreasing = TRUE),
+                      order(OpDiag_DeepMT_27p5$DiffMOM, decreasing = TRUE),
+                      order(OpDiag_DeepMT_30$DiffMOM, decreasing = TRUE),
+                      order(OpDiag_DeepMT_32p5$DiffMOM, decreasing = TRUE),
+                      order(OpDiag_DeepMT_35$DiffMOM, decreasing = TRUE),
+                      order(OpDiag_DeepMT_37p5$DiffMOM, decreasing = TRUE),
+                      order(OpDiag_DeepMT_40$DiffMOM, decreasing = TRUE),
+                      order(OpDiag_DeepMT_42p5$DiffMOM, decreasing = TRUE),
+                      order(OpDiag_DeepMT_45$DiffMOM, decreasing = TRUE),
+                      order(OpDiag_DeepMT_47p5$DiffMOM, decreasing = TRUE),
+                      order(OpDiag_DeepMT_50$DiffMOM, decreasing = TRUE),
+                      order(OpDiag_DeepMT_52p5$DiffMOM, decreasing = TRUE),
+                      order(OpDiag_DeepMT_55$DiffMOM, decreasing = TRUE),
+                      order(OpDiag_DeepMT_57p5$DiffMOM, decreasing = TRUE),
+                      order(OpDiag_DeepMT_60$DiffMOM, decreasing = TRUE))
+
+RankOpDiag_MOMWmat = cbind(order(OpDiag_DeepMT_2p5$DiffMOMW, decreasing = TRUE),
+                       order(OpDiag_DeepMT_5$DiffMOMW, decreasing = TRUE),
+                       order(OpDiag_DeepMT_7p5$DiffMOMW, decreasing = TRUE),
+                       order(OpDiag_DeepMT_10$DiffMOMW, decreasing = TRUE),
+                       order(OpDiag_DeepMT_12p5$DiffMOMW, decreasing = TRUE),
+                       order(OpDiag_DeepMT_15$DiffMOMW, decreasing = TRUE),
+                       order(OpDiag_DeepMT_17p5$DiffMOMW, decreasing = TRUE),
+                       order(OpDiag_DeepMT_20$DiffMOMW, decreasing = TRUE),
+                       order(OpDiag_DeepMT_22p5$DiffMOMW, decreasing = TRUE),
+                       order(OpDiag_DeepMT_25$DiffMOMW, decreasing = TRUE),
+                       order(OpDiag_DeepMT_27p5$DiffMOMW, decreasing = TRUE),
+                       order(OpDiag_DeepMT_30$DiffMOMW, decreasing = TRUE),
+                       order(OpDiag_DeepMT_32p5$DiffMOMW, decreasing = TRUE),
+                       order(OpDiag_DeepMT_35$DiffMOMW, decreasing = TRUE),
+                       order(OpDiag_DeepMT_37p5$DiffMOMW, decreasing = TRUE),
+                       order(OpDiag_DeepMT_40$DiffMOMW, decreasing = TRUE),
+                       order(OpDiag_DeepMT_42p5$DiffMOMW, decreasing = TRUE),
+                       order(OpDiag_DeepMT_45$DiffMOMW, decreasing = TRUE),
+                       order(OpDiag_DeepMT_47p5$DiffMOMW, decreasing = TRUE),
+                       order(OpDiag_DeepMT_50$DiffMOMW, decreasing = TRUE),
+                       order(OpDiag_DeepMT_52p5$DiffMOMW, decreasing = TRUE),
+                       order(OpDiag_DeepMT_55$DiffMOMW, decreasing = TRUE),
+                       order(OpDiag_DeepMT_57p5$DiffMOMW, decreasing = TRUE),
+                       order(OpDiag_DeepMT_60$DiffMOMW, decreasing = TRUE))
+
+RankOpDiag_Robustmat = cbind(order(OpDiag_DeepMT_2p5$DiffRobust, decreasing = TRUE),
+                         order(OpDiag_DeepMT_5$DiffRobust, decreasing = TRUE),
+                         order(OpDiag_DeepMT_7p5$DiffRobust, decreasing = TRUE),
+                         order(OpDiag_DeepMT_10$DiffRobust, decreasing = TRUE),
+                         order(OpDiag_DeepMT_12p5$DiffRobust, decreasing = TRUE),
+                         order(OpDiag_DeepMT_15$DiffRobust, decreasing = TRUE),
+                         order(OpDiag_DeepMT_17p5$DiffRobust, decreasing = TRUE),
+                         order(OpDiag_DeepMT_20$DiffRobust, decreasing = TRUE),
+                         order(OpDiag_DeepMT_22p5$DiffRobust, decreasing = TRUE),
+                         order(OpDiag_DeepMT_25$DiffRobust, decreasing = TRUE),
+                         order(OpDiag_DeepMT_27p5$DiffRobust, decreasing = TRUE),
+                         order(OpDiag_DeepMT_30$DiffRobust, decreasing = TRUE),
+                         order(OpDiag_DeepMT_32p5$DiffRobust, decreasing = TRUE),
+                         order(OpDiag_DeepMT_35$DiffRobust, decreasing = TRUE),
+                         order(OpDiag_DeepMT_37p5$DiffRobust, decreasing = TRUE),
+                         order(OpDiag_DeepMT_40$DiffRobust, decreasing = TRUE),
+                         order(OpDiag_DeepMT_42p5$DiffRobust, decreasing = TRUE),
+                         order(OpDiag_DeepMT_45$DiffRobust, decreasing = TRUE),
+                         order(OpDiag_DeepMT_47p5$DiffRobust, decreasing = TRUE),
+                         order(OpDiag_DeepMT_50$DiffRobust, decreasing = TRUE),
+                         order(OpDiag_DeepMT_52p5$DiffRobust, decreasing = TRUE),
+                         order(OpDiag_DeepMT_55$DiffRobust, decreasing = TRUE),
+                         order(OpDiag_DeepMT_57p5$DiffRobust, decreasing = TRUE),
+                         order(OpDiag_DeepMT_60$DiffRobust, decreasing = TRUE))
+
+RankOpDiag_RobustWmat = cbind(order(OpDiag_DeepMT_2p5$DiffRobustW, decreasing = TRUE),
+                          order(OpDiag_DeepMT_5$DiffRobustW, decreasing = TRUE),
+                          order(OpDiag_DeepMT_7p5$DiffRobustW, decreasing = TRUE),
+                          order(OpDiag_DeepMT_10$DiffRobustW, decreasing = TRUE),
+                          order(OpDiag_DeepMT_12p5$DiffRobustW, decreasing = TRUE),
+                          order(OpDiag_DeepMT_15$DiffRobustW, decreasing = TRUE),
+                          order(OpDiag_DeepMT_17p5$DiffRobustW, decreasing = TRUE),
+                          order(OpDiag_DeepMT_20$DiffRobustW, decreasing = TRUE),
+                          order(OpDiag_DeepMT_22p5$DiffRobustW, decreasing = TRUE),
+                          order(OpDiag_DeepMT_25$DiffRobustW, decreasing = TRUE),
+                          order(OpDiag_DeepMT_27p5$DiffRobustW, decreasing = TRUE),
+                          order(OpDiag_DeepMT_30$DiffRobustW, decreasing = TRUE),
+                          order(OpDiag_DeepMT_32p5$DiffRobustW, decreasing = TRUE),
+                          order(OpDiag_DeepMT_35$DiffRobustW, decreasing = TRUE),
+                          order(OpDiag_DeepMT_37p5$DiffRobustW, decreasing = TRUE),
+                          order(OpDiag_DeepMT_40$DiffRobustW, decreasing = TRUE),
+                          order(OpDiag_DeepMT_42p5$DiffRobustW, decreasing = TRUE),
+                          order(OpDiag_DeepMT_45$DiffRobustW, decreasing = TRUE),
+                          order(OpDiag_DeepMT_47p5$DiffRobustW, decreasing = TRUE),
+                          order(OpDiag_DeepMT_50$DiffRobustW, decreasing = TRUE),
+                          order(OpDiag_DeepMT_52p5$DiffRobustW, decreasing = TRUE),
+                          order(OpDiag_DeepMT_55$DiffRobustW, decreasing = TRUE),
+                          order(OpDiag_DeepMT_57p5$DiffRobustW, decreasing = TRUE),
+                          order(OpDiag_DeepMT_60$DiffRobustW, decreasing = TRUE))
+
+png('OpDiagnostics_DistanceSensitivity.png', res = 300, width = 7, height = 10, units = 'in')
+layout(cbind(c(1,2,3,4)))
+par(mar = c(2,5,3,1))
+for (i in 1:nrow(OpDiag_DeepMT)){
+  if (i == 1){
+    plot(seq(2.5,60,2.5), which(RankOpDiag_MOMmat == i) - (seq(0,ncol(RankOpDiag_MOMmat)-1,1)*nrow(RankOpDiag_MOMmat)), 
+         type = 'o', lty = 1, pch = 16, 
+         ylim = rev(c(0,nrow(RankOpDiag_MOMmat))), xlim = c(1,60), 
+         col = cols(nrow(RankOpDiag_MOMmat))[which(RankOpDiag_MOMmat[,1] == i)],
+         ylab = 'Operator Rank', xlab = '', main = 'MOM Semi-variogram, Weighted by Number of Wells',
+         cex.lab = 1.5, cex.main = 2, axes = FALSE)
+    box()
+    axis(side = 2, at = seq(0,100,20), labels = TRUE, cex.axis = 1.5)
+    axis(side = 4, at = seq(0,100,20), labels = FALSE)
+    axis(side = 1, at = seq(2.5,60,2.5), labels = FALSE)
+  }else{
+    plot(seq(2.5,60,2.5), which(RankOpDiag_MOMmat == i) - (seq(0,ncol(RankOpDiag_MOMmat)-1,1)*nrow(RankOpDiag_MOMmat)), 
+         type = 'o', lty = 1, pch = 16, 
+         ylim = rev(c(0,nrow(RankOpDiag_MOMmat))), xlim = c(1,60), 
+         col = cols(nrow(RankOpDiag_MOMmat))[which(RankOpDiag_MOMmat[,1] == i)],
+         axes = FALSE, xlab = '', ylab = '')
+  }
+  par(new = T)
+}
+par(new = FALSE)
+for (i in 1:nrow(OpDiag_DeepMT)){
+  if (i == 1){
+    plot(seq(2.5,60,2.5), which(RankOpDiag_Robustmat == i) - (seq(0,ncol(RankOpDiag_Robustmat)-1,1)*nrow(RankOpDiag_Robustmat)), 
+         type = 'o', lty = 1, pch = 16, 
+         ylim = rev(c(0,nrow(RankOpDiag_Robustmat))), xlim = c(1,60), 
+         col = cols(nrow(RankOpDiag_Robustmat))[which(RankOpDiag_Robustmat[,1] == i)],
+         ylab = 'Operator Rank', xlab = '', main = 'Robust Semi-variogram, Weighted by Number of Wells',
+         cex.lab = 1.5, cex.main = 2, axes = FALSE)
+    box()
+    axis(side = 2, at = seq(0,100,20), labels = TRUE, cex.axis = 1.5)
+    axis(side = 4, at = seq(0,100,20), labels = FALSE)
+    axis(side = 1, at = seq(2.5,60,2.5), labels = FALSE)
+  }else{
+    plot(seq(2.5,60,2.5), which(RankOpDiag_Robustmat == i) - (seq(0,ncol(RankOpDiag_Robustmat)-1,1)*nrow(RankOpDiag_Robustmat)), 
+         type = 'o', lty = 1, pch = 16, 
+         ylim = rev(c(0,nrow(RankOpDiag_Robustmat))), xlim = c(1,60), 
+         col = cols(nrow(RankOpDiag_Robustmat))[which(RankOpDiag_Robustmat[,1] == i)],
+         axes = FALSE, xlab = '', ylab = '')
+  }
+  par(new = T)
+}
+par(new = FALSE)
+for (i in 1:nrow(OpDiag_DeepMT)){
+  if (i == 1){
+    plot(seq(2.5,60,2.5), which(RankOpDiag_MOMWmat == i) - (seq(0,ncol(RankOpDiag_MOMWmat)-1,1)*nrow(RankOpDiag_MOMWmat)), 
+         type = 'o', lty = 1, pch = 16, 
+         ylim = rev(c(0,nrow(RankOpDiag_MOMWmat))), xlim = c(1,60), 
+         col = cols(nrow(RankOpDiag_MOMWmat))[which(RankOpDiag_MOMWmat[,1] == i)],
+         ylab = 'Operator Rank', xlab = '', main = 'MOM Semi-variogram, Weighted by Separation Distance',
+         cex.lab = 1.5, cex.main = 2, axes = FALSE)
+    box()
+    axis(side = 2, at = seq(0,100,20), labels = TRUE, cex.axis = 1.5)
+    axis(side = 4, at = seq(0,100,20), labels = FALSE)
+    axis(side = 1, at = seq(2.5,60,2.5), labels = FALSE)
+  }else{
+    plot(seq(2.5,60,2.5), which(RankOpDiag_MOMWmat == i) - (seq(0,ncol(RankOpDiag_MOMWmat)-1,1)*nrow(RankOpDiag_MOMWmat)), 
+         type = 'o', lty = 1, pch = 16, 
+         ylim = rev(c(0,nrow(RankOpDiag_MOMWmat))), xlim = c(1,60), 
+         col = cols(nrow(RankOpDiag_MOMWmat))[which(RankOpDiag_MOMWmat[,1] == i)],
+         axes = FALSE, xlab = '', ylab = '')
+  }
+  par(new = T)
+}
+par(new = FALSE)
+par(mar = c(2,5,3,1))
+for (i in 1:nrow(OpDiag_DeepMT)){
+  if (i == 1){
+    plot(seq(2.5,60,2.5), which(RankOpDiag_RobustWmat == i) - (seq(0,ncol(RankOpDiag_RobustWmat)-1,1)*nrow(RankOpDiag_RobustWmat)), 
+         type = 'o', lty = 1, pch = 16, 
+         ylim = rev(c(0,nrow(RankOpDiag_RobustWmat))), xlim = c(1,60), 
+         col = cols(nrow(RankOpDiag_RobustWmat))[which(RankOpDiag_RobustWmat[,1] == i)],
+         ylab = 'Operator Rank', xlab = 'Separation Distance (km)', main = 'Robust Semi-variogram, Weighted by Separation Distance',
+         cex.lab = 1.5, cex.main = 2, axes = FALSE)
+    box()
+    axis(side = 2, at = seq(0,100,20), labels = TRUE, cex.axis = 1.5)
+    axis(side = 4, at = seq(0,100,20), labels = FALSE)
+    axis(side = 1, at = seq(2.5,57.5,5), labels = FALSE)
+    axis(side = 1, at = seq(5,60,5), labels = seq(5,60,5), cex.axis = 1.5)
+  }else{
+    plot(seq(2.5,60,2.5), which(RankOpDiag_RobustWmat == i) - (seq(0,ncol(RankOpDiag_RobustWmat)-1,1)*nrow(RankOpDiag_RobustWmat)), 
+         type = 'o', lty = 1, pch = 16, 
+         ylim = rev(c(0,nrow(RankOpDiag_RobustWmat))), xlim = c(1,60), 
+         col = cols(nrow(RankOpDiag_RobustWmat))[which(RankOpDiag_RobustWmat[,1] == i)],
+         axes = FALSE, xlab = '', ylab = '')
+  }
+  par(new = T)
+}
+dev.off()
+
+#Plots for the output
+PlotOpsDiagnostics = function(OpDiag_DeepMT){
+  #Plot for variance represented by robust variogram difference, weighted by number of points the operator has
+  # Colored by the bias, represented by the p-value for difference in center for operator data vs. rest of data.
+  png('OpDiagnostics_PanelPlot.png', res = 300, width = 10, height = 5, units = 'in')
+  par(mar = c(5,5,5,3))
+  layout(rbind(c(1,2)))
+  plot(y = OpDiag_DeepMT$DiffMOM, x = OpDiag_DeepMT$DiffMOMW, 
+       col = colFun(OpDiag_DeepMT$pw_DiffMean), 
+       main = 'Difference in Variograms: \n All Data - Operator Removed \n 0 - 30 km Separation', ylab = 'MOM, weight = 1/number operator wells', xlab = 'MOM, weight ~ 1/(distance lag)^2')
+  legend('topleft', title = 'p-value', legend = c('< 0.05', '< 0.10', '< 0.15', '< 0.20', '> 0.20'), col = colFun(c(0,0.05,0.10,0.15,0.20,0.21)), pch = 1)
+  plot(y = OpDiag_DeepMT$DiffMOM, x = OpDiag_DeepMT$DiffRobust, 
+       col = colFun(OpDiag_DeepMT$pw_DiffMean), 
+       main = 'Difference in Variograms: \n All Data - Operator Removed \n 0 - 30 km Separation', ylab = 'MOM, weight = 1/number operator wells', xlab = 'Robust, weight = 1/number operator wells')
+  legend('topleft', title = 'p-value', legend = c('< 0.05', '< 0.10', '< 0.15', '< 0.20', '> 0.20'), col = colFun(c(0,0.05,0.10,0.15,0.20,0.21)), pch = 1)
+  dev.off()
+  
+  #plot(OpDiag_DeepMT$DiffRobust, OpDiag_DeepMT$DiffRobustW, col = colFun(OpDiag_DeepMT$pw_DiffMean), main = 'Difference in MOM Semi-variance: 0 to 20 km Separation', xlab = 'Difference in MOM semi-variance: 0 - 20 km Separation', ylab = 'Difference in Robust semi-variance: 0 - 20 km Separation')
+  #plot(OpDiag_DeepMT$DiffMOMW, OpDiag_DeepMT$DiffRobustW, col = colFun(OpDiag_DeepMT$pw_DiffMean), main = 'Difference in MOM Semi-variance: 0 to 20 km Separation', xlab = 'Difference in MOM semi-variance: 0 - 20 km Separation', ylab = 'Difference in Robust semi-variance: 0 - 20 km Separation')
+  #Univariate plots
+  #plot(seq(1,length(OpDiag_DeepMT$DiffMOM),1), abs(sort(as.numeric(OpDiag_DeepMT$DiffMOM))), main = 'Difference in MOM Semi-variance: 0 to 20 km Separation', xlab = 'Sorted Operator ID', ylab = 'Difference')
+  #plot(seq(1,length(OpDiag_DeepMT$DiffMOM),1), abs(sort(OpDiag_DeepMT$DiffRobust)), main = 'Difference in Robust Semi-variance: 0 to 20 km Separation', xlab = 'Sorted Operator ID', ylab = 'Difference')
+  
+  #Make a plot of the rank of the operator for each metric
+  #Make a matrix for the ranks
+  RankMat = matrix(0, nrow = nrow(OpDiag_DeepMT), ncol = 5)
+  RankMat[,1] = order(OpDiag_DeepMT$DiffMOM, decreasing = TRUE)
+  RankMat[,3] = order(OpDiag_DeepMT$DiffMOMW, decreasing = TRUE)
+  RankMat[,2] = order(OpDiag_DeepMT$DiffRobust, decreasing = TRUE)
+  RankMat[,4] = order(OpDiag_DeepMT$DiffRobustW, decreasing = TRUE)
+  RankMat[,5] = order(OpDiag_DeepMT$pw_DiffMean, decreasing = FALSE)
+  
+  cols = colorRampPalette(brewer.pal(7, name = 'PuOr'))
+  
+  png('OpDiagnostics_ParallelAxis_Ranks.png', res = 300, width = 10, height = 5, units = 'in')
+  par(mar = c(5,5,1,3))
+  for (i in 1:nrow(OpDiag_DeepMT)){
+    if (i == 1){
+      plot(seq(1,ncol(RankMat),1), which(RankMat == i) - (seq(0,ncol(RankMat)-1,1)*nrow(RankMat)), 
+           type = 'o', lty = 1, pch = 16, 
+           ylim = rev(c(0,nrow(RankMat))), xlim = c(1,5), 
+           col = cols(nrow(RankMat))[which(RankMat[,1] == i)],
+           ylab = 'Rank of Operator for Metric', xlab = 'Metrics', cex.lab = 1.5, axes = FALSE)
+      box()
+      axis(side = 2, at = seq(0,100,20), labels = TRUE, cex.axis = 1.5)
+      axis(side = 1, at = seq(1,ncol(RankMat),1), line = 2, tick = FALSE, padj = -0.3,
+           labels = c('MOM Variogram \n 0 - 30 km \n w = N wells',
+                      'Robust Variogram \n 0 - 30 km \n w = N wells',
+                      'MOM Variogram \n 0 - 30 km \n w = spatial lag',
+                      'Robust Variogram \n 0 - 30 km \n w = spatial lag',
+                      'p-value \n Wilcoxon Rank Sum \n'))
+    }else{
+      plot(seq(1,ncol(RankMat),1), which(RankMat == i) - (seq(0,ncol(RankMat)-1,1)*nrow(RankMat)), 
+           type = 'o', lty = 1, pch = 16, 
+           ylim = rev(c(0,nrow(RankMat))), xlim = c(1,5), col = cols(nrow(RankMat))[which(RankMat[,1] == i)],
+           axes = FALSE, xlab = '', ylab = '')
+    }
+    par(new = T)
+  }
+  dev.off()
+  
+  NormMat = matrix(0, nrow = nrow(OpDiag_DeepMT), ncol = 5)
+  NormMat[,1] = ((OpDiag_DeepMT$DiffMOM - min(OpDiag_DeepMT$DiffMOM)) / (max(OpDiag_DeepMT$DiffMOM) - min(OpDiag_DeepMT$DiffMOM)))[order(OpDiag_DeepMT$DiffMOM, decreasing = TRUE)]
+  NormMat[,3] = ((OpDiag_DeepMT$DiffMOMW - min(OpDiag_DeepMT$DiffMOMW)) / (max(OpDiag_DeepMT$DiffMOMW) - min(OpDiag_DeepMT$DiffMOMW)))[order(OpDiag_DeepMT$DiffMOMW, decreasing = TRUE)]
+  NormMat[,2] = ((OpDiag_DeepMT$DiffRobust - min(OpDiag_DeepMT$DiffRobust)) / (max(OpDiag_DeepMT$DiffRobust) - min(OpDiag_DeepMT$DiffRobust)))[order(OpDiag_DeepMT$DiffRobust, decreasing = TRUE)]
+  NormMat[,4] = ((OpDiag_DeepMT$DiffRobustW - min(OpDiag_DeepMT$DiffRobustW)) / (max(OpDiag_DeepMT$DiffRobustW) - min(OpDiag_DeepMT$DiffRobustW)))[order(OpDiag_DeepMT$DiffRobustW, decreasing = TRUE)]
+  NormMat[,5] = ((OpDiag_DeepMT$pw_DiffMean - min(OpDiag_DeepMT$pw_DiffMean)) / (max(OpDiag_DeepMT$pw_DiffMean) - min(OpDiag_DeepMT$pw_DiffMean)))[order(OpDiag_DeepMT$pw_DiffMean, decreasing = FALSE)]
+  
+  png('OpDiagnostics_ParallelAxis_Normalized.png', res = 300, width = 10, height = 5, units = 'in')
+  par(mar = c(5,5,1,3))
+  for (i in 1:nrow(OpDiag_DeepMT)){
+    if (i == 1){
+      plot(seq(1,ncol(RankMat),1), NormMat[which(RankMat == i)], 
+           type = 'o', lty = 1, pch = 16, 
+           ylim = c(0,1), xlim = c(1,5), 
+           col = cols(nrow(RankMat))[which(RankMat[,1] == i)],
+           ylab = 'Normalized Value of Metric', xlab = '', cex.lab = 1.5, axes = FALSE)
+      box()
+      axis(side = 2, at = seq(0,1,.1), labels = TRUE, cex.axis = 1.5)
+      axis(side = 1, at = seq(1,ncol(RankMat),1), line = 2, tick = FALSE, padj = -0.3,
+           labels = c('MOM Variogram \n 0 - 30 km \n w = N wells',
+                      'Robust Variogram \n 0 - 30 km \n w = N wells',
+                      'MOM Variogram \n 0 - 30 km \n w = spatial lag',
+                      'Robust Variogram \n 0 - 30 km \n w = spatial lag',
+                      'p-value \n Wilcoxon Rank Sum \n'))
+    }else{
+      plot(seq(1,ncol(RankMat),1), NormMat[which(RankMat == i)], 
+           type = 'o', lty = 1, pch = 16, 
+           ylim = c(0,1), xlim = c(1,5), col = cols(nrow(RankMat))[which(RankMat[,1] == i)],
+           axes = FALSE, xlab = '', ylab = '')
+    }
+    par(new = T)
+  }
+  dev.off()
+}
+
+#EPC is ranked highest. Has 1 clear outlier and 3 boxplot high outliers. Small number of points. Logged wells upwards.
+DeepMT_NoEPC = DeepMT[-which(DeepMT$Operator == 'Equitable Production Company'),]
+v.DeepMT_NoEPC = variogram(Qs ~ 1, DeepMT_NoEPC, cutoff = 60000, width = 60000/50)
+rv.DeepMT_NoEPC = variogram(Qs ~ 1, DeepMT_NoEPC, cutoff = 60000, width = 60000/50, cressie = TRUE)
+DeepMT_WGS = spTransform(DeepMT_NoEPC, CRS('+init=epsg:4326'))
+
+cl = makeCluster(detectCores() - 1)
+registerDoParallel(cl)
+OpDiag_DeepMT_NoEPC = foreach(o = 1:length(unique(DeepMT_NoEPC$Operator)), .packages = c('gstat', 'GISTools', 'sp'), .combine = 'rbind') %dopar% {
+  a = BadOperatorDiagnostics(MT = DeepMT_NoEPC, o = o, LowLim = 2, MT_WGS = DeepMT_WGS, v.MT = v.DeepMT_NoEPC, rv.MT = rv.DeepMT_NoEPC, Vcut = 60000, Vbins = 50, HistSep = 10, Histylim = 300, RegName = "bDeepMT_NoEPC", MaxLagDist = 60000)
+  a
+}
+stopCluster(cl)
+
+#Waco is a clear bad operator because they logged wells upwards. Equitable Production Company had wells logged by Waco. Remove both.
+DeepMT_NoWaco = DeepMT[-which(DeepMT$Operator == 'Waco Oil & Gas Co., Inc.'),]
+DeepMT_NoWaco = DeepMT_NoWaco[-which(DeepMT_NoWaco$Operator == 'Equitable Production Company'),]
+DeepMT_WGS = spTransform(DeepMT_NoWaco, CRS('+init=epsg:4326'))
+v.DeepMT_NoWaco = variogram(Qs ~ 1, DeepMT_NoWaco, cutoff = 60000, width = 60000/50)
+rv.DeepMT_NoWaco = variogram(Qs ~ 1, DeepMT_NoWaco, cutoff = 60000, width = 60000/50, cressie = TRUE)
+
+DeepMT_NoDevNY_NoWaco = DeepMT_NoDevNY[-which(DeepMT_NoDevNY$Operator == 'Waco Oil & Gas Co., Inc.'),]
+DeepMT_NoDevNY_NoWaco = DeepMT_NoDevNY_NoWaco[-which(DeepMT_NoDevNY_NoWaco$Operator == 'Equitable Production Company'),]
+DeepMT_WGS_NoDevNY = spTransform(DeepMT_NoDevNY_NoWaco, CRS('+init=epsg:4326'))
+v.DeepMT_NoDevNY_NoWaco = variogram(Qs ~ 1, DeepMT_NoDevNY_NoWaco, cutoff = 60000, width = 60000/50)
+rv.DeepMT_NoDevNY_NoWaco = variogram(Qs ~ 1, DeepMT_NoDevNY_NoWaco, cutoff = 60000, width = 60000/50, cressie = TRUE)
+
+cl = makeCluster(detectCores() - 1)
+registerDoParallel(cl)
+OpDiag_DeepMT_NoWaco = foreach(o = 1:length(unique(DeepMT_NoWaco$Operator)), .packages = c('gstat', 'GISTools', 'sp'), .combine = 'rbind') %dopar% {
+  a = BadOperatorDiagnostics(MT = DeepMT_NoWaco, o = o, LowLim = 2, MT_WGS = DeepMT_WGS, v.MT = v.DeepMT_NoWaco, rv.MT = rv.DeepMT_NoWaco, Vcut = 60000, Vbins = 50, HistSep = 10, Histylim = 300, RegName = "bDeepMT_NoWaco", MaxLagDist = 20000)
+  a
+}
+OpDiag_DeepMT_NoDevNY_NoWaco = foreach(o = 1:length(unique(DeepMT_NoDevNY_NoWaco$Operator)), .packages = c('gstat', 'GISTools', 'sp'), .combine = 'rbind') %dopar% {
+  a = BadOperatorDiagnostics(MT = DeepMT_NoDevNY_NoWaco, o = o, LowLim = 2, MT_WGS = DeepMT_WGS_NoDevNY, v.MT = v.DeepMT_NoDevNY_NoWaco, rv.MT = rv.DeepMT_NoDevNY_NoWaco, Vcut = 60000, Vbins = 50, HistSep = 10, Histylim = 300, RegName = "bDeepMT_NoDevNY_NoWaco", MaxLagDist = 20000)
+  a
+}
+stopCluster(cl)
+
+#Plots
+plot(seq(1,length(OpDiag_DeepMT_NoWaco$DiffMOM),1), sort(as.numeric(OpDiag_DeepMT_NoWaco$DiffMOM)), main = 'Difference in MOM Semi-variance: 0 to 20 km Separation', xlab = 'Sorted Operator ID', ylab = 'Difference')
+plot(seq(1,length(OpDiag_DeepMT_NoWaco$DiffMOM),1), sort(as.numeric(OpDiag_DeepMT_NoWaco$DiffRobust)), main = 'Difference in Robust Semi-variance: 0 to 20 km Separation', xlab = 'Sorted Operator ID', ylab = 'Difference')
+plot(seq(1,length(OpDiag_DeepMT_NoWaco$DiffMOM),1), sort(as.numeric(OpDiag_DeepMT_NoWaco$DiffMeanRmOp)), main = 'Difference in Mean: With - Without Operator', xlab = 'Sorted Operator ID', ylab = 'Difference')
+plot(seq(1,length(OpDiag_DeepMT_NoWaco$DiffMOM),1), sort(as.numeric(OpDiag_DeepMT_NoWaco$ScaledDiffMeanRmOp)))
+
+
+#CWV - Deviated wells do not look incorrect here.
+#Remove the 2 high points that were checked for being incorrect.
+DeepCWV_DelHigh = DeepCWV[DeepCWV$Qs < 160,]
+DeepCWV_NoDevNY_DelHigh = DeepCWV_NoDevNY[DeepCWV_NoDevNY$Qs < 160,]
+#Remove Waco
+DeepCWV_NoWaco = DeepCWV_DelHigh[-which(DeepCWV_DelHigh$Operator == "Waco Oil & Gas Co., Inc."),]
+v.DeepCWV_NoWaco = variogram(Qs~1, DeepCWV_NoWaco, cutoff = 60000, width = 60000/50)
+rv.DeepCWV_NoWaco = variogram(Qs~1, DeepCWV_NoWaco, cutoff = 60000, width = 60000/50, cressie = TRUE)
+DeepCWV_WGS = spTransform(DeepCWV_NoWaco, CRS('+init=epsg:4326'))
+
+DeepCWV_NoDevNY_NoWaco = DeepCWV_NoDevNY_DelHigh[-which(DeepCWV_NoDevNY_DelHigh$Operator == "Waco Oil & Gas Co., Inc."),]
+v.DeepCWV_NoDevNY_NoWaco = variogram(Qs~1, DeepCWV_NoDevNY_NoWaco, cutoff = 60000, width = 60000/50)
+rv.DeepCWV_NoDevNY_NoWaco = variogram(Qs~1, DeepCWV_NoDevNY_NoWaco, cutoff = 60000, width = 60000/50, cressie = TRUE)
+DeepCWV_WGS_NoDevNY = spTransform(DeepCWV_NoDevNY_NoWaco, CRS('+init=epsg:4326'))
+
+cl = makeCluster(detectCores() - 1)
+registerDoParallel(cl)
+OpDiag_DeepCWV = foreach(o = 1:length(unique(DeepCWV_NoWaco$Operator)), .packages = c('gstat', 'GISTools', 'sp'), .combine = 'rbind') %dopar% {
+  a = BadOperatorDiagnostics(MT = DeepCWV_NoWaco, o = o, LowLim = 2, MT_WGS = DeepCWV_WGS, v.MT = v.DeepCWV_NoWaco, rv.MT = rv.DeepCWV_NoWaco, Vcut = 60000, Vbins = 50, HistSep = 10, Histylim = 1300, RegName = "bDeepCWV_NoWaco", MaxLagDist = 20000)
+  a
+}
+OpDiag_DeepCWV_NoDevNY = foreach(o = 1:length(unique(DeepCWV_NoDevNY_NoWaco$Operator)), .packages = c('gstat', 'GISTools', 'sp'), .combine = 'rbind') %dopar% {
+  a = BadOperatorDiagnostics(MT = DeepCWV_NoDevNY_NoWaco, o = o, LowLim = 2, MT_WGS = DeepCWV_WGS_NoDevNY, v.MT = v.DeepCWV_NoDevNY_NoWaco, rv.MT = rv.DeepCWV_NoDevNY_NoWaco, Vcut = 60000, Vbins = 50, HistSep = 10, Histylim = 1300, RegName = "bDeepCWV_NoDevNY_NoWaco", MaxLagDist = 20000)
+  a
+}
+stopCluster(cl)
+
+#Plots
+plot(seq(1,length(OpDiag_DeepCWV$DiffMOM),1), sort(as.numeric(OpDiag_DeepCWV$DiffMOM)), main = 'Difference in MOM Semi-variance: 0 to 20 km Separation', xlab = 'Sorted Operator ID', ylab = 'Difference')
+plot(seq(1,length(OpDiag_DeepCWV$DiffMOM),1), sort(as.numeric(OpDiag_DeepCWV$DiffRobust)), main = 'Difference in Robust Semi-variance: 0 to 20 km Separation', xlab = 'Sorted Operator ID', ylab = 'Difference')
+plot(seq(1,length(OpDiag_DeepCWV$DiffMOM),1), sort(as.numeric(OpDiag_DeepCWV$DiffMeanRmOp)), main = 'Difference in Mean: With - Without Operator', xlab = 'Sorted Operator ID', ylab = 'Difference')
+plot(seq(1,length(OpDiag_DeepCWV$DiffMOM),1), sort(as.numeric(OpDiag_DeepCWV$ScaledDiffMeanRmOp)))
+
+
+#Split into KY and WV clusters - KY and WV have similar shapes. WV more variable, but fewer observations.
+DeepCWV_NoWaco_KY = DeepCWV_NoWaco[-which(DeepCWV_NoWaco$LatDeg >= 38.5),]
+v.DeepCWV_NoWaco_KY = variogram(Qs~1, DeepCWV_NoWaco_KY, cutoff = 60000, width = 60000/50)
+rv.DeepCWV_NoWaco_KY = variogram(Qs~1, DeepCWV_NoWaco_KY, cutoff = 60000, width = 60000/50, cressie = TRUE)
+DeepCWV_WGS_KY = spTransform(DeepCWV_NoWaco_KY, CRS('+init=epsg:4326'))
+
+DeepCWV_NoWaco_WV = DeepCWV_NoWaco[-which(DeepCWV_NoWaco$LatDeg < 38.5),]
+v.DeepCWV_NoWaco_WV = variogram(Qs~1, DeepCWV_NoWaco_WV, cutoff = 60000, width = 60000/50)
+rv.DeepCWV_NoWaco_WV = variogram(Qs~1, DeepCWV_NoWaco_WV, cutoff = 60000, width = 60000/50, cressie = TRUE)
+DeepCWV_WGS_WV = spTransform(DeepCWV_NoWaco_WV, CRS('+init=epsg:4326'))
+
+DeepCWV_NoDevNY_NoWaco_KY = DeepCWV_NoDevNY_NoWaco[-which(DeepCWV_NoDevNY_NoWaco$LatDeg >= 38.5),]
+v.DeepCWV_NoDevNY_NoWaco_KY = variogram(Qs~1, DeepCWV_NoDevNY_NoWaco_KY, cutoff = 60000, width = 60000/50)
+rv.DeepCWV_NoDevNY_NoWaco_KY = variogram(Qs~1, DeepCWV_NoDevNY_NoWaco_KY, cutoff = 60000, width = 60000/50, cressie = TRUE)
+DeepCWV_WGS_NoDevNY_KY = spTransform(DeepCWV_NoDevNY_NoWaco_KY, CRS('+init=epsg:4326'))
+
+DeepCWV_NoDevNY_NoWaco_WV = DeepCWV_NoDevNY_NoWaco[-which(DeepCWV_NoDevNY_NoWaco$LatDeg < 38.5),]
+v.DeepCWV_NoDevNY_NoWaco_WV = variogram(Qs~1, DeepCWV_NoDevNY_NoWaco_WV, cutoff = 60000, width = 60000/50)
+rv.DeepCWV_NoDevNY_NoWaco_WV = variogram(Qs~1, DeepCWV_NoDevNY_NoWaco_WV, cutoff = 60000, width = 60000/50, cressie = TRUE)
+DeepCWV_WGS_NoDevNY_WV = spTransform(DeepCWV_NoDevNY_NoWaco_WV, CRS('+init=epsg:4326'))
+
+cl = makeCluster(detectCores() - 1)
+registerDoParallel(cl)
+OpDiag_DeepCWV_NoWaco_KY = foreach(o = 1:length(unique(DeepCWV_NoWaco_KY$Operator)), .packages = c('gstat', 'GISTools', 'sp'), .combine = 'rbind') %dopar% {
+  a = BadOperatorDiagnostics(MT = DeepCWV_NoWaco_KY, o = o, LowLim = 2, MT_WGS = DeepCWV_WGS_KY, v.MT = v.DeepCWV_NoWaco_KY, rv.MT = rv.DeepCWV_NoWaco_KY, Vcut = 60000, Vbins = 50, HistSep = 10, Histylim = 1300, RegName = "bDeepCWV_NoWaco_KY", MaxLagDist = 20000)
+  a
+}
+OpDiag_DeepCWV_NoDevNY_NoWaco_KY = foreach(o = 1:length(unique(DeepCWV_NoDevNY_NoWaco_KY$Operator)), .packages = c('gstat', 'GISTools', 'sp'), .combine = 'rbind') %dopar% {
+  a = BadOperatorDiagnostics(MT = DeepCWV_NoDevNY_NoWaco_KY, o = o, LowLim = 2, MT_WGS = DeepCWV_WGS_NoDevNY_KY, v.MT = v.DeepCWV_NoDevNY_NoWaco_KY, rv.MT = rv.DeepCWV_NoDevNY_NoWaco_KY, Vcut = 60000, Vbins = 50, HistSep = 10, Histylim = 1300, RegName = "bDeepCWV_NoDevNY_NoWaco_KY", MaxLagDist = 20000)
+  a
+}
+OpDiag_DeepCWV_NoWaco_WV = foreach(o = 1:length(unique(DeepCWV_NoWaco_WV$Operator)), .packages = c('gstat', 'GISTools', 'sp'), .combine = 'rbind') %dopar% {
+  a = BadOperatorDiagnostics(MT = DeepCWV_NoWaco_WV, o = o, LowLim = 2, MT_WGS = DeepCWV_WGS_WV, v.MT = v.DeepCWV_NoWaco_WV, rv.MT = rv.DeepCWV_NoWaco_WV, Vcut = 60000, Vbins = 50, HistSep = 10, Histylim = 1300, RegName = "bDeepCWV_NoWaco_WV", MaxLagDist = 20000)
+  a
+}
+OpDiag_DeepCWV_NoDevNY_NoWaco_WV = foreach(o = 1:length(unique(DeepCWV_NoDevNY_NoWaco_WV$Operator)), .packages = c('gstat', 'GISTools', 'sp'), .combine = 'rbind') %dopar% {
+  a = BadOperatorDiagnostics(MT = DeepCWV_NoDevNY_NoWaco_WV, o = o, LowLim = 2, MT_WGS = DeepCWV_WGS_NoDevNY_WV, v.MT = v.DeepCWV_NoDevNY_NoWaco_WV, rv.MT = rv.DeepCWV_NoDevNY_NoWaco_WV, Vcut = 60000, Vbins = 50, HistSep = 10, Histylim = 1300, RegName = "bDeepCWV_NoDevNY_NoWaco_WV", MaxLagDist = 20000)
+  a
+}
+stopCluster(cl)
+
+#Plots
+plot(seq(1,length(OpDiag_DeepCWV_NoWaco_KY$DiffMOM),1), sort(as.numeric(OpDiag_DeepCWV_NoWaco_KY$DiffMOM)), main = 'Difference in MOM Semi-variance: 0 to 20 km Separation', xlab = 'Sorted Operator ID', ylab = 'Difference')
+plot(seq(1,length(OpDiag_DeepCWV_NoWaco_KY$DiffMOM),1), sort(as.numeric(OpDiag_DeepCWV_NoWaco_KY$DiffRobust)), main = 'Difference in Robust Semi-variance: 0 to 20 km Separation', xlab = 'Sorted Operator ID', ylab = 'Difference')
+plot(seq(1,length(OpDiag_DeepCWV_NoWaco_KY$DiffMOM),1), sort(as.numeric(OpDiag_DeepCWV_NoWaco_KY$DiffMeanRmOp)), main = 'Difference in Mean: With - Without Operator', xlab = 'Sorted Operator ID', ylab = 'Difference')
+plot(seq(1,length(OpDiag_DeepCWV_NoWaco_KY$DiffMOM),1), sort(as.numeric(OpDiag_DeepCWV_NoWaco_KY$ScaledDiffMeanRmOp)))
+
+#SWPA - Deviated wells do not look incorrect here.
+rv.DeepSWPA = variogram(Qs~1, DeepSWPA, cutoff = 60000, width = 60000/50, cressie = TRUE)
+DeepSWPA_WGS = spTransform(DeepSWPA, CRS('+init=epsg:4326'))
+
+rv.DeepSWPA_NoDevNY = variogram(Qs~1, DeepSWPA_NoDevNY, cutoff = 60000, width = 60000/50, cressie = TRUE)
+DeepSWPA_WGS_NoDevNY = spTransform(DeepSWPA_NoDevNY, CRS('+init=epsg:4326'))
+
+cl = makeCluster(detectCores() - 1)
+registerDoParallel(cl)
+OpDiag_DeepSWPA = foreach(o = 1:length(unique(DeepSWPA$Operator)), .packages = c('gstat', 'GISTools', 'sp'), .combine = 'rbind') %dopar% {
+  a = BadOperatorDiagnostics(MT = DeepSWPA, o = o, LowLim = 2, MT_WGS = DeepSWPA_WGS, v.MT = v.DeepSWPA, rv.MT = rv.DeepSWPA, Vcut = 60000, Vbins = 50, HistSep = 10, Histylim = 1300, RegName = "bDeepSWPA", MaxLagDist = 20000)
+  a
+}
+OpDiag_DeepSWPA_NoDevNY = foreach(o = 1:length(unique(DeepSWPA_NoDevNY$Operator)), .packages = c('gstat', 'GISTools', 'sp'), .combine = 'rbind') %dopar% {
+  a = BadOperatorDiagnostics(MT = DeepSWPA_NoDevNY, o = o, LowLim = 2, MT_WGS = DeepSWPA_WGS_NoDevNY, v.MT = v.DeepSWPA_NoDevNY, rv.MT = rv.DeepSWPA_NoDevNY, Vcut = 60000, Vbins = 50, HistSep = 10, Histylim = 1300, RegName = "bDeepSWPA_NoDevNY", MaxLagDist = 20000)
+  a
+}
+stopCluster(cl)
+
+#Seems like there are problem operators in WV for SWPA. Try to discover them.
+DeepSWPA_WGS_WV = spTransform(DeepSWPA[DeepSWPA$State == 'WV',], CRS('+init=epsg:4326'))
+v.DeepSWPA_WV = variogram(Qs~1, DeepSWPA[DeepSWPA$State == 'WV',], cutoff = 60000, width = 60000/50)
+rv.DeepSWPA_WV = variogram(Qs~1, DeepSWPA[DeepSWPA$State == 'WV',], cutoff = 60000, width = 60000/50, cressie = TRUE)
+
+DeepSWPA_WGS_NoDevNY_WV = spTransform(DeepSWPA_NoDevNY[DeepSWPA_NoDevNY$State == 'WV',], CRS('+init=epsg:4326'))
+v.DeepSWPA_NoDevNY_WV = variogram(Qs~1, DeepSWPA_NoDevNY[DeepSWPA_NoDevNY$State == 'WV',], cutoff = 60000, width = 60000/50)
+rv.DeepSWPA_NoDevNY_WV = variogram(Qs~1, DeepSWPA_NoDevNY[DeepSWPA_NoDevNY$State == 'WV',], cutoff = 60000, width = 60000/50, cressie = TRUE)
+
+cl = makeCluster(detectCores() - 1)
+registerDoParallel(cl)
+OpDiag_DeepSWPA_WV = foreach(o = 1:length(unique(DeepSWPA$Operator[DeepSWPA$State == 'WV'])), .packages = c('gstat', 'GISTools', 'sp'), .combine = 'rbind') %dopar% {
+  a = BadOperatorDiagnostics(MT = DeepSWPA[DeepSWPA$State == 'WV',], o = o, LowLim = 2, MT_WGS = DeepSWPA_WGS_WV, v.MT = v.DeepSWPA_WV, rv.MT = rv.DeepSWPA_WV, Vcut = 60000, Vbins = 50, HistSep = 10, Histylim = 1300, RegName = "bDeepSWPA_WV", MaxLagDist = 20000)
+  a
+}
+OpDiag_DeepSWPA_NoDevNY_WV = foreach(o = 1:length(unique(DeepSWPA_NoDevNY$Operator[DeepSWPA_NoDevNY$State == 'WV'])), .packages = c('gstat', 'GISTools', 'sp'), .combine = 'rbind') %dopar% {
+  a = BadOperatorDiagnostics(MT = DeepSWPA_NoDevNY[DeepSWPA_NoDevNY$State == 'WV',], o = o, LowLim = 2, MT_WGS = DeepSWPA_WGS_NoDevNY_WV, v.MT = v.DeepSWPA_NoDevNY_WV, rv.MT = rv.DeepSWPA_NoDevNY_WV, Vcut = 60000, Vbins = 50, HistSep = 10, Histylim = 1300, RegName = "bDeepSWPA_NoDevNY_WV", MaxLagDist = 20000)
+  a
+}
+stopCluster(cl)
+
+#Identified Petroleum Development Corp. as an operator that had some logs misinterpreted in AASG. Their logs are fine. 
+#EMAX wells logged up in this geologic region - remove.
+DeepSWPA = DeepSWPA[DeepSWPA$Operator != 'EMAX, Inc.',]
+DeepSWPA_NoDevNY = DeepSWPA_NoDevNY[DeepSWPA_NoDevNY$Operator != 'EMAX, Inc.',]
+#With these adjustments, no major change in variogram happens. There must be other factors affecting variogram in this region.
+
+#Map of Heat Flow, removing extreme high values
+plot(DeepSWPA_NoDevNY[DeepSWPA_NoDevNY$State == 'WV' & DeepSWPA_NoDevNY$Qs < 100,][order(DeepSWPA_NoDevNY[DeepSWPA_NoDevNY$State == 'WV' & DeepSWPA_NoDevNY$Qs < 100,]$WellDepth, decreasing = FALSE),], col = colFun(DeepSWPA_NoDevNY[DeepSWPA_NoDevNY$State == 'WV' & DeepSWPA_NoDevNY$Qs < 100,]$Qs[order(DeepSWPA_NoDevNY[DeepSWPA_NoDevNY$State == 'WV' & DeepSWPA_NoDevNY$Qs < 100,]$WellDepth, decreasing = FALSE)]), cex = 1, pch = 16)
+#Check only deeper than 1200 m - looks similar to > 1000 m. Depth doesn't seem to matter here.
+plot(DeepSWPA_NoDevNY[DeepSWPA_NoDevNY$State == 'WV' & DeepSWPA_NoDevNY$Qs < 100,][order(DeepSWPA_NoDevNY[DeepSWPA_NoDevNY$State == 'WV' & DeepSWPA_NoDevNY$Qs < 100,]$WellDepth, decreasing = FALSE),], col = 'white', cex = 1, pch = 16)
+plot(DeepSWPA_NoDevNY[DeepSWPA_NoDevNY$State == 'WV' & DeepSWPA_NoDevNY$Qs < 100 & DeepSWPA_NoDevNY$WellDepth > 1200,][order(DeepSWPA_NoDevNY[DeepSWPA_NoDevNY$State == 'WV' & DeepSWPA_NoDevNY$Qs < 100 & DeepSWPA_NoDevNY$WellDepth > 1200,]$WellDepth, decreasing = FALSE),], col = colFun(DeepSWPA_NoDevNY[DeepSWPA_NoDevNY$State == 'WV' & DeepSWPA_NoDevNY$Qs < 100 & DeepSWPA_NoDevNY$WellDepth > 1200,]$Qs[order(DeepSWPA_NoDevNY[DeepSWPA_NoDevNY$State == 'WV' & DeepSWPA_NoDevNY$Qs < 100 & DeepSWPA_NoDevNY$WellDepth > 1200,]$WellDepth, decreasing = FALSE)]), cex = 1, pch = 16, add = T)
+
+#Map of Elevation
+#Heat flow on the same spatial scale as elevation below
+plot(DeepSWPA_NoDevNY[order(DeepSWPA_NoDevNY$WellDepth, decreasing = FALSE),], col = colFun(DeepSWPA_NoDevNY$Qs[order(DeepSWPA_NoDevNY$WellDepth, decreasing = FALSE)]), cex = 1, pch = 16)
+
+colPal = colorRampPalette(colors = rev(c('red', 'orange', 'yellow', 'green', 'blue')))
+scaleRange = c(1000,4000)
+scaleBy = 200
+Pal = colPal((scaleRange[2] - scaleRange[1])/scaleBy + 1)
+
+#Seems to be some correlation with high elevation => high heat flow, but it's localized where the Allegheny Mtns are.
+plot(DeepSWPA_NoDevNY[DeepSWPA_NoDevNY$Qs < 100,][order(DeepSWPA_NoDevNY[DeepSWPA_NoDevNY$Qs < 100,]$WellDepth, decreasing = FALSE),], 
+     col = colFun(DeepSWPA_NoDevNY[DeepSWPA_NoDevNY$Qs < 100,]$ElevtnG[order(DeepSWPA_NoDevNY[DeepSWPA_NoDevNY$Qs < 100,]$WellDepth, decreasing = FALSE)]), cex = 1, pch = 16)
+
+#WellDepth
+colPal = colorRampPalette(colors = rev(c('red', 'orange', 'yellow', 'green', 'blue')))
+scaleRange = c(1000,3000)
+scaleBy = 200
+Pal = colPal((scaleRange[2] - scaleRange[1])/scaleBy + 1)
+
+#WellDepth - Seems like some deviated wells may still be present. Not sure how to ID them. Spatial outlier analysis hopefully finds them.
+plot(DeepSWPA_NoDevNY[DeepSWPA_NoDevNY$State == 'WV' & DeepSWPA_NoDevNY$Qs < 100,][order(DeepSWPA_NoDevNY[DeepSWPA_NoDevNY$State == 'WV' & DeepSWPA_NoDevNY$Qs < 100,]$WellDepth, decreasing = FALSE),], col = colFun(DeepSWPA_NoDevNY[DeepSWPA_NoDevNY$State == 'WV' & DeepSWPA_NoDevNY$Qs < 100,]$WellDepth[order(DeepSWPA_NoDevNY[DeepSWPA_NoDevNY$State == 'WV' & DeepSWPA_NoDevNY$Qs < 100,]$WellDepth, decreasing = FALSE)]), cex = 1, pch = 16)
+
+#Colors for heat flow on maps
+colPal = colorRampPalette(colors = rev(c('red', 'orange', 'yellow', 'green', 'blue')))
+scaleRange = c(30,80)
+scaleBy = 10
+Pal = colPal((scaleRange[2] - scaleRange[1])/scaleBy + 1)
+
+#WPA - Deviated wells do not look incorrect here.
+DeepWPA_WGS = spTransform(DeepWPA, CRS('+init=epsg:4326'))
+rv.DeepWPA = variogram(Qs~1, DeepWPA, cutoff = 60000, width = 60000/50, cressie = TRUE)
+DeepWPA_NoDevNY_WGS = spTransform(DeepWPA_NoDevNY, CRS('+init=epsg:4326'))
+rv.DeepWPA_NoDevNY = variogram(Qs~1, DeepWPA_NoDevNY, cutoff = 60000, width = 60000/50, cressie = TRUE)
+
+cl = makeCluster(detectCores() - 1)
+registerDoParallel(cl)
+OpDiag_DeepWPA = foreach(o = 1:length(unique(DeepWPA$Operator)), .packages = c('gstat', 'GISTools', 'sp'), .combine = 'rbind') %dopar% {
+  a = BadOperatorDiagnostics(MT = DeepWPA, o = o, LowLim = 2, MT_WGS = DeepWPA_WGS, v.MT = v.DeepWPA, rv.MT = rv.DeepWPA, Vcut = 60000, Vbins = 50, HistSep = 5, Histylim = 800, RegName = "bDeepWPA", MaxLagDist = 20000)
+  a
+}
+OpDiag_DeepWPA_NoDevNY = foreach(o = 1:length(unique(DeepWPA_NoDevNY$Operator)), .packages = c('gstat', 'GISTools', 'sp'), .combine = 'rbind') %dopar% {
+  a = BadOperatorDiagnostics(MT = DeepWPA_NoDevNY, o = o, LowLim = 2, MT_WGS = DeepWPA_NoDevNY_WGS, v.MT = v.DeepWPA_NoDevNY, rv.MT = rv.DeepWPA_NoDevNY, Vcut = 60000, Vbins = 50, HistSep = 5, Histylim = 800, RegName = "bDeepWPA_NoDevNY", MaxLagDist = 20000)
+  a
+}
+stopCluster(cl)
+
+#CT - Deviated wells do not look incorrect here.
+DeepCT_WGS = spTransform(DeepCT, CRS('+init=epsg:4326'))
+rv.DeepCT = variogram(Qs~1, DeepCT, cutoff = 60000, width = 60000/50, cressie = TRUE)
+DeepCT_NoDevNY_WGS = spTransform(DeepCT_NoDevNY, CRS('+init=epsg:4326'))
+rv.DeepCT_NoDevNY = variogram(Qs~1, DeepCT_NoDevNY, cutoff = 60000, width = 60000/50, cressie = TRUE)
+
+cl = makeCluster(detectCores() - 1)
+registerDoParallel(cl)
+OpDiag_DeepCT = foreach(o = 1:length(unique(DeepCT$Operator)), .packages = c('gstat', 'GISTools', 'sp'), .combine = 'rbind') %dopar% {
+  a = BadOperatorDiagnostics(MT = DeepCT, o = o, LowLim = 2, MT_WGS = DeepCT_WGS, v.MT = v.DeepCT, rv.MT = rv.DeepCT, Vcut = 60000, Vbins = 50, HistSep = 10, Histylim = 800, RegName = "bDeepCT", MaxLagDist = 20000)
+  a
+}
+OpDiag_DeepCT_NoDevNY = foreach(o = 1:length(unique(DeepCT_NoDevNY$Operator)), .packages = c('gstat', 'GISTools', 'sp'), .combine = 'rbind') %dopar% {
+  a = BadOperatorDiagnostics(MT = DeepCT_NoDevNY, o = o, LowLim = 2, MT_WGS = DeepCT_NoDevNY_WGS, v.MT = v.DeepCT_NoDevNY, rv.MT = rv.DeepCT_NoDevNY, Vcut = 60000, Vbins = 50, HistSep = 10, Histylim = 800, RegName = "bDeepCT_NoDevNY", MaxLagDist = 20000)
+  a
+}
+stopCluster(cl)
+
+#ENYPA - Deviated wells do not look incorrect here.
+DeepENYPA_WGS = spTransform(DeepENYPA, CRS('+init=epsg:4326'))
+rv.DeepENYPA = variogram(Qs~1, DeepENYPA, cutoff = 60000, width = 60000/50, cressie = TRUE)
+DeepENYPA_NoDevNY_WGS = spTransform(DeepENYPA_NoDevNY, CRS('+init=epsg:4326'))
+rv.DeepENYPA_NoDevNY = variogram(Qs~1, DeepENYPA_NoDevNY, cutoff = 60000, width = 60000/50, cressie = TRUE)
+
+cl = makeCluster(detectCores() - 1)
+registerDoParallel(cl)
+OpDiag_DeepENYPA = foreach(o = 1:length(unique(DeepENYPA$Operator)), .packages = c('gstat', 'GISTools', 'sp'), .combine = 'rbind') %dopar% {
+  a = BadOperatorDiagnostics(MT = DeepENYPA, o = o, LowLim = 2, MT_WGS = DeepENYPA_WGS, v.MT = v.DeepENYPA, rv.MT = rv.DeepENYPA, Vcut = 60000, Vbins = 40, HistSep = 10, Histylim = 200, RegName = "bDeepENYPA", MaxLagDist = 20000)
+  a
+}
+OpDiag_DeepENYPA_NoDevNY = foreach(o = 1:length(unique(DeepENYPA_NoDevNY$Operator)), .packages = c('gstat', 'GISTools', 'sp'), .combine = 'rbind') %dopar% {
+  a = BadOperatorDiagnostics(MT = DeepENYPA_NoDevNY, o = o, LowLim = 2, MT_WGS = DeepENYPA_NoDevNY_WGS, v.MT = v.DeepENYPA_NoDevNY, rv.MT = rv.DeepENYPA_NoDevNY, Vcut = 60000, Vbins = 40, HistSep = 10, Histylim = 200, RegName = "bDeepENYPA_NoDevNY", MaxLagDist = 20000)
+  a
+}
+stopCluster(cl)
+
+#NWPANY - Deviated wells do not look incorrect here.
+DeepNWPANY_WGS = spTransform(DeepNWPANY, CRS('+init=epsg:4326'))
+rv.DeepNWPANY = variogram(Qs~1, DeepNWPANY, cutoff = 60000, width = 60000/50, cressie = TRUE)
+DeepNWPANY_NoDevNY_WGS = spTransform(DeepNWPANY_NoDevNY, CRS('+init=epsg:4326'))
+rv.DeepNWPANY_NoDevNY = variogram(Qs~1, DeepNWPANY_NoDevNY, cutoff = 60000, width = 60000/50, cressie = TRUE)
+
+cl = makeCluster(detectCores() - 1)
+registerDoParallel(cl)
+OpDiag_DeepNWPANY = foreach(o = 1:length(unique(DeepNWPANY$Operator)), .packages = c('gstat', 'GISTools', 'sp'), .combine = 'rbind') %dopar% {
+  a = BadOperatorDiagnostics(MT = DeepNWPANY, o = o, LowLim = 2, MT_WGS = DeepNWPANY_WGS, v.MT = v.DeepNWPANY, rv.MT = rv.DeepNWPANY, Vcut = 60000, Vbins = 20, HistSep = 10, Histylim = 200, RegName = "bDeepNWPANY", MaxLagDist = 20000)
+  a
+}
+OpDiag_DeepNWPANY_NoDevNY = foreach(o = 1:length(unique(DeepNWPANY_NoDevNY$Operator)), .packages = c('gstat', 'GISTools', 'sp'), .combine = 'rbind') %dopar% {
+  a = BadOperatorDiagnostics(MT = DeepNWPANY_NoDevNY, o = o, LowLim = 2, MT_WGS = DeepNWPANY_NoDevNY_WGS, v.MT = v.DeepNWPANY_NoDevNY, rv.MT = rv.DeepNWPANY_NoDevNY, Vcut = 60000, Vbins = 20, HistSep = 10, Histylim = 200, RegName = "bDeepNWPANY_NoDevNY", MaxLagDist = 20000)
+  a
+}
+stopCluster(cl)
+
+#CNY - only 1 operator
+
+#ENY - Deviated wells do not look incorrect here.
+DeepENY_WGS = spTransform(DeepENY, CRS('+init=epsg:4326'))
+rv.DeepENY = variogram(Qs~1, DeepENY, cutoff = 60000, width = 60000/15, cressie = TRUE)
+DeepENY_NoDevNY_WGS = spTransform(DeepENY_NoDevNY, CRS('+init=epsg:4326'))
+rv.DeepENY_NoDevNY = variogram(Qs~1, DeepENY_NoDevNY, cutoff = 60000, width = 60000/15, cressie = TRUE)
+
+cl = makeCluster(detectCores() - 1)
+registerDoParallel(cl)
+OpDiag_DeepENY = foreach(o = 1:length(unique(DeepENY$Operator)), .packages = c('gstat', 'GISTools', 'sp'), .combine = 'rbind') %dopar% {
+  a = BadOperatorDiagnostics(MT = DeepENY, o = o, LowLim = 2, MT_WGS = DeepENY_WGS, v.MT = v.DeepENY, rv.MT = rv.DeepENY, Vcut = 60000, Vbins = 15, HistSep = 10, Histylim = 200, RegName = "bDeepENY", MaxLagDist = 20000)
+  a
+}
+OpDiag_DeepENY_NoDevNY = foreach(o = 1:length(unique(DeepENY_NoDevNY$Operator)), .packages = c('gstat', 'GISTools', 'sp'), .combine = 'rbind') %dopar% {
+  a = BadOperatorDiagnostics(MT = DeepENY_NoDevNY, o = o, LowLim = 2, MT_WGS = DeepENY_NoDevNY_WGS, v.MT = v.DeepENY_NoDevNY, rv.MT = rv.DeepENY_NoDevNY, Vcut = 60000, Vbins = 15, HistSep = 10, Histylim = 200, RegName = "bDeepENY_NoDevNY", MaxLagDist = 20000)
+  a
+}
+stopCluster(cl)
+
+#VR - Deviated wells do not look incorrect here.
+DeepVR_WGS = spTransform(DeepVR, CRS('+init=epsg:4326'))
+rv.DeepVR = variogram(Qs~1, DeepVR, cutoff = 60000, width = 60000/20, cressie = TRUE)
+DeepVR_NoDevNY_WGS = spTransform(DeepVR_NoDevNY, CRS('+init=epsg:4326'))
+rv.DeepVR_NoDevNY = variogram(Qs~1, DeepVR_NoDevNY, cutoff = 60000, width = 60000/20, cressie = TRUE)
+
+cl = makeCluster(detectCores() - 1)
+registerDoParallel(cl)
+OpDiag_DeepVR = foreach(o = 1:length(unique(DeepVR$Operator)), .packages = c('gstat', 'GISTools', 'sp'), .combine = 'rbind') %dopar% {
+  a = BadOperatorDiagnostics(MT = DeepVR, o = o, LowLim = 2, MT_WGS = DeepVR_WGS, v.MT = v.DeepVR, rv.MT = rv.DeepVR, Vcut = 60000, Vbins = 20, HistSep = 10, Histylim = 200, RegName = "bDeepVR", MaxLagDist = 20000)
+  a
+}
+OpDiag_DeepVR_NoDevNY = foreach(o = 1:length(unique(DeepVR_NoDevNY$Operator)), .packages = c('gstat', 'GISTools', 'sp'), .combine = 'rbind') %dopar% {
+  a = BadOperatorDiagnostics(MT = DeepVR_NoDevNY, o = o, LowLim = 2, MT_WGS = DeepVR_NoDevNY_WGS, v.MT = v.DeepVR_NoDevNY, rv.MT = rv.DeepVR_NoDevNY, Vcut = 60000, Vbins = 20, HistSep = 10, Histylim = 200, RegName = "bDeepVR_NoDevNY", MaxLagDist = 20000)
+  a
+}
+stopCluster(cl)
+
+#   Make new deep well database with bad operators removed----
+WellsDeep_RmOps = WellsDeep[-which(WellsDeep$Operator == 'Waco Oil & Gas Co., Inc.'),]
+
+
 #  Spatial Outlier Detection ----
 #This should be run after points have been reduced to unique locations and negative gradient values have been removed or corrected.
+#Bad operators should also be evaluated.
 
 #Data must have a column of UTM coordinates in m for this to work because it relies on Euclidian distances.
 WellsDeep = spTransform(WellsDeep, CRS('+init=epsg:26917'))
@@ -4705,253 +5887,16 @@ VarLagsTable[109:120,1] = 'Valley and Ridge'
 write.csv(VarLagsTable, file = 'TableVarianceLags.csv')
 
 #  Operator data----
-#Fixme: Loop over operators, remove them from the dataset, and see how variograms compare.
-# If there are significant differences, see if operator should be removed.
-# Careful that some operators may make up all of the data for a region.
-
 #Wow! This region becomes manageable with its variogram by removing these points
 #Add operators and Waco drilled wells to the dataset
-MT@data$Operator = ''
 MT@data$Waco = 0
 for (i in 1:nrow(MT)){
-  MT@data$Operator[i] = Operator$Operator[Operator$StateID == MT@data$StateID[i]]
   if (length(which(MT$StateID[i] %in% Wacos$StateID)) > 0){
     MT@data$Waco[i] = 1
   }
 }
 MT$Waco[MT$StateID == 'WV1336'] = 1
 rm(i)
-
-DeepMT@data$Operator = ''
-DeepMT@data$Waco = 0
-for (i in 1:nrow(DeepMT)){
-  DeepMT@data$Operator[i] = Operator$Operator[Operator$StateID == DeepMT@data$StateID[i]]
-  if (length(which(DeepMT$StateID[i] %in% Wacos$StateID)) > 0){
-    DeepMT@data$Waco[i] = 1
-  }
-}
-DeepMT$Waco[DeepMT$StateID == 'WV1336'] = 1
-rm(i)
-
-DeepCWV@data$Operator = ''
-DeepCWV@data$Waco = 0
-for (i in 1:nrow(DeepCWV)){
-  DeepCWV@data$Operator[i] = Operator$Operator[Operator$StateID == DeepCWV@data$StateID[i]]
-  if (length(which(DeepCWV$StateID[i] %in% Wacos$StateID)) > 0){
-    DeepCWV@data$Waco[i] = 1
-  }
-}
-rm(i)
-
-DeepSWPA@data$Operator = ''
-DeepSWPA@data$Waco = 0
-for (i in 1:nrow(DeepSWPA)){
-  DeepSWPA@data$Operator[i] = Operator$Operator[Operator$StateID == DeepSWPA@data$StateID[i]]
-}
-rm(i)
-
-DeepWPA@data$Operator = ''
-for (i in 1:nrow(DeepWPA)){
-  DeepWPA@data$Operator[i] = Operator$Operator[Operator$StateID == DeepWPA@data$StateID[i]]
-}
-rm(i)
-
-DeepCT@data$Operator = ''
-for (i in 1:nrow(DeepCT)){
-  DeepCT@data$Operator[i] = Operator$Operator[Operator$StateID == DeepCT@data$StateID[i]]
-}
-rm(i)
-
-DeepENYPA@data$Operator = ''
-for (i in 1:nrow(DeepENYPA)){
-  DeepENYPA@data$Operator[i] = Operator$Operator[Operator$StateID == DeepENYPA@data$StateID[i]]
-}
-rm(i)
-
-#Make ESDAs for operators in MT region
-BadOperatorDiagnostics = function(MT, #Spatial dataframe containing a column named "Operator" 
-                                  MT_WGS, #Spatial dataframe in WGS coordinates to make map
-                                  v.MT, #variogram for MT dataset using all data
-                                  rv.MT, #Cressie's robust variogram for MT dataset using all data
-                                  Vcut, #variogram cutoff in m
-                                  Vbins, #Number of variogram bins
-                                  o,  #index for the operator to be left out
-                                  LowLim = 2, #Lower limit for number of wells drilled by an operator. Need at least LowLim wells to make a plot for the operator.
-                                  HistSep = 10, #x-axis bar separartion on histogram
-                                  Histylim = 300, #y-axis upper limit on histogram
-                                  RegName #Region name for figure
-                                  ){
-  #Unique operators
-  UniOps = unique(MT$Operator)
-  
-  #Only plot the operator if they have more than LowLim well. It doesn't make sense otherwise.
-  if(nrow(MT[MT$Operator == UniOps[o],]) >= LowLim){
-    png(paste0(RegName, '_OperatorESDA_', o, '.png'), res = 300, height = 8, width = 8, units = 'in')
-    layout(rbind(c(1,4), c(2,3)))
-    #Histogram showing difference between current operator (red) and all data (black)
-    hist(MT$Qs, col = 'black', main = UniOps[o], xlab = expression(paste('Heat Flow (mW/m'^2,')')), ylab = 'Frequency', ylim = c(0,Histylim), xlim = c(0,round(max(MT$Qs + HistSep/2),-1)), breaks = seq(round(min(MT$Qs - HistSep/2),-1),round(max(MT$Qs + HistSep/2),-1),HistSep))
-    par(new=TRUE)
-    hist(MT$Qs[-which(MT$Operator == UniOps[o])], border = 'red', axes = FALSE, xlab = '', main = '', ylab = '', ylim = c(0,Histylim), xlim = c(0,round(max(MT$Qs + HistSep/2),-1)), breaks = seq(round(min(MT$Qs - HistSep/2),-1),round(max(MT$Qs + HistSep/2),-1),HistSep))
-    legend('topright', legend = c('All data', 'Operator Removed'), col = c('black', 'red'), pch = 15)
-    
-    #Variogram of region with and without operator
-    v.o = variogram(Qs~1, MT[-which(MT$Operator == UniOps[o]),], cutoff=Vcut, width = Vcut/Vbins)
-    plot(v.MT$dist, v.MT$gamma, ylim = c(0,round(max(v.MT$gamma),-1)), xlim = c(0,Vcut), xlab = 'Separation Distance', ylab = expression(paste('Semivariance (mW/m'^2,')'^2)), main = 'MOM Semi-variogram')
-    par(new=TRUE)
-    plot(v.o$dist, v.o$gamma, ylim = c(0,round(max(v.MT$gamma),-1)), xlim = c(0,Vcut), xlab = '', ylab = '', col = 'red')
-    legend('bottomright', legend = c('All data', 'Operator Removed'), col = c('black', 'red'), pch = 1)
-    
-    #Robust variogram of region with and without operator
-    rv.o = variogram(Qs~1, MT[-which(MT$Operator == UniOps[o]),], cutoff=Vcut, width = Vcut/Vbins, cressie = TRUE)
-    plot(rv.MT$dist, rv.MT$gamma, ylim = c(0,round(max(v.MT$gamma),-1)), xlim = c(0,Vcut), xlab = 'Separation Distance', ylab = expression(paste('Semivariance (mW/m'^2,')'^2)), main = 'Robust Semi-variogram')
-    par(new=TRUE)
-    plot(rv.o$dist, rv.o$gamma, ylim = c(0,round(max(v.MT$gamma),-1)), xlim = c(0,Vcut), xlab = '', ylab = '', col = 'red')
-    legend('bottomright', legend = c('All data', 'Operator Removed'), col = c('black', 'red'), pch = 1)
-    
-    #Map
-    plot(MT_WGS, pch = 16, cex = 0.4, col ='white')
-    plot(Counties[which(Counties$STATEFP == 42 | Counties$STATEFP == 36 | Counties$STATEFP == 54 | Counties$STATEFP == 51| Counties$STATEFP == 24| Counties$STATEFP == 21),], add=TRUE, border = 'grey')
-    plot(NY, lwd = 2, add=TRUE)
-    plot(PA, lwd = 2, add=TRUE)
-    plot(WV, lwd = 2, add=TRUE)
-    plot(MD, lwd = 2, add=TRUE)
-    plot(KY, lwd = 2, add=TRUE)
-    plot(VA, lwd = 2, add=TRUE)
-    north.arrow(-83.5, 37.8, 0.05, lab = 'N', cex.lab = 1.5, col='black', cex = 0.7)
-    degAxis(side = 2, seq(34, 46, 1), cex.axis = 1.5)
-    degAxis(side = 2, seq(34, 46, 1), labels = FALSE)
-    degAxis(side = 4, seq(34, 46, 1), labels = FALSE)
-    degAxis(side = 1, seq(-70, -86, -1), cex.axis = 1.5)
-    degAxis(side = 3, seq(-70, -86, -1), labels = FALSE)
-    degAxis(side = 1, seq(-70, -86, -1), labels = FALSE)
-    plot(MT_WGS, pch = 16, cex = 0.4, add = T)
-    plot(MT_WGS[which(MT$Operator == UniOps[o]),], pch = 16, cex = 0.4, add = T, col = 'red')
-    legend('topleft', legend = c(paste("Operator's Wells: N wells =", nrow(MT[which(MT$Operator == UniOps[o]),])), 'Other Wells'), col = c('red', 'black'), pch = 16, cex = 0.7)
-    
-    dev.off()
-  }
-}
-
-MT_WGS = spTransform(MT, CRS('+init=epsg:4326'))
-cl = makeCluster(detectCores() - 1)
-registerDoParallel(cl)
-temp = foreach(o = 1:length(unique(MT$Operator)), .packages = c('gstat', 'GISTools', 'sp')) %dopar% {
-  BadOperatorDiagnostics(MT = MT, o = o, LowLim = 2, MT_WGS = MT_WGS, v.MT = v.MT, Vcut = 60000, Vbins = 50, HistSep = 10, Histylim = 300, RegName = "MT")
-  a = o
-}
-stopCluster(cl)
-
-DeepMT_WGS = spTransform(DeepMT, CRS('+init=epsg:4326'))
-rv.DeepMT = variogram(Qs~1, DeepMT, cutoff = 60000, width = 60000/50, cressie = TRUE)
-cl = makeCluster(detectCores() - 1)
-registerDoParallel(cl)
-temp = foreach(o = 1:length(unique(DeepMT$Operator)), .packages = c('gstat', 'GISTools', 'sp')) %dopar% {
-  BadOperatorDiagnostics(MT = DeepMT, o = o, LowLim = 2, MT_WGS = DeepMT_WGS, v.MT = v.DeepMT, rv.MT = rv.DeepMT, Vcut = 60000, Vbins = 50, HistSep = 10, Histylim = 500, RegName = "rDeepMT")
-  a = o
-}
-stopCluster(cl)
-
-#Waco is a clear bad operator because they logged wells upwards. Equitable Production Company had wells logged by Waco. Remove both.
-DeepMT_NoWaco = DeepMT[-which(DeepMT$Operator == 'Waco Oil & Gas Co., Inc.'),]
-DeepMT_NoWaco = DeepMT_NoWaco[-which(DeepMT_NoWaco$Operator == 'Equitable Production Company'),]
-DeepMT_WGS = spTransform(DeepMT_NoWaco, CRS('+init=epsg:4326'))
-v.DeepMT_NoWaco = variogram(Qs ~ 1, DeepMT_NoWaco, cutoff = 60000, width = 60000/50)
-
-cl = makeCluster(detectCores() - 1)
-registerDoParallel(cl)
-temp = foreach(o = 1:length(unique(DeepMT_NoWaco$Operator)), .packages = c('gstat', 'GISTools', 'sp')) %dopar% {
-  BadOperatorDiagnostics(MT = DeepMT_NoWaco, o = o, LowLim = 2, MT_WGS = DeepMT_WGS, v.MT = v.DeepMT_NoWaco, Vcut = 60000, Vbins = 50, HistSep = 10, Histylim = 300, RegName = "DeepMT_NoWaco")
-  a = o
-}
-stopCluster(cl)
-
-
-#CWV
-#Remove the 2 high points that were checked for being incorrect
-DeepCWV_DelHigh = DeepCWV[DeepCWV$Qs < 160,]
-#Remove Waco and Equitable Production Company
-DeepCWV_NoWaco = DeepCWV_DelHigh[-which(DeepCWV_DelHigh$Operator == "Waco Oil & Gas Co., Inc."),]
-v.DeepCWV_NoWaco = variogram(Qs~1, DeepCWV_NoWaco, cutoff = 60000, width = 60000/50)
-DeepCWV_WGS = spTransform(DeepCWV_NoWaco, CRS('+init=epsg:4326'))
-cl = makeCluster(detectCores() - 1)
-registerDoParallel(cl)
-temp = foreach(o = 1:length(unique(DeepCWV$Operator)), .packages = c('gstat', 'GISTools', 'sp')) %dopar% {
-  BadOperatorDiagnostics(MT = DeepCWV_NoWaco, o = o, LowLim = 2, MT_WGS = DeepCWV_WGS, v.MT = v.DeepCWV_NoWaco, Vcut = 60000, Vbins = 50, HistSep = 10, Histylim = 1300, RegName = "DeepCWV_NoWaco")
-  a = o
-}
-stopCluster(cl)
-
-DeepSWPA_WGS = spTransform(DeepSWPA, CRS('+init=epsg:4326'))
-cl = makeCluster(detectCores() - 1)
-registerDoParallel(cl)
-temp = foreach(o = 1:length(unique(DeepSWPA$Operator)), .packages = c('gstat', 'GISTools', 'sp')) %dopar% {
-  BadOperatorDiagnostics(MT = DeepSWPA, o = o, LowLim = 2, MT_WGS = DeepSWPA_WGS, v.MT = v.DeepSWPA, Vcut = 60000, Vbins = 50, HistSep = 10, Histylim = 1300, RegName = "DeepSWPA")
-  a = o
-}
-stopCluster(cl)
-
-#Seems like there are problem operators in WV for SWPA. Try to discover them.
-DeepSWPA_WGS = spTransform(DeepSWPA[DeepSWPA$State == 'WV',], CRS('+init=epsg:4326'))
-v.DeepSWPA_WV = variogram(Qs~1, DeepSWPA[DeepSWPA$State == 'WV',], cutoff = 60000, width = 60000/50)
-cl = makeCluster(detectCores() - 1)
-registerDoParallel(cl)
-temp = foreach(o = 1:length(unique(DeepSWPA$Operator[DeepSWPA$State == 'WV'])), .packages = c('gstat', 'GISTools', 'sp')) %dopar% {
-  BadOperatorDiagnostics(MT = DeepSWPA[DeepSWPA$State == 'WV',], o = o, LowLim = 2, MT_WGS = DeepSWPA_WGS, v.MT = v.DeepSWPA_WV, Vcut = 60000, Vbins = 50, HistSep = 10, Histylim = 1300, RegName = "DeepSWPA_WV")
-  a = o
-}
-stopCluster(cl)
-
-#Identified Petroleum Development Corp. as an operator that had some logs misinterpreted in AASG. Their logs are fine. EMAX wells logged up in this geologic region - remove.
-DeepSWPA_NoPDC = DeepSWPA[-which(DeepSWPA$Operator == 'Petroleum Development Corp.' | DeepSWPA$Operator == 'EMAX, Inc.'),]
-DeepSWPA_WGS = spTransform(DeepSWPA_NoPDC, CRS('+init=epsg:4326'))
-v.DeepSWPA_WV_NoPDC = variogram(Qs~1, DeepSWPA_NoPDC, cutoff = 60000, width = 60000/50)
-cl = makeCluster(detectCores() - 1)
-registerDoParallel(cl)
-temp = foreach(o = 1:length(unique(DeepSWPA_NoPDC$Operator)), .packages = c('gstat', 'GISTools', 'sp')) %dopar% {
-  BadOperatorDiagnostics(MT = DeepSWPA_NoPDC, o = o, LowLim = 2, MT_WGS = DeepSWPA_WGS, v.MT = v.DeepSWPA_WV_NoPDC, Vcut = 60000, Vbins = 50, HistSep = 10, Histylim = 2000, RegName = "DeepSWPA_WV_NoPDC")
-  a = o
-}
-stopCluster(cl)
-
-#Recheck WV
-#Still problem operators in WV for SWPA. Try to discover them. CNG Producing Co. and CNG Development Co. have temperature scales on their logs begining at low values for the depths they operate. 
-DeepSWPA_WGS = spTransform(DeepSWPA_NoPDC[DeepSWPA_NoPDC$State == 'WV',], CRS('+init=epsg:4326'))
-v.DeepSWPA_NoPDC_WV = variogram(Qs~1, DeepSWPA_NoPDC[DeepSWPA_NoPDC$State == 'WV',], cutoff = 60000, width = 60000/50)
-cl = makeCluster(detectCores() - 1)
-registerDoParallel(cl)
-temp = foreach(o = 1:length(unique(DeepSWPA_NoPDC$Operator[DeepSWPA_NoPDC$State == 'WV'])), .packages = c('gstat', 'GISTools', 'sp')) %dopar% {
-  BadOperatorDiagnostics(MT = DeepSWPA_NoPDC[DeepSWPA_NoPDC$State == 'WV',], o = o, LowLim = 2, MT_WGS = DeepSWPA_WGS, v.MT = v.DeepSWPA_NoPDC_WV, Vcut = 60000, Vbins = 50, HistSep = 10, Histylim = 300, RegName = "DeepSWPA_WV_NoPDC")
-  a = o
-}
-stopCluster(cl)
-
-
-DeepWPA_WGS = spTransform(DeepWPA, CRS('+init=epsg:4326'))
-cl = makeCluster(detectCores() - 1)
-registerDoParallel(cl)
-temp = foreach(o = 1:length(unique(DeepWPA$Operator)), .packages = c('gstat', 'GISTools', 'sp')) %dopar% {
-  BadOperatorDiagnostics(MT = DeepWPA, o = o, LowLim = 2, MT_WGS = DeepWPA_WGS, v.MT = v.DeepWPA, Vcut = 60000, Vbins = 50, HistSep = 5, Histylim = 800, RegName = "DeepWPA")
-  a = o
-}
-stopCluster(cl)
-
-DeepCT_WGS = spTransform(DeepCT, CRS('+init=epsg:4326'))
-cl = makeCluster(detectCores() - 1)
-registerDoParallel(cl)
-temp = foreach(o = 1:length(unique(DeepCT$Operator)), .packages = c('gstat', 'GISTools', 'sp')) %dopar% {
-  BadOperatorDiagnostics(MT = DeepCT, o = o, LowLim = 2, MT_WGS = DeepCT_WGS, v.MT = v.DeepCT, Vcut = 60000, Vbins = 50, HistSep = 10, Histylim = 800, RegName = "DeepCT")
-  a = o
-}
-stopCluster(cl)
-
-DeepENYPA_WGS = spTransform(DeepENYPA, CRS('+init=epsg:4326'))
-cl = makeCluster(detectCores() - 1)
-registerDoParallel(cl)
-temp = foreach(o = 1:length(unique(DeepENYPA$Operator)), .packages = c('gstat', 'GISTools', 'sp')) %dopar% {
-  BadOperatorDiagnostics(MT = DeepENYPA, o = o, LowLim = 2, MT_WGS = DeepENYPA_WGS, v.MT = v.DeepENYPA, Vcut = 60000, Vbins = 40, HistSep = 10, Histylim = 200, RegName = "DeepENYPA")
-  a = o
-}
-stopCluster(cl)
 
 #Map - the region with these wells still has data.
 plot(MT, pch = 16, cex = 0.1)
