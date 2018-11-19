@@ -105,7 +105,7 @@ BadOperatorDiagnostics = function(MT, #Spatial dataframe containing a column nam
       #Get the lag that should be selected for cumulative sums
       DistLags = DiffMOMW = DiffRobustW = vector('numeric', length(Dists))
       for (d in 1:length(Dists)){
-        DistLags[d] = max(which(v.DeepMT$dist <= Dists[d]))
+        DistLags[d] = max(which(v.MT$dist <= Dists[d]))
         
         #Weighting by the separation distance lags
         #Note: not using different weights for MOM and Robust because want to compare the same number of lags for both
@@ -441,14 +441,14 @@ ReturnTopN = function(OpDiag,  #Output from the bad operator diagnostics functio
     b = ReturnOperatorPlotNum(OpDiag, OpRanks$RankOpDiag_MOMWmat, col = 12, rank = i)
     c = ReturnOperatorPlotNum(OpDiag, OpRanks$RankOpDiag_Robustmat, col = 12, rank = i)
     d = ReturnOperatorPlotNum(OpDiag, OpRanks$RankOpDiag_RobustWmat, col = 12, rank = i)
-    Top10 = unique(c(a,b,c,d,Top10))
+    TopN = unique(c(a,b,c,d,TopN))
   }
   
   if(ID){
     #PlotID numbers
-    return(sort(Top10))
+    return(sort(TopN))
   }else{
     #Operator Names
-    return(unique(WellData$Operator)[sort(Top10)])
+    return(unique(WellData$Operator)[sort(TopN)])
   }
 }
