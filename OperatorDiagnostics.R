@@ -363,7 +363,7 @@ PlotOpsDiagnostics = function(OpDiag, #Output from the bad operator diagnostics 
            type = 'o', lty = 1, pch = 16, 
            ylim = rev(c(0,nrow(RankMat))), xlim = c(1,ncol(RankMat)), 
            col = cols(nrow(RankMat))[which(RankMat[,1] == i)],
-           ylab = 'Rank of Operator for Metric', xlab = 'Metrics', cex.lab = 1.5, axes = FALSE)
+           ylab = 'Rank of Operator for Metric', xlab = '', cex.lab = 1.5, axes = FALSE)
       box()
       axis(side = 2, at = seq(0,NumOps,NumOpsStep), labels = TRUE, cex.axis = 1.5)
       axis(side = 1, at = seq(1,ncol(RankMat),1), line = 2, tick = FALSE, padj = -0.3,
