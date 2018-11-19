@@ -320,7 +320,8 @@ PlotOpsDiagnostics = function(OpDiag, #Output from the bad operator diagnostics 
                               NumOps = 100, #y axis number of operators to show
                               NumOpsStep = 20, #y axis tick mark locations for operators
                               PlotName, #name to be added to the plot file
-                              cols = NA #color palette function for the parallel axis plots
+                              cols = NA, #color palette function for the parallel axis plots
+                              xStep #separation distance step size (km) for variogram. Used to place captions on plots
 ){
   #Plot for variance represented by robust variogram difference, weighted by number of points the operator has
   # Colored by the bias, represented by the p-value for difference in center for operator data vs. rest of data.
@@ -367,10 +368,10 @@ PlotOpsDiagnostics = function(OpDiag, #Output from the bad operator diagnostics 
       box()
       axis(side = 2, at = seq(0,NumOps,NumOpsStep), labels = TRUE, cex.axis = 1.5)
       axis(side = 1, at = seq(1,ncol(RankMat),1), line = 2, tick = FALSE, padj = -0.3,
-           labels = c('MOM Variogram \n 0 - 30 km \n w = N wells',
-                      'Robust Variogram \n 0 - 30 km \n w = N wells',
-                      'MOM Variogram \n 0 - 30 km \n w = spatial lag',
-                      'Robust Variogram \n 0 - 30 km \n w = spatial lag',
+           labels = c(paste0('MOM Variogram \n 0 - ', col*xStep, ' km \n w = N wells'),
+                      paste0('Robust Variogram \n 0 - ', col*xStep, ' km \n w = N wells'),
+                      paste0('MOM Variogram \n 0 - ', col*xStep, ' km \n w = spatial lag'),
+                      paste0('Robust Variogram \n 0 - ', col*xStep, ' km \n w = spatial lag'),
                       'p-value \n Wilcoxon Rank Sum \n'))
     }else{
       plot(seq(1,ncol(RankMat),1), which(RankMat == i) - (seq(0,ncol(RankMat)-1,1)*nrow(RankMat)), 
@@ -401,10 +402,10 @@ PlotOpsDiagnostics = function(OpDiag, #Output from the bad operator diagnostics 
       box()
       axis(side = 2, at = seq(0,1,.1), labels = TRUE, cex.axis = 1.5)
       axis(side = 1, at = seq(1,ncol(RankMat),1), line = 2, tick = FALSE, padj = -0.3,
-           labels = c('MOM Variogram \n 0 - 30 km \n w = N wells',
-                      'Robust Variogram \n 0 - 30 km \n w = N wells',
-                      'MOM Variogram \n 0 - 30 km \n w = spatial lag',
-                      'Robust Variogram \n 0 - 30 km \n w = spatial lag',
+           labels = c(paste0('MOM Variogram \n 0 - ', col*xStep, ' km \n w = N wells'),
+                      paste0('Robust Variogram \n 0 - ', col*xStep, ' km \n w = N wells'),
+                      paste0('MOM Variogram \n 0 - ', col*xStep, ' km \n w = spatial lag'),
+                      paste0('Robust Variogram \n 0 - ', col*xStep, ' km \n w = spatial lag'),
                       'p-value \n Wilcoxon Rank Sum \n'))
     }else{
       plot(seq(1,ncol(NormMat),1), NormMat[i,], 
@@ -415,4 +416,39 @@ PlotOpsDiagnostics = function(OpDiag, #Output from the bad operator diagnostics 
     par(new = T)
   }
   dev.off()
+}
+
+#How to retrieve operator number from the sorted results. Useful to check diagnostic plots for operators.
+ReturnOperatorPlotNum = function(OpDiag,  #Output from the bad operator diagnostics function
+                                 OpRanks, #One metric's dataframe output from the GetOperatorRanks function
+                                 col, #column of OpRanks to select 
+                                 rank #Rank to select. 1 is highest value in col
+){
+  RankOp = OpRanks[rank,col]
+  as.numeric(strsplit(names(OpDiag[,1][RankOp]), split = '.', fixed = TRUE)[[1]][2])
+}
+
+ReturnTopN = function(OpDiag,  #Output from the bad operator diagnostics function
+                      OpRanks, #Output from the GetOperatorRanks function
+                      col, #column of OpRanks to select 
+                      N, #Ranks to select. The top N are selected for each metric
+                      ID = TRUE, #Should plot ID number be returned? If FALSE, returns name of operator
+                      WellData #Needs a column named Operator to return the name of the operator.
+){
+  TopN = vector('numeric')
+  for (i in 1:N){
+    a = ReturnOperatorPlotNum(OpDiag, OpRanks$RankOpDiag_MOMmat, col = 12, rank = i)
+    b = ReturnOperatorPlotNum(OpDiag, OpRanks$RankOpDiag_MOMWmat, col = 12, rank = i)
+    c = ReturnOperatorPlotNum(OpDiag, OpRanks$RankOpDiag_Robustmat, col = 12, rank = i)
+    d = ReturnOperatorPlotNum(OpDiag, OpRanks$RankOpDiag_RobustWmat, col = 12, rank = i)
+    Top10 = unique(c(a,b,c,d,Top10))
+  }
+  
+  if(ID){
+    #PlotID numbers
+    return(sort(Top10))
+  }else{
+    #Operator Names
+    return(unique(WellData$Operator)[sort(Top10)])
+  }
 }
