@@ -1851,9 +1851,10 @@ colPal = colorRampPalette(colors = rev(c('red', 'orange', 'yellow', 'green', 'bl
 scaleRange = c(30,80)
 scaleBy = 10
 Pal = colPal((scaleRange[2] - scaleRange[1])/scaleBy + 1)
-#    Run bad operator diagnostics for each geologic region----
+#   Run bad operator diagnostics for each geologic region----
 
-#MT - Deviated wells do not look incorrect here.
+#    MT---- 
+#Deviated wells do not look incorrect here.
 cl = makeCluster(detectCores() - 1)
 registerDoParallel(cl)
 OpDiag_DeepMT = foreach(o = 1:length(unique(DeepMT$Operator)), .packages = c('gstat', 'GISTools', 'sp'), .combine = 'rbind') %dopar% {
@@ -1879,35 +1880,19 @@ PlotDistanceSensitivity(OpDiagRanks = OpRanks_DeepMT, res = 300, height = 10, wi
 cl = makeCluster(detectCores() - 1)
 registerDoParallel(cl)
 temp = foreach (i = 1:ncol(OpRanks_DeepMT$DiffMOM), .packages = 'RColorBrewer') %dopar% {
-  PlotOpsDiagnostics(OpDiag = OpDiag_DeepMT, OpDiagRanks = OpRanks_DeepMT, col = i, res = 300, NumOps = 100, NumOpsStep = 20, PlotName = paste0('DeepMT_',i))
+  PlotOpsDiagnostics(OpDiag = OpDiag_DeepMT, OpDiagRanks = OpRanks_DeepMT, col = i, res = 300, NumOps = 100, NumOpsStep = 20, PlotName = paste0('DeepMT_',i), xStep = 2.5)
 }
-stopCluster(cl)
 rm(temp)
 
 OpRanks_DeepMT_NoDevNY = GetOperatorRanks(OpDiag_DeepMT_NoDevNY)
 PlotDistanceSensitivity(OpDiagRanks = OpRanks_DeepMT_NoDevNY, res = 300, height = 10, width = 7, xlim = c(1.5,60), NumOps = 100, NumOpsStep = 20, xStep = 2.5, PlotName = 'DeepMT_NoDevNY')
-cl = makeCluster(detectCores() - 1)
-registerDoParallel(cl)
 temp = foreach (i = 1:ncol(OpRanks_DeepMT_NoDevNY$DiffMOM), .packages = 'RColorBrewer') %dopar% {
-  PlotOpsDiagnostics(OpDiag = OpDiag_DeepMT_NoDevNY, OpDiagRanks = OpRanks_DeepMT_NoDevNY, col = i, res = 300, NumOps = 100, NumOpsStep = 20, PlotName = paste0('DeepMT_NoDevNY_',i))
+  PlotOpsDiagnostics(OpDiag = OpDiag_DeepMT_NoDevNY, OpDiagRanks = OpRanks_DeepMT_NoDevNY, col = i, res = 300, NumOps = 100, NumOpsStep = 20, PlotName = paste0('DeepMT_NoDevNY_',i), xStep = 2.5)
 }
 stopCluster(cl)
 rm(temp)
 
-#EPC is ranked highest. Has 1 clear outlier and 3 boxplot high outliers. Small number of points. Logged wells upwards.
-DeepMT_NoEPC = DeepMT[-which(DeepMT$Operator == 'Equitable Production Company'),]
-v.DeepMT_NoEPC = variogram(Qs ~ 1, DeepMT_NoEPC, cutoff = 60000, width = 60000/50)
-rv.DeepMT_NoEPC = variogram(Qs ~ 1, DeepMT_NoEPC, cutoff = 60000, width = 60000/50, cressie = TRUE)
-DeepMT_WGS = spTransform(DeepMT_NoEPC, CRS('+init=epsg:4326'))
-
-cl = makeCluster(detectCores() - 1)
-registerDoParallel(cl)
-OpDiag_DeepMT_NoEPC = foreach(o = 1:length(unique(DeepMT_NoEPC$Operator)), .packages = c('gstat', 'GISTools', 'sp'), .combine = 'rbind') %dopar% {
-  a = BadOperatorDiagnostics(MT = DeepMT_NoEPC, o = o, LowLim = 2, MT_WGS = DeepMT_WGS, v.MT = v.DeepMT_NoEPC, rv.MT = rv.DeepMT_NoEPC, Vcut = 60000, Vbins = 50, HistSep = 10, Histylim = 300, RegName = "bDeepMT_NoEPC", MaxLagDist = 60000)
-  a
-}
-stopCluster(cl)
-
+#     Remove Waco and Equitable Production Company----
 #Waco is a clear bad operator because they logged wells upwards. Equitable Production Company had wells logged by Waco. Remove both.
 DeepMT_NoWaco = DeepMT[-which(DeepMT$Operator == 'Waco Oil & Gas Co., Inc.'),]
 DeepMT_NoWaco = DeepMT_NoWaco[-which(DeepMT_NoWaco$Operator == 'Equitable Production Company'),]
@@ -1915,32 +1900,39 @@ DeepMT_WGS = spTransform(DeepMT_NoWaco, CRS('+init=epsg:4326'))
 v.DeepMT_NoWaco = variogram(Qs ~ 1, DeepMT_NoWaco, cutoff = 60000, width = 60000/50)
 rv.DeepMT_NoWaco = variogram(Qs ~ 1, DeepMT_NoWaco, cutoff = 60000, width = 60000/50, cressie = TRUE)
 
-DeepMT_NoDevNY_NoWaco = DeepMT_NoDevNY[-which(DeepMT_NoDevNY$Operator == 'Waco Oil & Gas Co., Inc.'),]
-DeepMT_NoDevNY_NoWaco = DeepMT_NoDevNY_NoWaco[-which(DeepMT_NoDevNY_NoWaco$Operator == 'Equitable Production Company'),]
-DeepMT_WGS_NoDevNY = spTransform(DeepMT_NoDevNY_NoWaco, CRS('+init=epsg:4326'))
-v.DeepMT_NoDevNY_NoWaco = variogram(Qs ~ 1, DeepMT_NoDevNY_NoWaco, cutoff = 60000, width = 60000/50)
-rv.DeepMT_NoDevNY_NoWaco = variogram(Qs ~ 1, DeepMT_NoDevNY_NoWaco, cutoff = 60000, width = 60000/50, cressie = TRUE)
+colPal = colorRampPalette(colors = rev(c('red', 'orange', 'yellow', 'green', 'blue')))
+scaleRange = c(30,80)
+scaleBy = 10
+Pal = colPal((scaleRange[2] - scaleRange[1])/scaleBy + 1)
 
 cl = makeCluster(detectCores() - 1)
 registerDoParallel(cl)
 OpDiag_DeepMT_NoWaco = foreach(o = 1:length(unique(DeepMT_NoWaco$Operator)), .packages = c('gstat', 'GISTools', 'sp'), .combine = 'rbind') %dopar% {
-  a = BadOperatorDiagnostics(MT = DeepMT_NoWaco, o = o, LowLim = 2, MT_WGS = DeepMT_WGS, v.MT = v.DeepMT_NoWaco, rv.MT = rv.DeepMT_NoWaco, Vcut = 60000, Vbins = 50, HistSep = 10, Histylim = 300, RegName = "bDeepMT_NoWaco", MaxLagDist = 20000)
+  a = BadOperatorDiagnostics(MT = DeepMT_NoWaco, o = o, LowLim = 2, MT_WGS = DeepMT_WGS, v.MT = v.DeepMT_NoWaco, rv.MT = rv.DeepMT_NoWaco, Vcut = 60000, Vbins = 50, HistSep = 10, Histylim = 300, RegName = "DeepMT_NoWaco", MaxLagDist = 60000, SensitivityDist = 2500)
   a
 }
-OpDiag_DeepMT_NoDevNY_NoWaco = foreach(o = 1:length(unique(DeepMT_NoDevNY_NoWaco$Operator)), .packages = c('gstat', 'GISTools', 'sp'), .combine = 'rbind') %dopar% {
-  a = BadOperatorDiagnostics(MT = DeepMT_NoDevNY_NoWaco, o = o, LowLim = 2, MT_WGS = DeepMT_WGS_NoDevNY, v.MT = v.DeepMT_NoDevNY_NoWaco, rv.MT = rv.DeepMT_NoDevNY_NoWaco, Vcut = 60000, Vbins = 50, HistSep = 10, Histylim = 300, RegName = "bDeepMT_NoDevNY_NoWaco", MaxLagDist = 20000)
-  a
+#p-value colors
+colPal = colorRampPalette(colors = rev(c('red', 'orange', 'yellow', 'green', 'blue')))
+scaleRange = c(0,0.2)
+scaleBy = 0.05
+Pal = colPal((scaleRange[2] - scaleRange[1])/scaleBy + 1)
+
+#Sensitivity Plot for All Metrics
+OpRanks_DeepMT_NoWaco = GetOperatorRanks(OpDiag_DeepMT_NoWaco)
+PlotDistanceSensitivity(OpDiagRanks = OpRanks_DeepMT_NoWaco, res = 300, height = 10, width = 7, xlim = c(1.5,60), NumOps = 100, NumOpsStep = 20, xStep = 2.5, PlotName = 'DeepMT_NoWaco')
+#Plot operator diagnostics for each of the distances
+temp = foreach (i = 1:ncol(OpRanks_DeepMT_NoWaco$DiffMOM), .packages = 'RColorBrewer') %dopar% {
+  PlotOpsDiagnostics(OpDiag = OpDiag_DeepMT_NoWaco, OpDiagRanks = OpRanks_DeepMT_NoWaco, col = i, res = 300, NumOps = 100, NumOpsStep = 20, PlotName = paste0('DeepMT_NoWaco',i*2500), xStep = 2.5)
 }
+rm(temp)
 stopCluster(cl)
 
-#Plots
-plot(seq(1,length(OpDiag_DeepMT_NoWaco$DiffMOM),1), sort(as.numeric(OpDiag_DeepMT_NoWaco$DiffMOM)), main = 'Difference in MOM Semi-variance: 0 to 20 km Separation', xlab = 'Sorted Operator ID', ylab = 'Difference')
-plot(seq(1,length(OpDiag_DeepMT_NoWaco$DiffMOM),1), sort(as.numeric(OpDiag_DeepMT_NoWaco$DiffRobust)), main = 'Difference in Robust Semi-variance: 0 to 20 km Separation', xlab = 'Sorted Operator ID', ylab = 'Difference')
-plot(seq(1,length(OpDiag_DeepMT_NoWaco$DiffMOM),1), sort(as.numeric(OpDiag_DeepMT_NoWaco$DiffMeanRmOp)), main = 'Difference in Mean: With - Without Operator', xlab = 'Sorted Operator ID', ylab = 'Difference')
-plot(seq(1,length(OpDiag_DeepMT_NoWaco$DiffMOM),1), sort(as.numeric(OpDiag_DeepMT_NoWaco$ScaledDiffMeanRmOp)))
+#Top 10 among all metrics, without p-value - These all look reasonable
+TopBadOps_MT = ReturnTopN(OpDiag = OpDiag_DeepMT_NoWaco, OpRanks = OpRanks_DeepMT_NoWaco, col = 6, N = 5, ID = TRUE, WellData = DeepMT_NoWaco)
+TopBadOps_MT_Names = ReturnTopN(OpDiag = OpDiag_DeepMT_NoWaco, OpRanks = OpRanks_DeepMT_NoWaco, col = 6, N = 5, ID = FALSE, WellData = DeepMT_NoWaco)
 
-
-#CWV - Deviated wells do not look incorrect here.
+#    CWV ---- 
+#Deviated wells do not look incorrect here.
 #Remove the 2 high points that were checked for being incorrect.
 DeepCWV_DelHigh = DeepCWV[DeepCWV$Qs < 160,]
 DeepCWV_NoDevNY_DelHigh = DeepCWV_NoDevNY[DeepCWV_NoDevNY$Qs < 160,]
@@ -1955,26 +1947,45 @@ v.DeepCWV_NoDevNY_NoWaco = variogram(Qs~1, DeepCWV_NoDevNY_NoWaco, cutoff = 6000
 rv.DeepCWV_NoDevNY_NoWaco = variogram(Qs~1, DeepCWV_NoDevNY_NoWaco, cutoff = 60000, width = 60000/50, cressie = TRUE)
 DeepCWV_WGS_NoDevNY = spTransform(DeepCWV_NoDevNY_NoWaco, CRS('+init=epsg:4326'))
 
+colPal = colorRampPalette(colors = rev(c('red', 'orange', 'yellow', 'green', 'blue')))
+scaleRange = c(30,80)
+scaleBy = 10
+Pal = colPal((scaleRange[2] - scaleRange[1])/scaleBy + 1)
+
 cl = makeCluster(detectCores() - 1)
 registerDoParallel(cl)
 OpDiag_DeepCWV = foreach(o = 1:length(unique(DeepCWV_NoWaco$Operator)), .packages = c('gstat', 'GISTools', 'sp'), .combine = 'rbind') %dopar% {
-  a = BadOperatorDiagnostics(MT = DeepCWV_NoWaco, o = o, LowLim = 2, MT_WGS = DeepCWV_WGS, v.MT = v.DeepCWV_NoWaco, rv.MT = rv.DeepCWV_NoWaco, Vcut = 60000, Vbins = 50, HistSep = 10, Histylim = 1300, RegName = "bDeepCWV_NoWaco", MaxLagDist = 20000)
+  a = BadOperatorDiagnostics(MT = DeepCWV_NoWaco, o = o, LowLim = 2, MT_WGS = DeepCWV_WGS, v.MT = v.DeepCWV_NoWaco, rv.MT = rv.DeepCWV_NoWaco, Vcut = 60000, Vbins = 50, HistSep = 10, Histylim = 1300, RegName = "DeepCWV_NoWaco", MaxLagDist = 60000, SensitivityDist = 2500)
   a
 }
 OpDiag_DeepCWV_NoDevNY = foreach(o = 1:length(unique(DeepCWV_NoDevNY_NoWaco$Operator)), .packages = c('gstat', 'GISTools', 'sp'), .combine = 'rbind') %dopar% {
-  a = BadOperatorDiagnostics(MT = DeepCWV_NoDevNY_NoWaco, o = o, LowLim = 2, MT_WGS = DeepCWV_WGS_NoDevNY, v.MT = v.DeepCWV_NoDevNY_NoWaco, rv.MT = rv.DeepCWV_NoDevNY_NoWaco, Vcut = 60000, Vbins = 50, HistSep = 10, Histylim = 1300, RegName = "bDeepCWV_NoDevNY_NoWaco", MaxLagDist = 20000)
+  a = BadOperatorDiagnostics(MT = DeepCWV_NoDevNY_NoWaco, o = o, LowLim = 2, MT_WGS = DeepCWV_WGS_NoDevNY, v.MT = v.DeepCWV_NoDevNY_NoWaco, rv.MT = rv.DeepCWV_NoDevNY_NoWaco, Vcut = 60000, Vbins = 50, HistSep = 10, Histylim = 1300, RegName = "DeepCWV_NoDevNY_NoWaco", MaxLagDist = 60000, SensitivityDist = 2500)
   a
 }
+#p-value colors
+colPal = colorRampPalette(colors = rev(c('red', 'orange', 'yellow', 'green', 'blue')))
+scaleRange = c(0,0.2)
+scaleBy = 0.05
+Pal = colPal((scaleRange[2] - scaleRange[1])/scaleBy + 1)
+
+#Sensitivity Plot for All Metrics
+OpRanks_DeepCWV = GetOperatorRanks(OpDiag_DeepCWV)
+PlotDistanceSensitivity(OpDiagRanks = OpRanks_DeepCWV, res = 300, height = 10, width = 7, xlim = c(1.5,60), NumOps = 220, NumOpsStep = 20, xStep = 2.5, PlotName = 'DeepCWV_NoWaco')
+#Plot operator diagnostics for each of the distances
+temp = foreach (i = 1:ncol(OpRanks_DeepCWV$DiffMOM), .packages = 'RColorBrewer') %dopar% {
+  PlotOpsDiagnostics(OpDiag = OpDiag_DeepCWV, OpDiagRanks = OpRanks_DeepCWV, col = i, res = 300, NumOps = 220, NumOpsStep = 20, PlotName = paste0('DeepCWV_NoWaco',i*2500), xStep = 2.5)
+}
+rm(temp)
 stopCluster(cl)
 
-#Plots
-plot(seq(1,length(OpDiag_DeepCWV$DiffMOM),1), sort(as.numeric(OpDiag_DeepCWV$DiffMOM)), main = 'Difference in MOM Semi-variance: 0 to 20 km Separation', xlab = 'Sorted Operator ID', ylab = 'Difference')
-plot(seq(1,length(OpDiag_DeepCWV$DiffMOM),1), sort(as.numeric(OpDiag_DeepCWV$DiffRobust)), main = 'Difference in Robust Semi-variance: 0 to 20 km Separation', xlab = 'Sorted Operator ID', ylab = 'Difference')
-plot(seq(1,length(OpDiag_DeepCWV$DiffMOM),1), sort(as.numeric(OpDiag_DeepCWV$DiffMeanRmOp)), main = 'Difference in Mean: With - Without Operator', xlab = 'Sorted Operator ID', ylab = 'Difference')
-plot(seq(1,length(OpDiag_DeepCWV$DiffMOM),1), sort(as.numeric(OpDiag_DeepCWV$ScaledDiffMeanRmOp)))
 
+#     Split into KY and WV clusters ---- 
+#KY and WV have similar variogram shapes. WV more variable, but fewer observations.
+colPal = colorRampPalette(colors = rev(c('red', 'orange', 'yellow', 'green', 'blue')))
+scaleRange = c(30,80)
+scaleBy = 10
+Pal = colPal((scaleRange[2] - scaleRange[1])/scaleBy + 1)
 
-#Split into KY and WV clusters - KY and WV have similar shapes. WV more variable, but fewer observations.
 DeepCWV_NoWaco_KY = DeepCWV_NoWaco[-which(DeepCWV_NoWaco$LatDeg >= 38.5),]
 v.DeepCWV_NoWaco_KY = variogram(Qs~1, DeepCWV_NoWaco_KY, cutoff = 60000, width = 60000/50)
 rv.DeepCWV_NoWaco_KY = variogram(Qs~1, DeepCWV_NoWaco_KY, cutoff = 60000, width = 60000/50, cressie = TRUE)
@@ -1985,89 +1996,127 @@ v.DeepCWV_NoWaco_WV = variogram(Qs~1, DeepCWV_NoWaco_WV, cutoff = 60000, width =
 rv.DeepCWV_NoWaco_WV = variogram(Qs~1, DeepCWV_NoWaco_WV, cutoff = 60000, width = 60000/50, cressie = TRUE)
 DeepCWV_WGS_WV = spTransform(DeepCWV_NoWaco_WV, CRS('+init=epsg:4326'))
 
-DeepCWV_NoDevNY_NoWaco_KY = DeepCWV_NoDevNY_NoWaco[-which(DeepCWV_NoDevNY_NoWaco$LatDeg >= 38.5),]
-v.DeepCWV_NoDevNY_NoWaco_KY = variogram(Qs~1, DeepCWV_NoDevNY_NoWaco_KY, cutoff = 60000, width = 60000/50)
-rv.DeepCWV_NoDevNY_NoWaco_KY = variogram(Qs~1, DeepCWV_NoDevNY_NoWaco_KY, cutoff = 60000, width = 60000/50, cressie = TRUE)
-DeepCWV_WGS_NoDevNY_KY = spTransform(DeepCWV_NoDevNY_NoWaco_KY, CRS('+init=epsg:4326'))
-
-DeepCWV_NoDevNY_NoWaco_WV = DeepCWV_NoDevNY_NoWaco[-which(DeepCWV_NoDevNY_NoWaco$LatDeg < 38.5),]
-v.DeepCWV_NoDevNY_NoWaco_WV = variogram(Qs~1, DeepCWV_NoDevNY_NoWaco_WV, cutoff = 60000, width = 60000/50)
-rv.DeepCWV_NoDevNY_NoWaco_WV = variogram(Qs~1, DeepCWV_NoDevNY_NoWaco_WV, cutoff = 60000, width = 60000/50, cressie = TRUE)
-DeepCWV_WGS_NoDevNY_WV = spTransform(DeepCWV_NoDevNY_NoWaco_WV, CRS('+init=epsg:4326'))
-
 cl = makeCluster(detectCores() - 1)
 registerDoParallel(cl)
 OpDiag_DeepCWV_NoWaco_KY = foreach(o = 1:length(unique(DeepCWV_NoWaco_KY$Operator)), .packages = c('gstat', 'GISTools', 'sp'), .combine = 'rbind') %dopar% {
-  a = BadOperatorDiagnostics(MT = DeepCWV_NoWaco_KY, o = o, LowLim = 2, MT_WGS = DeepCWV_WGS_KY, v.MT = v.DeepCWV_NoWaco_KY, rv.MT = rv.DeepCWV_NoWaco_KY, Vcut = 60000, Vbins = 50, HistSep = 10, Histylim = 1300, RegName = "bDeepCWV_NoWaco_KY", MaxLagDist = 20000)
-  a
-}
-OpDiag_DeepCWV_NoDevNY_NoWaco_KY = foreach(o = 1:length(unique(DeepCWV_NoDevNY_NoWaco_KY$Operator)), .packages = c('gstat', 'GISTools', 'sp'), .combine = 'rbind') %dopar% {
-  a = BadOperatorDiagnostics(MT = DeepCWV_NoDevNY_NoWaco_KY, o = o, LowLim = 2, MT_WGS = DeepCWV_WGS_NoDevNY_KY, v.MT = v.DeepCWV_NoDevNY_NoWaco_KY, rv.MT = rv.DeepCWV_NoDevNY_NoWaco_KY, Vcut = 60000, Vbins = 50, HistSep = 10, Histylim = 1300, RegName = "bDeepCWV_NoDevNY_NoWaco_KY", MaxLagDist = 20000)
+  a = BadOperatorDiagnostics(MT = DeepCWV_NoWaco_KY, o = o, LowLim = 2, MT_WGS = DeepCWV_WGS_KY, v.MT = v.DeepCWV_NoWaco_KY, rv.MT = rv.DeepCWV_NoWaco_KY, Vcut = 60000, Vbins = 50, HistSep = 10, Histylim = 1300, RegName = "DeepCWV_NoWaco_KY", MaxLagDist = 60000, SensitivityDist = 2500)
   a
 }
 OpDiag_DeepCWV_NoWaco_WV = foreach(o = 1:length(unique(DeepCWV_NoWaco_WV$Operator)), .packages = c('gstat', 'GISTools', 'sp'), .combine = 'rbind') %dopar% {
-  a = BadOperatorDiagnostics(MT = DeepCWV_NoWaco_WV, o = o, LowLim = 2, MT_WGS = DeepCWV_WGS_WV, v.MT = v.DeepCWV_NoWaco_WV, rv.MT = rv.DeepCWV_NoWaco_WV, Vcut = 60000, Vbins = 50, HistSep = 10, Histylim = 1300, RegName = "bDeepCWV_NoWaco_WV", MaxLagDist = 20000)
+  a = BadOperatorDiagnostics(MT = DeepCWV_NoWaco_WV, o = o, LowLim = 2, MT_WGS = DeepCWV_WGS_WV, v.MT = v.DeepCWV_NoWaco_WV, rv.MT = rv.DeepCWV_NoWaco_WV, Vcut = 60000, Vbins = 50, HistSep = 10, Histylim = 1300, RegName = "DeepCWV_NoWaco_WV", MaxLagDist = 60000, SensitivityDist = 2500)
   a
 }
-OpDiag_DeepCWV_NoDevNY_NoWaco_WV = foreach(o = 1:length(unique(DeepCWV_NoDevNY_NoWaco_WV$Operator)), .packages = c('gstat', 'GISTools', 'sp'), .combine = 'rbind') %dopar% {
-  a = BadOperatorDiagnostics(MT = DeepCWV_NoDevNY_NoWaco_WV, o = o, LowLim = 2, MT_WGS = DeepCWV_WGS_NoDevNY_WV, v.MT = v.DeepCWV_NoDevNY_NoWaco_WV, rv.MT = rv.DeepCWV_NoDevNY_NoWaco_WV, Vcut = 60000, Vbins = 50, HistSep = 10, Histylim = 1300, RegName = "bDeepCWV_NoDevNY_NoWaco_WV", MaxLagDist = 20000)
-  a
+#p-value colors
+colPal = colorRampPalette(colors = rev(c('red', 'orange', 'yellow', 'green', 'blue')))
+scaleRange = c(0,0.2)
+scaleBy = 0.05
+Pal = colPal((scaleRange[2] - scaleRange[1])/scaleBy + 1)
+
+#Sensitivity Plot for All Metrics
+OpRanks_DeepCWV_KY = GetOperatorRanks(OpDiag_DeepCWV_NoWaco_KY)
+OpRanks_DeepCWV_WV = GetOperatorRanks(OpDiag_DeepCWV_NoWaco_WV)
+PlotDistanceSensitivity(OpDiagRanks = OpRanks_DeepCWV_KY, res = 300, height = 10, width = 7, xlim = c(1.5,60), NumOps = 100, NumOpsStep = 20, xStep = 2.5, PlotName = 'DeepCWV_NoWaco_KY')
+PlotDistanceSensitivity(OpDiagRanks = OpRanks_DeepCWV_WV, res = 300, height = 10, width = 7, xlim = c(1.5,60), NumOps = 120, NumOpsStep = 20, xStep = 2.5, PlotName = 'DeepCWV_NoWaco_WV')
+#Plot operator diagnostics for each of the distances
+temp = foreach (i = 1:ncol(OpRanks_DeepCWV_KY$DiffMOM), .packages = 'RColorBrewer') %dopar% {
+  PlotOpsDiagnostics(OpDiag = OpDiag_DeepCWV_NoWaco_KY, OpDiagRanks = OpRanks_DeepCWV_KY, col = i, res = 300, NumOps = 100, NumOpsStep = 20, PlotName = paste0('DeepCWV_NoWaco_KY',i*2500), xStep = 2.5)
 }
+temp = foreach (i = 1:ncol(OpRanks_DeepCWV_WV$DiffMOM), .packages = 'RColorBrewer') %dopar% {
+  PlotOpsDiagnostics(OpDiag = OpDiag_DeepCWV_NoWaco_WV, OpDiagRanks = OpRanks_DeepCWV_WV, col = i, res = 300, NumOps = 120, NumOpsStep = 20, PlotName = paste0('DeepCWV_NoWaco_WV',i*2500), xStep = 2.5)
+}
+rm(temp)
 stopCluster(cl)
 
-#Plots
-plot(seq(1,length(OpDiag_DeepCWV_NoWaco_KY$DiffMOM),1), sort(as.numeric(OpDiag_DeepCWV_NoWaco_KY$DiffMOM)), main = 'Difference in MOM Semi-variance: 0 to 20 km Separation', xlab = 'Sorted Operator ID', ylab = 'Difference')
-plot(seq(1,length(OpDiag_DeepCWV_NoWaco_KY$DiffMOM),1), sort(as.numeric(OpDiag_DeepCWV_NoWaco_KY$DiffRobust)), main = 'Difference in Robust Semi-variance: 0 to 20 km Separation', xlab = 'Sorted Operator ID', ylab = 'Difference')
-plot(seq(1,length(OpDiag_DeepCWV_NoWaco_KY$DiffMOM),1), sort(as.numeric(OpDiag_DeepCWV_NoWaco_KY$DiffMeanRmOp)), main = 'Difference in Mean: With - Without Operator', xlab = 'Sorted Operator ID', ylab = 'Difference')
-plot(seq(1,length(OpDiag_DeepCWV_NoWaco_KY$DiffMOM),1), sort(as.numeric(OpDiag_DeepCWV_NoWaco_KY$ScaledDiffMeanRmOp)))
+#Petroleum Resources Inc has some high and low points, but most cluster around the same value.
+#Top 10 among all metrics, without p-value
+TopBadOps_CWV_KY = ReturnTopN(OpDiag = OpDiag_DeepCWV_NoWaco_KY, OpRanks = OpRanks_DeepCWV_KY, col = 6, N = 5, ID = TRUE, WellData = DeepCWV_NoWaco_KY)
+TopBadOps_CWV_KY_Names = ReturnTopN(OpDiag = OpDiag_DeepCWV_NoWaco_KY, OpRanks = OpRanks_DeepCWV_KY, col = 6, N = 5, ID = FALSE, WellData = DeepCWV_NoWaco_KY)
+TopBadOps_CWV_WV = ReturnTopN(OpDiag = OpDiag_DeepCWV_NoWaco_WV, OpRanks = OpRanks_DeepCWV_WV, col = 6, N = 5, ID = TRUE, WellData = DeepCWV_NoWaco_WV)
+TopBadOps_CWV_WV_Names = ReturnTopN(OpDiag = OpDiag_DeepCWV_NoWaco_WV, OpRanks = OpRanks_DeepCWV_WV, col = 6, N = 5, ID = FALSE, WellData = DeepCWV_NoWaco_WV)
 
-#SWPA - Deviated wells do not look incorrect here.
-rv.DeepSWPA = variogram(Qs~1, DeepSWPA, cutoff = 60000, width = 60000/50, cressie = TRUE)
-DeepSWPA_WGS = spTransform(DeepSWPA, CRS('+init=epsg:4326'))
-
-rv.DeepSWPA_NoDevNY = variogram(Qs~1, DeepSWPA_NoDevNY, cutoff = 60000, width = 60000/50, cressie = TRUE)
-DeepSWPA_WGS_NoDevNY = spTransform(DeepSWPA_NoDevNY, CRS('+init=epsg:4326'))
+#    SWPA----
+#Deviated wells do not look incorrect here.
+colPal = colorRampPalette(colors = rev(c('red', 'orange', 'yellow', 'green', 'blue')))
+scaleRange = c(30,80)
+scaleBy = 10
+Pal = colPal((scaleRange[2] - scaleRange[1])/scaleBy + 1)
 
 cl = makeCluster(detectCores() - 1)
 registerDoParallel(cl)
 OpDiag_DeepSWPA = foreach(o = 1:length(unique(DeepSWPA$Operator)), .packages = c('gstat', 'GISTools', 'sp'), .combine = 'rbind') %dopar% {
-  a = BadOperatorDiagnostics(MT = DeepSWPA, o = o, LowLim = 2, MT_WGS = DeepSWPA_WGS, v.MT = v.DeepSWPA, rv.MT = rv.DeepSWPA, Vcut = 60000, Vbins = 50, HistSep = 10, Histylim = 1300, RegName = "bDeepSWPA", MaxLagDist = 20000)
+  a = BadOperatorDiagnostics(MT = DeepSWPA, o = o, LowLim = 2, MT_WGS = DeepSWPA_WGS, v.MT = v.DeepSWPA, rv.MT = rv.DeepSWPA, Vcut = 60000, Vbins = 50, HistSep = 10, Histylim = 1300, RegName = "DeepSWPA", MaxLagDist = 60000, SensitivityDist = 2500)
   a
 }
 OpDiag_DeepSWPA_NoDevNY = foreach(o = 1:length(unique(DeepSWPA_NoDevNY$Operator)), .packages = c('gstat', 'GISTools', 'sp'), .combine = 'rbind') %dopar% {
-  a = BadOperatorDiagnostics(MT = DeepSWPA_NoDevNY, o = o, LowLim = 2, MT_WGS = DeepSWPA_WGS_NoDevNY, v.MT = v.DeepSWPA_NoDevNY, rv.MT = rv.DeepSWPA_NoDevNY, Vcut = 60000, Vbins = 50, HistSep = 10, Histylim = 1300, RegName = "bDeepSWPA_NoDevNY", MaxLagDist = 20000)
+  a = BadOperatorDiagnostics(MT = DeepSWPA_NoDevNY, o = o, LowLim = 2, MT_WGS = DeepSWPA_WGS_NoDevNY, v.MT = v.DeepSWPA_NoDevNY, rv.MT = rv.DeepSWPA_NoDevNY, Vcut = 60000, Vbins = 50, HistSep = 10, Histylim = 1300, RegName = "DeepSWPA_NoDevNY", MaxLagDist = 60000, SensitivityDist = 2500)
   a
 }
+#p-value colors
+colPal = colorRampPalette(colors = rev(c('red', 'orange', 'yellow', 'green', 'blue')))
+scaleRange = c(0,0.2)
+scaleBy = 0.05
+Pal = colPal((scaleRange[2] - scaleRange[1])/scaleBy + 1)
+
+#Sensitivity Plot for All Metrics
+OpRanks_DeepSWPA = GetOperatorRanks(OpDiag_DeepSWPA)
+PlotDistanceSensitivity(OpDiagRanks = OpRanks_DeepSWPA, res = 300, height = 10, width = 7, xlim = c(1.5,60), NumOps = 300, NumOpsStep = 50, xStep = 2.5, PlotName = 'DeepSWPA')
+#Plot operator diagnostics for each of the distances
+temp = foreach (i = 1:ncol(OpRanks_DeepSWPA$DiffMOM), .packages = 'RColorBrewer') %dopar% {
+  PlotOpsDiagnostics(OpDiag = OpDiag_DeepSWPA, OpDiagRanks = OpRanks_DeepSWPA, col = i, res = 300, NumOps = 300, NumOpsStep = 50, PlotName = paste0('DeepSWPA',i*2500), xStep = 2.5)
+}
+rm(temp)
 stopCluster(cl)
 
-#Seems like there are problem operators in WV for SWPA. Try to discover them.
+#     Check operators in WV for SWPA---- 
+#Seems like WV may have a different variogram shape than PA in this region. Maybe splitting would be good for 2nd order stationarity.
 DeepSWPA_WGS_WV = spTransform(DeepSWPA[DeepSWPA$State == 'WV',], CRS('+init=epsg:4326'))
 v.DeepSWPA_WV = variogram(Qs~1, DeepSWPA[DeepSWPA$State == 'WV',], cutoff = 60000, width = 60000/50)
 rv.DeepSWPA_WV = variogram(Qs~1, DeepSWPA[DeepSWPA$State == 'WV',], cutoff = 60000, width = 60000/50, cressie = TRUE)
 
-DeepSWPA_WGS_NoDevNY_WV = spTransform(DeepSWPA_NoDevNY[DeepSWPA_NoDevNY$State == 'WV',], CRS('+init=epsg:4326'))
-v.DeepSWPA_NoDevNY_WV = variogram(Qs~1, DeepSWPA_NoDevNY[DeepSWPA_NoDevNY$State == 'WV',], cutoff = 60000, width = 60000/50)
-rv.DeepSWPA_NoDevNY_WV = variogram(Qs~1, DeepSWPA_NoDevNY[DeepSWPA_NoDevNY$State == 'WV',], cutoff = 60000, width = 60000/50, cressie = TRUE)
+colPal = colorRampPalette(colors = rev(c('red', 'orange', 'yellow', 'green', 'blue')))
+scaleRange = c(30,80)
+scaleBy = 10
+Pal = colPal((scaleRange[2] - scaleRange[1])/scaleBy + 1)
 
 cl = makeCluster(detectCores() - 1)
 registerDoParallel(cl)
 OpDiag_DeepSWPA_WV = foreach(o = 1:length(unique(DeepSWPA$Operator[DeepSWPA$State == 'WV'])), .packages = c('gstat', 'GISTools', 'sp'), .combine = 'rbind') %dopar% {
-  a = BadOperatorDiagnostics(MT = DeepSWPA[DeepSWPA$State == 'WV',], o = o, LowLim = 2, MT_WGS = DeepSWPA_WGS_WV, v.MT = v.DeepSWPA_WV, rv.MT = rv.DeepSWPA_WV, Vcut = 60000, Vbins = 50, HistSep = 10, Histylim = 1300, RegName = "bDeepSWPA_WV", MaxLagDist = 20000)
+  a = BadOperatorDiagnostics(MT = DeepSWPA[DeepSWPA$State == 'WV',], o = o, LowLim = 2, MT_WGS = DeepSWPA_WGS_WV, v.MT = v.DeepSWPA_WV, rv.MT = rv.DeepSWPA_WV, Vcut = 60000, Vbins = 50, HistSep = 10, Histylim = 1300, RegName = "DeepSWPA_WV", MaxLagDist = 60000, SensitivityDist = 2500)
   a
 }
-OpDiag_DeepSWPA_NoDevNY_WV = foreach(o = 1:length(unique(DeepSWPA_NoDevNY$Operator[DeepSWPA_NoDevNY$State == 'WV'])), .packages = c('gstat', 'GISTools', 'sp'), .combine = 'rbind') %dopar% {
-  a = BadOperatorDiagnostics(MT = DeepSWPA_NoDevNY[DeepSWPA_NoDevNY$State == 'WV',], o = o, LowLim = 2, MT_WGS = DeepSWPA_WGS_NoDevNY_WV, v.MT = v.DeepSWPA_NoDevNY_WV, rv.MT = rv.DeepSWPA_NoDevNY_WV, Vcut = 60000, Vbins = 50, HistSep = 10, Histylim = 1300, RegName = "bDeepSWPA_NoDevNY_WV", MaxLagDist = 20000)
-  a
+#p-value colors
+colPal = colorRampPalette(colors = rev(c('red', 'orange', 'yellow', 'green', 'blue')))
+scaleRange = c(0,0.2)
+scaleBy = 0.05
+Pal = colPal((scaleRange[2] - scaleRange[1])/scaleBy + 1)
+
+#Sensitivity Plot for All Metrics
+OpRanks_DeepSWPA_WV = GetOperatorRanks(OpDiag_DeepSWPA_WV)
+PlotDistanceSensitivity(OpDiagRanks = OpRanks_DeepSWPA_WV, res = 300, height = 10, width = 7, xlim = c(1.5,60), NumOps = 80, NumOpsStep = 20, xStep = 2.5, PlotName = 'DeepSWPA_WV')
+#Plot operator diagnostics for each of the distances
+temp = foreach (i = 1:ncol(OpRanks_DeepSWPA_WV$DiffMOM), .packages = 'RColorBrewer') %dopar% {
+  PlotOpsDiagnostics(OpDiag = OpDiag_DeepSWPA_WV, OpDiagRanks = OpRanks_DeepSWPA_WV, col = i, res = 300, NumOps = 80, NumOpsStep = 20, PlotName = paste0('DeepSWPA_WV',i*2500), xStep = 2.5)
 }
+rm(temp)
 stopCluster(cl)
+
+#Top 10 among all metrics, without p-value
+TopBadOps_SWPA_WV = ReturnTopN(OpDiag = OpDiag_DeepSWPA_WV, OpRanks = OpRanks_DeepSWPA_WV, col = 12, N = 10, ID = TRUE, WellData = DeepSWPA_WGS_WV)
+TopBadOps_SWPA_WV_Names = ReturnTopN(OpDiag = OpDiag_DeepSWPA_WV, OpRanks = OpRanks_DeepSWPA_WV, col = 12, N = 10, ID = FALSE, WellData = DeepSWPA_WGS_WV)
 
 #Identified Petroleum Development Corp. as an operator that had some logs misinterpreted in AASG. Their logs are fine. 
 #EMAX wells logged up in this geologic region - remove.
 DeepSWPA = DeepSWPA[DeepSWPA$Operator != 'EMAX, Inc.',]
 DeepSWPA_NoDevNY = DeepSWPA_NoDevNY[DeepSWPA_NoDevNY$Operator != 'EMAX, Inc.',]
-#With these adjustments, no major change in variogram happens. There must be other factors affecting variogram in this region.
+#With these adjustments, no major change in variogram happens. 
+#     Check maps of this region in WV. The variogram is very high at short separation distances----
+#There must be other factors affecting variogram in this region.
 
 #Map of Heat Flow, removing extreme high values
+colPal = colorRampPalette(colors = rev(c('red', 'orange', 'yellow', 'green', 'blue')))
+scaleRange = c(30,80)
+scaleBy = 10
+Pal = colPal((scaleRange[2] - scaleRange[1])/scaleBy + 1)
 plot(DeepSWPA_NoDevNY[DeepSWPA_NoDevNY$State == 'WV' & DeepSWPA_NoDevNY$Qs < 100,][order(DeepSWPA_NoDevNY[DeepSWPA_NoDevNY$State == 'WV' & DeepSWPA_NoDevNY$Qs < 100,]$WellDepth, decreasing = FALSE),], col = colFun(DeepSWPA_NoDevNY[DeepSWPA_NoDevNY$State == 'WV' & DeepSWPA_NoDevNY$Qs < 100,]$Qs[order(DeepSWPA_NoDevNY[DeepSWPA_NoDevNY$State == 'WV' & DeepSWPA_NoDevNY$Qs < 100,]$WellDepth, decreasing = FALSE)]), cex = 1, pch = 16)
 #Check only deeper than 1200 m - looks similar to > 1000 m. Depth doesn't seem to matter here.
 plot(DeepSWPA_NoDevNY[DeepSWPA_NoDevNY$State == 'WV' & DeepSWPA_NoDevNY$Qs < 100,][order(DeepSWPA_NoDevNY[DeepSWPA_NoDevNY$State == 'WV' & DeepSWPA_NoDevNY$Qs < 100,]$WellDepth, decreasing = FALSE),], col = 'white', cex = 1, pch = 16)
@@ -2095,121 +2144,231 @@ Pal = colPal((scaleRange[2] - scaleRange[1])/scaleBy + 1)
 #WellDepth - Seems like some deviated wells may still be present. Not sure how to ID them. Spatial outlier analysis hopefully finds them.
 plot(DeepSWPA_NoDevNY[DeepSWPA_NoDevNY$State == 'WV' & DeepSWPA_NoDevNY$Qs < 100,][order(DeepSWPA_NoDevNY[DeepSWPA_NoDevNY$State == 'WV' & DeepSWPA_NoDevNY$Qs < 100,]$WellDepth, decreasing = FALSE),], col = colFun(DeepSWPA_NoDevNY[DeepSWPA_NoDevNY$State == 'WV' & DeepSWPA_NoDevNY$Qs < 100,]$WellDepth[order(DeepSWPA_NoDevNY[DeepSWPA_NoDevNY$State == 'WV' & DeepSWPA_NoDevNY$Qs < 100,]$WellDepth, decreasing = FALSE)]), cex = 1, pch = 16)
 
-#Colors for heat flow on maps
+dev.off()
+
+#    WPA---- 
+#Deviated wells do not look incorrect here.
 colPal = colorRampPalette(colors = rev(c('red', 'orange', 'yellow', 'green', 'blue')))
 scaleRange = c(30,80)
 scaleBy = 10
 Pal = colPal((scaleRange[2] - scaleRange[1])/scaleBy + 1)
 
-#WPA - Deviated wells do not look incorrect here.
-DeepWPA_WGS = spTransform(DeepWPA, CRS('+init=epsg:4326'))
-rv.DeepWPA = variogram(Qs~1, DeepWPA, cutoff = 60000, width = 60000/50, cressie = TRUE)
-DeepWPA_NoDevNY_WGS = spTransform(DeepWPA_NoDevNY, CRS('+init=epsg:4326'))
-rv.DeepWPA_NoDevNY = variogram(Qs~1, DeepWPA_NoDevNY, cutoff = 60000, width = 60000/50, cressie = TRUE)
-
 cl = makeCluster(detectCores() - 1)
 registerDoParallel(cl)
 OpDiag_DeepWPA = foreach(o = 1:length(unique(DeepWPA$Operator)), .packages = c('gstat', 'GISTools', 'sp'), .combine = 'rbind') %dopar% {
-  a = BadOperatorDiagnostics(MT = DeepWPA, o = o, LowLim = 2, MT_WGS = DeepWPA_WGS, v.MT = v.DeepWPA, rv.MT = rv.DeepWPA, Vcut = 60000, Vbins = 50, HistSep = 5, Histylim = 800, RegName = "bDeepWPA", MaxLagDist = 20000)
+  a = BadOperatorDiagnostics(MT = DeepWPA, o = o, LowLim = 2, MT_WGS = DeepWPA_WGS, v.MT = v.DeepWPA, rv.MT = rv.DeepWPA, Vcut = 60000, Vbins = 50, HistSep = 5, Histylim = 800, RegName = "DeepWPA", MaxLagDist = 60000, SensitivityDist = 2500)
   a
 }
 OpDiag_DeepWPA_NoDevNY = foreach(o = 1:length(unique(DeepWPA_NoDevNY$Operator)), .packages = c('gstat', 'GISTools', 'sp'), .combine = 'rbind') %dopar% {
-  a = BadOperatorDiagnostics(MT = DeepWPA_NoDevNY, o = o, LowLim = 2, MT_WGS = DeepWPA_NoDevNY_WGS, v.MT = v.DeepWPA_NoDevNY, rv.MT = rv.DeepWPA_NoDevNY, Vcut = 60000, Vbins = 50, HistSep = 5, Histylim = 800, RegName = "bDeepWPA_NoDevNY", MaxLagDist = 20000)
+  a = BadOperatorDiagnostics(MT = DeepWPA_NoDevNY, o = o, LowLim = 2, MT_WGS = DeepWPA_WGS_NoDevNY, v.MT = v.DeepWPA_NoDevNY, rv.MT = rv.DeepWPA_NoDevNY, Vcut = 60000, Vbins = 50, HistSep = 5, Histylim = 800, RegName = "DeepWPA_NoDevNY", MaxLagDist = 60000, SensitivityDist = 2500)
   a
 }
+#p-value colors
+colPal = colorRampPalette(colors = rev(c('red', 'orange', 'yellow', 'green', 'blue')))
+scaleRange = c(0,0.2)
+scaleBy = 0.05
+Pal = colPal((scaleRange[2] - scaleRange[1])/scaleBy + 1)
+
+#Sensitivity Plot for All Metrics
+OpRanks_DeepWPA = GetOperatorRanks(OpDiag_DeepWPA)
+PlotDistanceSensitivity(OpDiagRanks = OpRanks_DeepWPA, res = 300, height = 10, width = 7, xlim = c(1.5,60), NumOps = 80, NumOpsStep = 20, xStep = 2.5, PlotName = 'DeepWPA')
+#Plot operator diagnostics for each of the distances
+temp = foreach (i = 1:ncol(OpRanks_DeepWPA$DiffMOM), .packages = 'RColorBrewer') %dopar% {
+  PlotOpsDiagnostics(OpDiag = OpDiag_DeepWPA, OpDiagRanks = OpRanks_DeepWPA, col = i, res = 300, NumOps = 80, NumOpsStep = 20, PlotName = paste0('DeepWPA',i*2500), xStep = 2.5)
+}
+rm(temp)
 stopCluster(cl)
 
-#CT - Deviated wells do not look incorrect here.
-DeepCT_WGS = spTransform(DeepCT, CRS('+init=epsg:4326'))
-rv.DeepCT = variogram(Qs~1, DeepCT, cutoff = 60000, width = 60000/50, cressie = TRUE)
-DeepCT_NoDevNY_WGS = spTransform(DeepCT_NoDevNY, CRS('+init=epsg:4326'))
-rv.DeepCT_NoDevNY = variogram(Qs~1, DeepCT_NoDevNY, cutoff = 60000, width = 60000/50, cressie = TRUE)
+#Top 10 among all metrics, without p-value - These all look reasonable
+TopBadOps_WPA = ReturnTopN(OpDiag = OpDiag_DeepWPA, OpRanks = OpRanks_DeepWPA, col = 5, N = 5, ID = TRUE, WellData = DeepWPA)
+TopBadOps_WPA_Names = ReturnTopN(OpDiag = OpDiag_DeepWPA, OpRanks = OpRanks_DeepWPA, col = 5, N = 5, ID = FALSE, WellData = DeepWPA)
+
+#    CT---- 
+#Deviated wells do not look incorrect here.
+colPal = colorRampPalette(colors = rev(c('red', 'orange', 'yellow', 'green', 'blue')))
+scaleRange = c(30,80)
+scaleBy = 10
+Pal = colPal((scaleRange[2] - scaleRange[1])/scaleBy + 1)
 
 cl = makeCluster(detectCores() - 1)
 registerDoParallel(cl)
 OpDiag_DeepCT = foreach(o = 1:length(unique(DeepCT$Operator)), .packages = c('gstat', 'GISTools', 'sp'), .combine = 'rbind') %dopar% {
-  a = BadOperatorDiagnostics(MT = DeepCT, o = o, LowLim = 2, MT_WGS = DeepCT_WGS, v.MT = v.DeepCT, rv.MT = rv.DeepCT, Vcut = 60000, Vbins = 50, HistSep = 10, Histylim = 800, RegName = "bDeepCT", MaxLagDist = 20000)
+  a = BadOperatorDiagnostics(MT = DeepCT, o = o, LowLim = 2, MT_WGS = DeepCT_WGS, v.MT = v.DeepCT, rv.MT = rv.DeepCT, Vcut = 60000, Vbins = 50, HistSep = 10, Histylim = 800, RegName = "DeepCT", MaxLagDist = 60000, SensitivityDist = 2500)
   a
 }
 OpDiag_DeepCT_NoDevNY = foreach(o = 1:length(unique(DeepCT_NoDevNY$Operator)), .packages = c('gstat', 'GISTools', 'sp'), .combine = 'rbind') %dopar% {
-  a = BadOperatorDiagnostics(MT = DeepCT_NoDevNY, o = o, LowLim = 2, MT_WGS = DeepCT_NoDevNY_WGS, v.MT = v.DeepCT_NoDevNY, rv.MT = rv.DeepCT_NoDevNY, Vcut = 60000, Vbins = 50, HistSep = 10, Histylim = 800, RegName = "bDeepCT_NoDevNY", MaxLagDist = 20000)
+  a = BadOperatorDiagnostics(MT = DeepCT_NoDevNY, o = o, LowLim = 2, MT_WGS = DeepCT_WGS_NoDevNY, v.MT = v.DeepCT_NoDevNY, rv.MT = rv.DeepCT_NoDevNY, Vcut = 60000, Vbins = 50, HistSep = 10, Histylim = 800, RegName = "DeepCT_NoDevNY", MaxLagDist = 60000, SensitivityDist = 2500)
   a
 }
+#p-value colors
+colPal = colorRampPalette(colors = rev(c('red', 'orange', 'yellow', 'green', 'blue')))
+scaleRange = c(0,0.2)
+scaleBy = 0.05
+Pal = colPal((scaleRange[2] - scaleRange[1])/scaleBy + 1)
+
+#Sensitivity Plot for All Metrics
+OpRanks_DeepCT = GetOperatorRanks(OpDiag_DeepCT)
+PlotDistanceSensitivity(OpDiagRanks = OpRanks_DeepCT, res = 300, height = 10, width = 7, xlim = c(1.5,60), NumOps = 80, NumOpsStep = 20, xStep = 2.5, PlotName = 'DeepCT')
+#Plot operator diagnostics for each of the distances
+temp = foreach (i = 1:ncol(OpRanks_DeepCT$DiffMOM), .packages = 'RColorBrewer') %dopar% {
+  PlotOpsDiagnostics(OpDiag = OpDiag_DeepCT, OpDiagRanks = OpRanks_DeepCT, col = i, res = 300, NumOps = 80, NumOpsStep = 20, PlotName = paste0('DeepCT',i*2500), xStep = 2.5)
+}
+rm(temp)
 stopCluster(cl)
 
-#ENYPA - Deviated wells do not look incorrect here.
-DeepENYPA_WGS = spTransform(DeepENYPA, CRS('+init=epsg:4326'))
-rv.DeepENYPA = variogram(Qs~1, DeepENYPA, cutoff = 60000, width = 60000/50, cressie = TRUE)
-DeepENYPA_NoDevNY_WGS = spTransform(DeepENYPA_NoDevNY, CRS('+init=epsg:4326'))
-rv.DeepENYPA_NoDevNY = variogram(Qs~1, DeepENYPA_NoDevNY, cutoff = 60000, width = 60000/50, cressie = TRUE)
+#Top 10 among all metrics, without p-value - These all look reasonable
+TopBadOps_CT = ReturnTopN(OpDiag = OpDiag_DeepCT, OpRanks = OpRanks_DeepCT, col = 6, N = 5, ID = TRUE, WellData = DeepCT)
+TopBadOps_CT_Names = ReturnTopN(OpDiag = OpDiag_DeepCT, OpRanks = OpRanks_DeepCT, col = 6, N = 5, ID = FALSE, WellData = DeepCT)
+
+#    ENYPA----
+#Deviated wells do not look incorrect here.
+colPal = colorRampPalette(colors = rev(c('red', 'orange', 'yellow', 'green', 'blue')))
+scaleRange = c(30,80)
+scaleBy = 10
+Pal = colPal((scaleRange[2] - scaleRange[1])/scaleBy + 1)
 
 cl = makeCluster(detectCores() - 1)
 registerDoParallel(cl)
 OpDiag_DeepENYPA = foreach(o = 1:length(unique(DeepENYPA$Operator)), .packages = c('gstat', 'GISTools', 'sp'), .combine = 'rbind') %dopar% {
-  a = BadOperatorDiagnostics(MT = DeepENYPA, o = o, LowLim = 2, MT_WGS = DeepENYPA_WGS, v.MT = v.DeepENYPA, rv.MT = rv.DeepENYPA, Vcut = 60000, Vbins = 40, HistSep = 10, Histylim = 200, RegName = "bDeepENYPA", MaxLagDist = 20000)
+  a = BadOperatorDiagnostics(MT = DeepENYPA, o = o, LowLim = 2, MT_WGS = DeepENYPA_WGS, v.MT = v.DeepENYPA, rv.MT = rv.DeepENYPA, Vcut = 60000, Vbins = 40, HistSep = 10, Histylim = 200, RegName = "DeepENYPA", MaxLagDist = 60000, SensitivityDist = 2500)
   a
 }
 OpDiag_DeepENYPA_NoDevNY = foreach(o = 1:length(unique(DeepENYPA_NoDevNY$Operator)), .packages = c('gstat', 'GISTools', 'sp'), .combine = 'rbind') %dopar% {
-  a = BadOperatorDiagnostics(MT = DeepENYPA_NoDevNY, o = o, LowLim = 2, MT_WGS = DeepENYPA_NoDevNY_WGS, v.MT = v.DeepENYPA_NoDevNY, rv.MT = rv.DeepENYPA_NoDevNY, Vcut = 60000, Vbins = 40, HistSep = 10, Histylim = 200, RegName = "bDeepENYPA_NoDevNY", MaxLagDist = 20000)
+  a = BadOperatorDiagnostics(MT = DeepENYPA_NoDevNY, o = o, LowLim = 2, MT_WGS = DeepENYPA_WGS_NoDevNY, v.MT = v.DeepENYPA_NoDevNY, rv.MT = rv.DeepENYPA_NoDevNY, Vcut = 60000, Vbins = 40, HistSep = 10, Histylim = 200, RegName = "DeepENYPA_NoDevNY", MaxLagDist = 60000, SensitivityDist = 2500)
   a
 }
+#p-value colors
+colPal = colorRampPalette(colors = rev(c('red', 'orange', 'yellow', 'green', 'blue')))
+scaleRange = c(0,0.2)
+scaleBy = 0.05
+Pal = colPal((scaleRange[2] - scaleRange[1])/scaleBy + 1)
+
+#Sensitivity Plot for All Metrics
+OpRanks_DeepENYPA = GetOperatorRanks(OpDiag_DeepENYPA)
+PlotDistanceSensitivity(OpDiagRanks = OpRanks_DeepENYPA, res = 300, height = 10, width = 7, xlim = c(1.5,60), NumOps = 20, NumOpsStep = 5, xStep = 2.5, PlotName = 'DeepENYPA')
+#Plot operator diagnostics for each of the distances
+temp = foreach (i = 1:ncol(OpRanks_DeepENYPA$DiffMOM), .packages = 'RColorBrewer') %dopar% {
+  PlotOpsDiagnostics(OpDiag = OpDiag_DeepENYPA, OpDiagRanks = OpRanks_DeepENYPA, col = i, res = 300, NumOps = 100, NumOpsStep = 20, PlotName = paste0('DeepENYPA',i*2500), xStep = 2.5)
+}
+rm(temp)
 stopCluster(cl)
 
-#NWPANY - Deviated wells do not look incorrect here.
-DeepNWPANY_WGS = spTransform(DeepNWPANY, CRS('+init=epsg:4326'))
-rv.DeepNWPANY = variogram(Qs~1, DeepNWPANY, cutoff = 60000, width = 60000/50, cressie = TRUE)
-DeepNWPANY_NoDevNY_WGS = spTransform(DeepNWPANY_NoDevNY, CRS('+init=epsg:4326'))
-rv.DeepNWPANY_NoDevNY = variogram(Qs~1, DeepNWPANY_NoDevNY, cutoff = 60000, width = 60000/50, cressie = TRUE)
+#Top 10 among all metrics, without p-value - These all look reasonable
+TopBadOps_ENYPA = ReturnTopN(OpDiag = OpDiag_DeepENYPA, OpRanks = OpRanks_DeepENYPA, col = 6, N = 5, ID = TRUE, WellData = DeepENYPA)
+TopBadOps_ENYPA_Names = ReturnTopN(OpDiag = OpDiag_DeepENYPA, OpRanks = OpRanks_DeepENYPA, col = 6, N = 5, ID = FALSE, WellData = DeepENYPA)
+
+#    NWPANY---- 
+#Deviated wells do not look incorrect here.
+colPal = colorRampPalette(colors = rev(c('red', 'orange', 'yellow', 'green', 'blue')))
+scaleRange = c(30,80)
+scaleBy = 10
+Pal = colPal((scaleRange[2] - scaleRange[1])/scaleBy + 1)
 
 cl = makeCluster(detectCores() - 1)
 registerDoParallel(cl)
 OpDiag_DeepNWPANY = foreach(o = 1:length(unique(DeepNWPANY$Operator)), .packages = c('gstat', 'GISTools', 'sp'), .combine = 'rbind') %dopar% {
-  a = BadOperatorDiagnostics(MT = DeepNWPANY, o = o, LowLim = 2, MT_WGS = DeepNWPANY_WGS, v.MT = v.DeepNWPANY, rv.MT = rv.DeepNWPANY, Vcut = 60000, Vbins = 20, HistSep = 10, Histylim = 200, RegName = "bDeepNWPANY", MaxLagDist = 20000)
+  a = BadOperatorDiagnostics(MT = DeepNWPANY, o = o, LowLim = 2, MT_WGS = DeepNWPANY_WGS, v.MT = v.DeepNWPANY, rv.MT = rv.DeepNWPANY, Vcut = 60000, Vbins = 20, HistSep = 10, Histylim = 200, RegName = "DeepNWPANY", MaxLagDist = 60000, SensitivityDist = 2500)
   a
 }
 OpDiag_DeepNWPANY_NoDevNY = foreach(o = 1:length(unique(DeepNWPANY_NoDevNY$Operator)), .packages = c('gstat', 'GISTools', 'sp'), .combine = 'rbind') %dopar% {
-  a = BadOperatorDiagnostics(MT = DeepNWPANY_NoDevNY, o = o, LowLim = 2, MT_WGS = DeepNWPANY_NoDevNY_WGS, v.MT = v.DeepNWPANY_NoDevNY, rv.MT = rv.DeepNWPANY_NoDevNY, Vcut = 60000, Vbins = 20, HistSep = 10, Histylim = 200, RegName = "bDeepNWPANY_NoDevNY", MaxLagDist = 20000)
+  a = BadOperatorDiagnostics(MT = DeepNWPANY_NoDevNY, o = o, LowLim = 2, MT_WGS = DeepNWPANY_WGS_NoDevNY, v.MT = v.DeepNWPANY_NoDevNY, rv.MT = rv.DeepNWPANY_NoDevNY, Vcut = 60000, Vbins = 20, HistSep = 10, Histylim = 200, RegName = "DeepNWPANY_NoDevNY", MaxLagDist = 60000, SensitivityDist = 2500)
   a
 }
+#p-value colors
+colPal = colorRampPalette(colors = rev(c('red', 'orange', 'yellow', 'green', 'blue')))
+scaleRange = c(0,0.2)
+scaleBy = 0.05
+Pal = colPal((scaleRange[2] - scaleRange[1])/scaleBy + 1)
+
+#Sensitivity Plot for All Metrics
+OpRanks_DeepNWPANY = GetOperatorRanks(OpDiag_DeepNWPANY)
+PlotDistanceSensitivity(OpDiagRanks = OpRanks_DeepNWPANY, res = 300, height = 10, width = 7, xlim = c(1.5,60), NumOps = 20, NumOpsStep = 5, xStep = 2.5, PlotName = 'DeepNWPANY')
+#Plot operator diagnostics for each of the distances
+temp = foreach (i = 1:ncol(OpRanks_DeepNWPANY$DiffMOM), .packages = 'RColorBrewer') %dopar% {
+  PlotOpsDiagnostics(OpDiag = OpDiag_DeepNWPANY, OpDiagRanks = OpRanks_DeepNWPANY, col = i, res = 300, NumOps = 20, NumOpsStep = 5, PlotName = paste0('DeepNWPANY',i*2500), xStep = 2.5)
+}
+rm(temp)
 stopCluster(cl)
 
-#CNY - only 1 operator
+#Top 10 among all metrics, without p-value - These all look reasonable
+TopBadOps_NWPANY = ReturnTopN(OpDiag = OpDiag_DeepNWPANY, OpRanks = OpRanks_DeepNWPANY, col = 6, N = 5, ID = TRUE, WellData = DeepNWPANY)
+TopBadOps_NWPANY = ReturnTopN(OpDiag = OpDiag_DeepNWPANY, OpRanks = OpRanks_DeepNWPANY, col = 6, N = 5, ID = FALSE, WellData = DeepNWPANY)
 
-#ENY - Deviated wells do not look incorrect here.
-DeepENY_WGS = spTransform(DeepENY, CRS('+init=epsg:4326'))
-rv.DeepENY = variogram(Qs~1, DeepENY, cutoff = 60000, width = 60000/15, cressie = TRUE)
-DeepENY_NoDevNY_WGS = spTransform(DeepENY_NoDevNY, CRS('+init=epsg:4326'))
-rv.DeepENY_NoDevNY = variogram(Qs~1, DeepENY_NoDevNY, cutoff = 60000, width = 60000/15, cressie = TRUE)
+#    CNY - No operators listed----
+
+#    ENY---- 
+#Deviated wells do not look incorrect here.
+colPal = colorRampPalette(colors = rev(c('red', 'orange', 'yellow', 'green', 'blue')))
+scaleRange = c(30,80)
+scaleBy = 10
+Pal = colPal((scaleRange[2] - scaleRange[1])/scaleBy + 1)
 
 cl = makeCluster(detectCores() - 1)
 registerDoParallel(cl)
 OpDiag_DeepENY = foreach(o = 1:length(unique(DeepENY$Operator)), .packages = c('gstat', 'GISTools', 'sp'), .combine = 'rbind') %dopar% {
-  a = BadOperatorDiagnostics(MT = DeepENY, o = o, LowLim = 2, MT_WGS = DeepENY_WGS, v.MT = v.DeepENY, rv.MT = rv.DeepENY, Vcut = 60000, Vbins = 15, HistSep = 10, Histylim = 200, RegName = "bDeepENY", MaxLagDist = 20000)
+  a = BadOperatorDiagnostics(MT = DeepENY, o = o, LowLim = 2, MT_WGS = DeepENY_WGS, v.MT = v.DeepENY, rv.MT = rv.DeepENY, Vcut = 60000, Vbins = 15, HistSep = 10, Histylim = 200, RegName = "DeepENY", MaxLagDist = 60000, SensitivityDist = 2500)
   a
 }
 OpDiag_DeepENY_NoDevNY = foreach(o = 1:length(unique(DeepENY_NoDevNY$Operator)), .packages = c('gstat', 'GISTools', 'sp'), .combine = 'rbind') %dopar% {
-  a = BadOperatorDiagnostics(MT = DeepENY_NoDevNY, o = o, LowLim = 2, MT_WGS = DeepENY_NoDevNY_WGS, v.MT = v.DeepENY_NoDevNY, rv.MT = rv.DeepENY_NoDevNY, Vcut = 60000, Vbins = 15, HistSep = 10, Histylim = 200, RegName = "bDeepENY_NoDevNY", MaxLagDist = 20000)
+  a = BadOperatorDiagnostics(MT = DeepENY_NoDevNY, o = o, LowLim = 2, MT_WGS = DeepENY_WGS_NoDevNY, v.MT = v.DeepENY_NoDevNY, rv.MT = rv.DeepENY_NoDevNY, Vcut = 60000, Vbins = 15, HistSep = 10, Histylim = 200, RegName = "DeepENY_NoDevNY", MaxLagDist = 60000, SensitivityDist = 2500)
   a
 }
+#p-value colors
+colPal = colorRampPalette(colors = rev(c('red', 'orange', 'yellow', 'green', 'blue')))
+scaleRange = c(0,0.2)
+scaleBy = 0.05
+Pal = colPal((scaleRange[2] - scaleRange[1])/scaleBy + 1)
+
+#Sensitivity Plot for All Metrics
+OpRanks_DeepENY = GetOperatorRanks(OpDiag_DeepENY)
+PlotDistanceSensitivity(OpDiagRanks = OpRanks_DeepENY, res = 300, height = 10, width = 7, xlim = c(1.5,60), NumOps = 20, NumOpsStep = 5, xStep = 2.5, PlotName = 'DeepENY')
+#Plot operator diagnostics for each of the distances
+temp = foreach (i = 1:ncol(OpRanks_DeepENY$DiffMOM), .packages = 'RColorBrewer') %dopar% {
+  PlotOpsDiagnostics(OpDiag = OpDiag_DeepENY, OpDiagRanks = OpRanks_DeepENY, col = i, res = 300, NumOps = 20, NumOpsStep = 5, PlotName = paste0('DeepENY',i*2500), xStep = 2.5)
+}
+rm(temp)
 stopCluster(cl)
 
-#VR - Deviated wells do not look incorrect here.
-DeepVR_WGS = spTransform(DeepVR, CRS('+init=epsg:4326'))
-rv.DeepVR = variogram(Qs~1, DeepVR, cutoff = 60000, width = 60000/20, cressie = TRUE)
-DeepVR_NoDevNY_WGS = spTransform(DeepVR_NoDevNY, CRS('+init=epsg:4326'))
-rv.DeepVR_NoDevNY = variogram(Qs~1, DeepVR_NoDevNY, cutoff = 60000, width = 60000/20, cressie = TRUE)
+#Top 10 among all metrics, without p-value - These all look reasonable
+TopBadOps_ENY = ReturnTopN(OpDiag = OpDiag_DeepENY, OpRanks = OpRanks_DeepENY, col = 6, N = 5, ID = TRUE, WellData = DeepENY)
+TopBadOps_ENY = ReturnTopN(OpDiag = OpDiag_DeepENY, OpRanks = OpRanks_DeepENY, col = 6, N = 5, ID = FALSE, WellData = DeepENY)
+
+#    VR---- 
+#Deviated wells do not look incorrect here.
+colPal = colorRampPalette(colors = rev(c('red', 'orange', 'yellow', 'green', 'blue')))
+scaleRange = c(30,80)
+scaleBy = 10
+Pal = colPal((scaleRange[2] - scaleRange[1])/scaleBy + 1)
 
 cl = makeCluster(detectCores() - 1)
 registerDoParallel(cl)
 OpDiag_DeepVR = foreach(o = 1:length(unique(DeepVR$Operator)), .packages = c('gstat', 'GISTools', 'sp'), .combine = 'rbind') %dopar% {
-  a = BadOperatorDiagnostics(MT = DeepVR, o = o, LowLim = 2, MT_WGS = DeepVR_WGS, v.MT = v.DeepVR, rv.MT = rv.DeepVR, Vcut = 60000, Vbins = 20, HistSep = 10, Histylim = 200, RegName = "bDeepVR", MaxLagDist = 20000)
+  a = BadOperatorDiagnostics(MT = DeepVR, o = o, LowLim = 2, MT_WGS = DeepVR_WGS, v.MT = v.DeepVR, rv.MT = rv.DeepVR, Vcut = 60000, Vbins = 20, HistSep = 10, Histylim = 200, RegName = "DeepVR", MaxLagDist = 60000, SensitivityDist = 2500)
   a
 }
 OpDiag_DeepVR_NoDevNY = foreach(o = 1:length(unique(DeepVR_NoDevNY$Operator)), .packages = c('gstat', 'GISTools', 'sp'), .combine = 'rbind') %dopar% {
-  a = BadOperatorDiagnostics(MT = DeepVR_NoDevNY, o = o, LowLim = 2, MT_WGS = DeepVR_NoDevNY_WGS, v.MT = v.DeepVR_NoDevNY, rv.MT = rv.DeepVR_NoDevNY, Vcut = 60000, Vbins = 20, HistSep = 10, Histylim = 200, RegName = "bDeepVR_NoDevNY", MaxLagDist = 20000)
+  a = BadOperatorDiagnostics(MT = DeepVR_NoDevNY, o = o, LowLim = 2, MT_WGS = DeepVR_NoDevNY_WGS, v.MT = v.DeepVR_NoDevNY, rv.MT = rv.DeepVR_NoDevNY, Vcut = 60000, Vbins = 20, HistSep = 10, Histylim = 200, RegName = "DeepVR_NoDevNY", MaxLagDist = 60000, SensitivityDist = 2500)
   a
 }
+#p-value colors
+colPal = colorRampPalette(colors = rev(c('red', 'orange', 'yellow', 'green', 'blue')))
+scaleRange = c(0,0.2)
+scaleBy = 0.05
+Pal = colPal((scaleRange[2] - scaleRange[1])/scaleBy + 1)
+
+#Sensitivity Plot for All Metrics
+OpRanks_DeepVR = GetOperatorRanks(OpDiag_DeepVR)
+PlotDistanceSensitivity(OpDiagRanks = OpRanks_DeepVR, res = 300, height = 10, width = 7, xlim = c(1.5,60), NumOps = 20, NumOpsStep = 5, xStep = 2.5, PlotName = 'DeepVR')
+#Plot operator diagnostics for each of the distances
+temp = foreach (i = 1:ncol(OpRanks_DeepVR$DiffMOM), .packages = 'RColorBrewer') %dopar% {
+  PlotOpsDiagnostics(OpDiag = OpDiag_DeepVR, OpDiagRanks = OpRanks_DeepVR, col = i, res = 300, NumOps = 20, NumOpsStep = 5, PlotName = paste0('DeepVR',i*2500), xStep = 2.5)
+}
+rm(temp)
 stopCluster(cl)
+
+#Top 10 among all metrics, without p-value - These all look reasonable
+TopBadOps_VR = ReturnTopN(OpDiag = OpDiag_DeepVR, OpRanks = OpRanks_DeepVR, col = 6, N = 5, ID = TRUE, WellData = DeepVR)
+TopBadOps_VR = ReturnTopN(OpDiag = OpDiag_DeepVR, OpRanks = OpRanks_DeepVR, col = 6, N = 5, ID = FALSE, WellData = DeepVR)
 
 #   Make new deep well database with bad operators removed----
 WellsDeep_RmOps = WellsDeep[-which(WellsDeep$Operator == 'Waco Oil & Gas Co., Inc.'),]
