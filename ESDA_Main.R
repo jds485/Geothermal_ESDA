@@ -1978,7 +1978,6 @@ temp = foreach (i = 1:ncol(OpRanks_DeepCWV$DiffMOM), .packages = 'RColorBrewer')
 rm(temp)
 stopCluster(cl)
 
-
 #     Split into KY and WV clusters ---- 
 #KY and WV have similar variogram shapes. WV more variable, but fewer observations.
 colPal = colorRampPalette(colors = rev(c('red', 'orange', 'yellow', 'green', 'blue')))
@@ -2292,7 +2291,7 @@ stopCluster(cl)
 
 #Top 10 among all metrics, without p-value - These all look reasonable
 TopBadOps_NWPANY = ReturnTopN(OpDiag = OpDiag_DeepNWPANY, OpRanks = OpRanks_DeepNWPANY, col = 6, N = 5, ID = TRUE, WellData = DeepNWPANY)
-TopBadOps_NWPANY = ReturnTopN(OpDiag = OpDiag_DeepNWPANY, OpRanks = OpRanks_DeepNWPANY, col = 6, N = 5, ID = FALSE, WellData = DeepNWPANY)
+TopBadOps_NWPANY_Names = ReturnTopN(OpDiag = OpDiag_DeepNWPANY, OpRanks = OpRanks_DeepNWPANY, col = 6, N = 5, ID = FALSE, WellData = DeepNWPANY)
 
 #    CNY - No operators listed----
 
@@ -2330,8 +2329,8 @@ rm(temp)
 stopCluster(cl)
 
 #Top 10 among all metrics, without p-value - These all look reasonable
-TopBadOps_ENY = ReturnTopN(OpDiag = OpDiag_DeepENY, OpRanks = OpRanks_DeepENY, col = 6, N = 5, ID = TRUE, WellData = DeepENY)
-TopBadOps_ENY = ReturnTopN(OpDiag = OpDiag_DeepENY, OpRanks = OpRanks_DeepENY, col = 6, N = 5, ID = FALSE, WellData = DeepENY)
+TopBadOps_ENY = ReturnTopN(OpDiag = OpDiag_DeepENY, OpRanks = OpRanks_DeepENY, col = 6, N = 2, ID = TRUE, WellData = DeepENY)
+TopBadOps_ENY_Names = ReturnTopN(OpDiag = OpDiag_DeepENY, OpRanks = OpRanks_DeepENY, col = 6, N = 2, ID = FALSE, WellData = DeepENY)
 
 #    VR---- 
 #Deviated wells do not look incorrect here.
@@ -2358,21 +2357,49 @@ Pal = colPal((scaleRange[2] - scaleRange[1])/scaleBy + 1)
 
 #Sensitivity Plot for All Metrics
 OpRanks_DeepVR = GetOperatorRanks(OpDiag_DeepVR)
-PlotDistanceSensitivity(OpDiagRanks = OpRanks_DeepVR, res = 300, height = 10, width = 7, xlim = c(1.5,60), NumOps = 20, NumOpsStep = 5, xStep = 2.5, PlotName = 'DeepVR')
+PlotDistanceSensitivity(OpDiagRanks = OpRanks_DeepVR, res = 300, height = 10, width = 7, xlim = c(1.5,60), NumOps = 40, NumOpsStep = 5, xStep = 2.5, PlotName = 'DeepVR')
 #Plot operator diagnostics for each of the distances
 temp = foreach (i = 1:ncol(OpRanks_DeepVR$DiffMOM), .packages = 'RColorBrewer') %dopar% {
-  PlotOpsDiagnostics(OpDiag = OpDiag_DeepVR, OpDiagRanks = OpRanks_DeepVR, col = i, res = 300, NumOps = 20, NumOpsStep = 5, PlotName = paste0('DeepVR',i*2500), xStep = 2.5)
+  PlotOpsDiagnostics(OpDiag = OpDiag_DeepVR, OpDiagRanks = OpRanks_DeepVR, col = i, res = 300, NumOps = 40, NumOpsStep = 5, PlotName = paste0('DeepVR',i*2500), xStep = 2.5)
 }
 rm(temp)
 stopCluster(cl)
 
 #Top 10 among all metrics, without p-value - These all look reasonable
 TopBadOps_VR = ReturnTopN(OpDiag = OpDiag_DeepVR, OpRanks = OpRanks_DeepVR, col = 6, N = 5, ID = TRUE, WellData = DeepVR)
-TopBadOps_VR = ReturnTopN(OpDiag = OpDiag_DeepVR, OpRanks = OpRanks_DeepVR, col = 6, N = 5, ID = FALSE, WellData = DeepVR)
+TopBadOps_VR_Names = ReturnTopN(OpDiag = OpDiag_DeepVR, OpRanks = OpRanks_DeepVR, col = 6, N = 5, ID = FALSE, WellData = DeepVR)
 
 #   Make new deep well database with bad operators removed----
 WellsDeep_RmOps = WellsDeep[-which(WellsDeep$Operator == 'Waco Oil & Gas Co., Inc.'),]
+WellsDeep_RmOps = WellsDeep_RmOps[-which(WellsDeep_RmOps$StateID %in% DeepMT$StateID[which(DeepMT$Operator == 'Equitable Production Company')]),]
+WellsDeep_RmOps = WellsDeep_RmOps[-which(WellsDeep_RmOps$StateID %in% DeepSWPA_WGS_WV$StateID[DeepSWPA_WGS_WV$Operator == 'EMAX, Inc.']),]
+WellsDeep_RmOpsWGS = spTransform(WellsDeep_RmOps, CRS('+init=epsg:4326'))
 
+#Operator removed geologic region data
+DeepCT_RmOps = spTransform(WellsDeep_RmOpsWGS[InterpRegs[InterpRegs$Name == 'CT',],], CRS('+init=epsg:26917'))
+DeepCNY_RmOps = spTransform(WellsDeep_RmOpsWGS[InterpRegs[InterpRegs$Name == 'CNY',],], CRS('+init=epsg:26917'))
+DeepCWV_RmOps = spTransform(WellsDeep_RmOpsWGS[CWV_Bounded,], CRS('+init=epsg:26917'))
+DeepENY_RmOps = spTransform(WellsDeep_RmOpsWGS[InterpRegs[InterpRegs$Name == 'ENY',],], CRS('+init=epsg:26917'))
+DeepENYPA_RmOps = spTransform(WellsDeep_RmOpsWGS[InterpRegs[InterpRegs$Name == 'ENYPA',],], CRS('+init=epsg:26917'))
+DeepMT_RmOps = spTransform(WellsDeep_RmOpsWGS[MT_Bounded,], CRS('+init=epsg:26917'))
+DeepNWPANY_RmOps = spTransform(WellsDeep_RmOpsWGS[InterpRegs[InterpRegs$Name == 'NWPANY',],], CRS('+init=epsg:26917'))
+DeepSWPA_RmOps = spTransform(WellsDeep_RmOpsWGS[InterpRegs[InterpRegs$Name == 'SWPA',],], CRS('+init=epsg:26917'))
+DeepWPA_RmOps = spTransform(WellsDeep_RmOpsWGS[InterpRegs[InterpRegs$Name == 'WPA',],], CRS('+init=epsg:26917'))
+DeepVR_RmOps = spTransform(WellsDeep_RmOpsWGS[VR_Bounded,], CRS('+init=epsg:26917'))
+DeepFL_RmOps = rbind(DeepCT_RmOps, DeepCWV_RmOps, DeepCNY_RmOps, DeepENY_RmOps, DeepENYPA_RmOps, DeepMT_RmOps, DeepNWPANY_RmOps, DeepSWPA_RmOps, DeepWPA_RmOps, DeepVR_RmOps)
+
+#Resetting all deep data to before operators were removed
+DeepCT = spTransform(WellsDeepWGS[InterpRegs[InterpRegs$Name == 'CT',],], CRS('+init=epsg:26917'))
+DeepCNY = spTransform(WellsDeepWGS[InterpRegs[InterpRegs$Name == 'CNY',],], CRS('+init=epsg:26917'))
+DeepCWV = spTransform(WellsDeepWGS[CWV_Bounded,], CRS('+init=epsg:26917'))
+DeepENY = spTransform(WellsDeepWGS[InterpRegs[InterpRegs$Name == 'ENY',],], CRS('+init=epsg:26917'))
+DeepENYPA = spTransform(WellsDeepWGS[InterpRegs[InterpRegs$Name == 'ENYPA',],], CRS('+init=epsg:26917'))
+DeepMT = spTransform(WellsDeepWGS[MT_Bounded,], CRS('+init=epsg:26917'))
+DeepNWPANY = spTransform(WellsDeepWGS[InterpRegs[InterpRegs$Name == 'NWPANY',],], CRS('+init=epsg:26917'))
+DeepSWPA = spTransform(WellsDeepWGS[InterpRegs[InterpRegs$Name == 'SWPA',],], CRS('+init=epsg:26917'))
+DeepWPA = spTransform(WellsDeepWGS[InterpRegs[InterpRegs$Name == 'WPA',],], CRS('+init=epsg:26917'))
+DeepVR = spTransform(WellsDeepWGS[VR_Bounded,], CRS('+init=epsg:26917'))
+DeepFL = rbind(DeepCT, DeepCWV, DeepCNY, DeepENY, DeepENYPA, DeepMT, DeepNWPANY, DeepSWPA, DeepWPA, DeepVR)
 
 #  Spatial Outlier Detection ----
 #This should be run after points have been reduced to unique locations and negative gradient values have been removed or corrected.
@@ -2384,7 +2411,39 @@ WellsDeep = spTransform(WellsDeep, CRS('+init=epsg:26917'))
 WellsDeep$POINT_X = WellsDeep@coords[,1]
 WellsDeep$POINT_Y = WellsDeep@coords[,2]
 
+WellsDeep_RmOps = spTransform(WellsDeep_RmOps, CRS('+init=epsg:26917'))
+#Add columns of UTM coordinates
+WellsDeep_RmOps$POINT_X = WellsDeep_RmOps@coords[,1]
+WellsDeep_RmOps$POINT_Y = WellsDeep_RmOps@coords[,2]
+
+WellsDeep_NoDevNY = spTransform(WellsDeep_NoDevNY, CRS('+init=epsg:26917'))
+#Add columns of UTM coordinates
+WellsDeep_NoDevNY$POINT_X = WellsDeep_NoDevNY@coords[,1]
+WellsDeep_NoDevNY$POINT_Y = WellsDeep_NoDevNY@coords[,2]
+
 TestedOutliers_HeatFlow = select_out_algo(Data = WellsDeep@data, 
+                                          InVarName = "Qs", OutVarName = "Qs", 
+                                          X_coordName = "POINT_X", Y_coordName = "POINT_Y", 
+                                          CensorName = 'WellDepth', 
+                                          rad_max = 32000, 
+                                          pt_min = 25, 
+                                          k_loc = 3, 
+                                          type = 7, 
+                                          min_val = 0, max_val = 7000, rank = TRUE)
+
+#Testing using dataset without supposedly deviated wells. NY wells all not removed.
+TestedOutliers_HeatFlow_NoDevNY = select_out_algo(Data = WellsDeep_NoDevNY@data, 
+                                          InVarName = "Qs", OutVarName = "Qs", 
+                                          X_coordName = "POINT_X", Y_coordName = "POINT_Y", 
+                                          CensorName = 'WellDepth', 
+                                          rad_max = 32000, 
+                                          pt_min = 25, 
+                                          k_loc = 3, 
+                                          type = 7, 
+                                          min_val = 0, max_val = 7000, rank = TRUE)
+
+#Testing using operator-removed dataset
+TestedOutliers_HeatFlow_RmOps = select_out_algo(Data = WellsDeep_RmOps@data, 
                                           InVarName = "Qs", OutVarName = "Qs", 
                                           X_coordName = "POINT_X", Y_coordName = "POINT_Y", 
                                           CensorName = 'WellDepth', 
@@ -2497,11 +2556,21 @@ TestedOutliers_HeatFlow_k5p0 = select_out_algo(Data = WellsDeep@data,
                                                type = 7, 
                                                min_val = 0, max_val = 7000, rank = TRUE)
 
-#Convert to spatial data
+#   Convert to spatial data----
 coordinates(TestedOutliers_HeatFlow$NotOutliers) = c('POINT_X', 'POINT_Y')
 proj4string(TestedOutliers_HeatFlow$NotOutliers) = CRS('+init=epsg:26917')
 coordinates(TestedOutliers_HeatFlow$Outliers) = c('POINT_X', 'POINT_Y')
 proj4string(TestedOutliers_HeatFlow$Outliers) = CRS('+init=epsg:26917')
+
+coordinates(TestedOutliers_HeatFlow_NoDevNY$NotOutliers) = c('POINT_X', 'POINT_Y')
+proj4string(TestedOutliers_HeatFlow_NoDevNY$NotOutliers) = CRS('+init=epsg:26917')
+coordinates(TestedOutliers_HeatFlow_NoDevNY$Outliers) = c('POINT_X', 'POINT_Y')
+proj4string(TestedOutliers_HeatFlow_NoDevNY$Outliers) = CRS('+init=epsg:26917')
+
+coordinates(TestedOutliers_HeatFlow_RmOps$NotOutliers) = c('POINT_X', 'POINT_Y')
+proj4string(TestedOutliers_HeatFlow_RmOps$NotOutliers) = CRS('+init=epsg:26917')
+coordinates(TestedOutliers_HeatFlow_RmOps$Outliers) = c('POINT_X', 'POINT_Y')
+proj4string(TestedOutliers_HeatFlow_RmOps$Outliers) = CRS('+init=epsg:26917')
 
 coordinates(TestedOutliers_HeatFlow_max2k$NotOutliers) = c('POINT_X', 'POINT_Y')
 proj4string(TestedOutliers_HeatFlow_max2k$NotOutliers) = CRS('+init=epsg:26917')
@@ -2555,8 +2624,11 @@ proj4string(TestedOutliers_HeatFlow_k5p0$Outliers) = CRS('+init=epsg:26917')
 
 writeOGR(TestedOutliers_HeatFlow$NotOutliers, dsn=getwd(), layer="DeepestWells_NotOutliers_32km_Qs_CorrBase_Ranked_2018", driver = "ESRI Shapefile")
 writeOGR(TestedOutliers_HeatFlow$Outliers, dsn=getwd(), layer="DeepestWells_Outliers_32km_Qs_CorrBase_Ranked_2018", driver = "ESRI Shapefile")
+writeOGR(TestedOutliers_HeatFlow_RmOps$NotOutliers, dsn=getwd(), layer="DeepestWells_NotOutliers_32km_Qs_CorrBase_Ranked_2018_RmOps", driver = "ESRI Shapefile")
+writeOGR(TestedOutliers_HeatFlow_RmOps$Outliers, dsn=getwd(), layer="DeepestWells_Outliers_32km_Qs_CorrBase_Ranked_2018_RmOps", driver = "ESRI Shapefile")
 
-#Convert back to WGS coordinate system
+#   Convert to WGS coordinate system----
+#Wells in NAD83 WGS84
 Outs = spTransform(TestedOutliers_HeatFlow$Outliers, CRS = CRS("+init=epsg:4326"))
 NoOuts = spTransform(TestedOutliers_HeatFlow$NotOutliers, CRS = CRS("+init=epsg:4326"))
 AllData = rbind(NoOuts, Outs)
@@ -2567,69 +2639,17 @@ NoOuts_min2k = spTransform(TestedOutliers_HeatFlow_min2k$NotOutliers, CRS = CRS(
 Outs_max2k = spTransform(TestedOutliers_HeatFlow_max2k$Outliers, CRS = CRS("+init=epsg:4326"))
 NoOuts_max2k = spTransform(TestedOutliers_HeatFlow_max2k$NotOutliers, CRS = CRS("+init=epsg:4326"))
 
-#Evaluate the impact of just removing the L lowest data points and H highest data points in a region
-# L and H are the number of outliers identified in the local spatial outlier algorithm for k = 3.
-OutsCT = Outs[InterpRegs[InterpRegs$Name == 'CT',],]
-OutsCT = DeepCT[order(DeepCT$Qs),][-c(1:sum(OutsCT$out_loc_lo),(nrow(DeepCT)-(sum(OutsCT$out_loc_hi)-1)):nrow(DeepCT)),]
-plot(variogram(Qs~1, OutsCT, cutoff = 60000, width = 60000/50), ylim = c(0,20), more = T, split = c(1,1,1,1))
-plot(variogram(Qs~1, CT, cutoff = 60000, width = 60000/50), ylim = c(0,20), split = c(1,1,1,1))
-
-OutsWPA = Outs[InterpRegs[InterpRegs$Name == 'WPA',],]
-OutsWPA = DeepWPA[order(DeepWPA$Qs),][-c(1:sum(OutsWPA$out_loc_lo),(nrow(DeepWPA)-(sum(OutsWPA$out_loc_hi)-1)):nrow(DeepWPA)),]
-plot(variogram(Qs~1, OutsWPA, cutoff = 60000, width = 60000/50), ylim = c(0,20), more = T, split = c(1,1,1,1))
-plot(variogram(Qs~1, WPA, cutoff = 60000, width = 60000/50), ylim = c(0,20), split = c(1,1,1,1))
-
-OutsSWPA = Outs[InterpRegs[InterpRegs$Name == 'SWPA',],]
-OutsSWPA = DeepSWPA[order(DeepSWPA$Qs),][-c(1:sum(OutsSWPA$out_loc_lo),(nrow(DeepSWPA)-(sum(OutsSWPA$out_loc_hi)-1)):nrow(DeepSWPA)),]
-plot(variogram(Qs~1, OutsSWPA, cutoff = 60000, width = 60000/50), ylim = c(0,60), more = T, split = c(1,1,1,1))
-plot(variogram(Qs~1, SWPA, cutoff = 60000, width = 60000/50), ylim = c(0,60), split = c(1,1,1,1))
-
-OutsCWV = Outs[CWV_Bounded,]
-OutsCWV = DeepCWV[order(DeepCWV$Qs),][-c(1:sum(OutsCWV$out_loc_lo),(nrow(DeepCWV)-(sum(OutsCWV$out_loc_hi)-1)):nrow(DeepCWV)),]
-plot(variogram(Qs~1, OutsCWV, cutoff = 60000, width = 60000/50), ylim = c(0,200), more = T, split = c(1,1,1,1))
-plot(variogram(Qs~1, CWV, cutoff = 60000, width = 60000/50), ylim = c(0,200), split = c(1,1,1,1))
-
-OutsMT = Outs[MT_Bounded,]
-OutsMT = DeepMT[order(DeepMT$Qs),][-c(1:sum(OutsMT$out_loc_lo),(nrow(DeepMT)-(sum(OutsMT$out_loc_hi)-1)):nrow(DeepMT)),]
-plot(variogram(Qs~1, OutsMT, cutoff = 60000, width = 60000/50), ylim = c(0,300), more = T, split = c(1,1,1,1))
-plot(variogram(Qs~1, MT, cutoff = 60000, width = 60000/50), ylim = c(0,300), split = c(1,1,1,1))
-
-OutsVR = Outs[VR_Bounded,]
-OutsVR = DeepVR[order(DeepVR$Qs),][-c(1:sum(OutsVR$out_loc_lo),(nrow(DeepVR)-(sum(OutsVR$out_loc_hi)-1)):nrow(DeepVR)),]
-plot(variogram(Qs~1, OutsVR, cutoff = 60000, width = 60000/10), ylim = c(0,300), more = T, split = c(1,1,1,1))
-plot(variogram(Qs~1, VR, cutoff = 60000, width = 60000/10), ylim = c(0,300), split = c(1,1,1,1))
-
-OutsCNY = Outs[InterpRegs[InterpRegs$Name == 'CNY',],]
-OutsCNY = DeepCNY[order(DeepCNY$Qs),][-c(1:sum(OutsCNY$out_loc_lo),(nrow(DeepCNY)-(sum(OutsCNY$out_loc_hi)-1)):nrow(DeepCNY)),]
-plot(variogram(Qs~1, OutsCNY, cutoff = 60000, width = 60000/20), ylim = c(0,50), more = T, split = c(1,1,1,1))
-plot(variogram(Qs~1, CNY, cutoff = 60000, width = 60000/20), ylim = c(0,50), split = c(1,1,1,1))
-
-OutsENY = Outs[InterpRegs[InterpRegs$Name == 'ENY',],]
-OutsENY = DeepENY[order(DeepENY$Qs),][-c(1:sum(OutsENY$out_loc_lo),(nrow(DeepENY)-(sum(OutsENY$out_loc_hi)-1)):nrow(DeepENY)),]
-plot(variogram(Qs~1, OutsENY, cutoff = 60000, width = 60000/20), ylim = c(0,50), more = T, split = c(1,1,1,1))
-plot(variogram(Qs~1, ENY, cutoff = 60000, width = 60000/20), ylim = c(0,50), split = c(1,1,1,1))
-
-OutsENYPA = Outs[InterpRegs[InterpRegs$Name == 'ENYPA',],]
-OutsENYPA = DeepENYPA[order(DeepENYPA$Qs),][-c(1:sum(OutsENYPA$out_loc_lo),(nrow(DeepENYPA)-(sum(OutsENYPA$out_loc_hi)-1)):nrow(DeepENYPA)),]
-plot(variogram(Qs~1, OutsENYPA, cutoff = 60000, width = 60000/30), ylim = c(0,150), more = T, split = c(1,1,1,1))
-plot(variogram(Qs~1, ENYPA, cutoff = 60000, width = 60000/30), ylim = c(0,150), split = c(1,1,1,1))
-
-OutsNWPANY = Outs[InterpRegs[InterpRegs$Name == 'NWPANY',],]
-OutsNWPANY = DeepNWPANY[order(DeepNWPANY$Qs),][-c(1:sum(OutsNWPANY$out_loc_lo),(nrow(DeepNWPANY)-(sum(OutsNWPANY$out_loc_hi)-1)):nrow(DeepNWPANY)),]
-plot(variogram(Qs~1, OutsNWPANY, cutoff = 60000, width = 60000/50), ylim = c(0,60), more = T, split = c(1,1,1,1))
-plot(variogram(Qs~1, NWPANY, cutoff = 60000, width = 60000/50), ylim = c(0,60), split = c(1,1,1,1))
-
-#   Map of outliers----
-#Colors
-colPal = colorRampPalette(colors = rev(c('red', 'orange', 'yellow', 'green', 'blue')))
-scaleRange = c(10,90)
-scaleBy = 20
-Pal = colPal((scaleRange[2] - scaleRange[1])/scaleBy + 1)
-
-#Wells in NAD83 WGS84
 WellsDeepWGS = spTransform(WellsDeep, CRSobj = CRS('+init=epsg:4326'))
 NotOutliersWGS = spTransform(TestedOutliers_HeatFlow$NotOutliers, CRSobj = CRS('+init=epsg:4326'))
 OutliersWGS = spTransform(TestedOutliers_HeatFlow$Outliers, CRSobj = CRS('+init=epsg:4326'))
+
+WellsDeepWGS_NoDevNY = spTransform(WellsDeep_NoDevNY, CRSobj = CRS('+init=epsg:4326'))
+NotOutliersWGS_NoDevNY = spTransform(TestedOutliers_HeatFlow_NoDevNY$NotOutliers, CRSobj = CRS('+init=epsg:4326'))
+OutliersWGS_NoDevNY = spTransform(TestedOutliers_HeatFlow_NoDevNY$Outliers, CRSobj = CRS('+init=epsg:4326'))
+
+WellsDeepWGS_RmOps = spTransform(WellsDeep_RmOps, CRSobj = CRS('+init=epsg:4326'))
+NotOutliersWGS_RmOps = spTransform(TestedOutliers_HeatFlow_RmOps$NotOutliers, CRSobj = CRS('+init=epsg:4326'))
+OutliersWGS_RmOps = spTransform(TestedOutliers_HeatFlow_RmOps$Outliers, CRSobj = CRS('+init=epsg:4326'))
 
 NotOutliersWGS_k1p0 = spTransform(TestedOutliers_HeatFlow_k1p0$NotOutliers, CRSobj = CRS('+init=epsg:4326'))
 OutliersWGS_k1p0 = spTransform(TestedOutliers_HeatFlow_k1p0$Outliers, CRSobj = CRS('+init=epsg:4326'))
@@ -2648,17 +2668,273 @@ OutliersWGS_k4p5 = spTransform(TestedOutliers_HeatFlow_k4p5$Outliers, CRSobj = C
 NotOutliersWGS_k5p0 = spTransform(TestedOutliers_HeatFlow_k5p0$NotOutliers, CRSobj = CRS('+init=epsg:4326'))
 OutliersWGS_k5p0 = spTransform(TestedOutliers_HeatFlow_k5p0$Outliers, CRSobj = CRS('+init=epsg:4326'))
 
+#   Clip all data into their geologic regions----
+#Clip points that are not outliers to geologic regions
+CT = NotOutliersWGS[InterpRegs[InterpRegs$Name == 'CT',],]
+CNY = NotOutliersWGS[InterpRegs[InterpRegs$Name == 'CNY',],]
+CWV = NotOutliersWGS[CWV_Bounded,]
+ENY = NotOutliersWGS[InterpRegs[InterpRegs$Name == 'ENY',],]
+ENYPA = NotOutliersWGS[InterpRegs[InterpRegs$Name == 'ENYPA',],]
+MT = NotOutliersWGS[MT_Bounded,]
+NWPANY = NotOutliersWGS[InterpRegs[InterpRegs$Name == 'NWPANY',],]
+SWPA = NotOutliersWGS[InterpRegs[InterpRegs$Name == 'SWPA',],]
+WPA = NotOutliersWGS[InterpRegs[InterpRegs$Name == 'WPA',],]
+VR = NotOutliersWGS[VR_Bounded,]
+FL = rbind(CT, CWV, CNY, ENY, ENYPA, MT, NWPANY, SWPA, WPA, VR)
+
+CT_RmOps = NotOutliersWGS_RmOps[InterpRegs[InterpRegs$Name == 'CT',],]
+CNY_RmOps = NotOutliersWGS_RmOps[InterpRegs[InterpRegs$Name == 'CNY',],]
+CWV_RmOps = NotOutliersWGS_RmOps[CWV_Bounded,]
+ENY_RmOps = NotOutliersWGS_RmOps[InterpRegs[InterpRegs$Name == 'ENY',],]
+ENYPA_RmOps = NotOutliersWGS_RmOps[InterpRegs[InterpRegs$Name == 'ENYPA',],]
+MT_RmOps = NotOutliersWGS_RmOps[MT_Bounded,]
+NWPANY_RmOps = NotOutliersWGS_RmOps[InterpRegs[InterpRegs$Name == 'NWPANY',],]
+SWPA_RmOps = NotOutliersWGS_RmOps[InterpRegs[InterpRegs$Name == 'SWPA',],]
+WPA_RmOps = NotOutliersWGS_RmOps[InterpRegs[InterpRegs$Name == 'WPA',],]
+VR_RmOps = NotOutliersWGS_RmOps[VR_Bounded,]
+FL_RmOps = rbind(CT_RmOps, CWV_RmOps, CNY_RmOps, ENY_RmOps, ENYPA_RmOps, MT_RmOps, NWPANY_RmOps, SWPA_RmOps, WPA_RmOps, VR_RmOps)
+
+CT_k1p0 = NotOutliersWGS_k1p0[InterpRegs[InterpRegs$Name == 'CT',],]
+CNY_k1p0 = NotOutliersWGS_k1p0[InterpRegs[InterpRegs$Name == 'CNY',],]
+CWV_k1p0 = NotOutliersWGS_k1p0[CWV_Bounded,]
+ENY_k1p0 = NotOutliersWGS_k1p0[InterpRegs[InterpRegs$Name == 'ENY',],]
+ENYPA_k1p0 = NotOutliersWGS_k1p0[InterpRegs[InterpRegs$Name == 'ENYPA',],]
+MT_k1p0 = NotOutliersWGS_k1p0[MT_Bounded,]
+NWPANY_k1p0 = NotOutliersWGS_k1p0[InterpRegs[InterpRegs$Name == 'NWPANY',],]
+SWPA_k1p0 = NotOutliersWGS_k1p0[InterpRegs[InterpRegs$Name == 'SWPA',],]
+WPA_k1p0 = NotOutliersWGS_k1p0[InterpRegs[InterpRegs$Name == 'WPA',],]
+VR_k1p0 = NotOutliersWGS_k1p0[VR_Bounded,]
+FL_k1p0 = rbind(CT_k1p0, CWV_k1p0, CNY_k1p0, ENY_k1p0, ENYPA_k1p0, MT_k1p0, NWPANY_k1p0, SWPA_k1p0, WPA_k1p0, VR_k1p0)
+
+CT_k1p5 = NotOutliersWGS_k1p5[InterpRegs[InterpRegs$Name == 'CT',],]
+CNY_k1p5 = NotOutliersWGS_k1p5[InterpRegs[InterpRegs$Name == 'CNY',],]
+CWV_k1p5 = NotOutliersWGS_k1p5[CWV_Bounded,]
+ENY_k1p5 = NotOutliersWGS_k1p5[InterpRegs[InterpRegs$Name == 'ENY',],]
+ENYPA_k1p5 = NotOutliersWGS_k1p5[InterpRegs[InterpRegs$Name == 'ENYPA',],]
+MT_k1p5 = NotOutliersWGS_k1p5[MT_Bounded,]
+NWPANY_k1p5 = NotOutliersWGS_k1p5[InterpRegs[InterpRegs$Name == 'NWPANY',],]
+SWPA_k1p5 = NotOutliersWGS_k1p5[InterpRegs[InterpRegs$Name == 'SWPA',],]
+WPA_k1p5 = NotOutliersWGS_k1p5[InterpRegs[InterpRegs$Name == 'WPA',],]
+VR_k1p5 = NotOutliersWGS_k1p5[VR_Bounded,]
+FL_k1p5 = rbind(CT_k1p5, CWV_k1p5, CNY_k1p5, ENY_k1p5, ENYPA_k1p5, MT_k1p5, NWPANY_k1p5, SWPA_k1p5, WPA_k1p5, VR_k1p5)
+
+CT_k2p0 = NotOutliersWGS_k2p0[InterpRegs[InterpRegs$Name == 'CT',],]
+CNY_k2p0 = NotOutliersWGS_k2p0[InterpRegs[InterpRegs$Name == 'CNY',],]
+CWV_k2p0 = NotOutliersWGS_k2p0[CWV_Bounded,]
+ENY_k2p0 = NotOutliersWGS_k2p0[InterpRegs[InterpRegs$Name == 'ENY',],]
+ENYPA_k2p0 = NotOutliersWGS_k2p0[InterpRegs[InterpRegs$Name == 'ENYPA',],]
+MT_k2p0 = NotOutliersWGS_k2p0[MT_Bounded,]
+NWPANY_k2p0 = NotOutliersWGS_k2p0[InterpRegs[InterpRegs$Name == 'NWPANY',],]
+SWPA_k2p0 = NotOutliersWGS_k2p0[InterpRegs[InterpRegs$Name == 'SWPA',],]
+WPA_k2p0 = NotOutliersWGS_k2p0[InterpRegs[InterpRegs$Name == 'WPA',],]
+VR_k2p0 = NotOutliersWGS_k2p0[VR_Bounded,]
+FL_k2p0 = rbind(CT_k2p0, CWV_k2p0, CNY_k2p0, ENY_k2p0, ENYPA_k2p0, MT_k2p0, NWPANY_k2p0, SWPA_k2p0, WPA_k2p0, VR_k2p0)
+
+CT_k2p5 = NotOutliersWGS_k2p5[InterpRegs[InterpRegs$Name == 'CT',],]
+CNY_k2p5 = NotOutliersWGS_k2p5[InterpRegs[InterpRegs$Name == 'CNY',],]
+CWV_k2p5 = NotOutliersWGS_k2p5[CWV_Bounded,]
+ENY_k2p5 = NotOutliersWGS_k2p5[InterpRegs[InterpRegs$Name == 'ENY',],]
+ENYPA_k2p5 = NotOutliersWGS_k2p5[InterpRegs[InterpRegs$Name == 'ENYPA',],]
+MT_k2p5 = NotOutliersWGS_k2p5[MT_Bounded,]
+NWPANY_k2p5 = NotOutliersWGS_k2p5[InterpRegs[InterpRegs$Name == 'NWPANY',],]
+SWPA_k2p5 = NotOutliersWGS_k2p5[InterpRegs[InterpRegs$Name == 'SWPA',],]
+WPA_k2p5 = NotOutliersWGS_k2p5[InterpRegs[InterpRegs$Name == 'WPA',],]
+VR_k2p5 = NotOutliersWGS_k2p5[VR_Bounded,]
+FL_k2p5 = rbind(CT_k2p5, CWV_k2p5, CNY_k2p5, ENY_k2p5, ENYPA_k2p5, MT_k2p5, NWPANY_k2p5, SWPA_k2p5, WPA_k2p5, VR_k2p5)
+
+CT_k3p5 = NotOutliersWGS_k3p5[InterpRegs[InterpRegs$Name == 'CT',],]
+CNY_k3p5 = NotOutliersWGS_k3p5[InterpRegs[InterpRegs$Name == 'CNY',],]
+CWV_k3p5 = NotOutliersWGS_k3p5[CWV_Bounded,]
+ENY_k3p5 = NotOutliersWGS_k3p5[InterpRegs[InterpRegs$Name == 'ENY',],]
+ENYPA_k3p5 = NotOutliersWGS_k3p5[InterpRegs[InterpRegs$Name == 'ENYPA',],]
+MT_k3p5 = NotOutliersWGS_k3p5[MT_Bounded,]
+NWPANY_k3p5 = NotOutliersWGS_k3p5[InterpRegs[InterpRegs$Name == 'NWPANY',],]
+SWPA_k3p5 = NotOutliersWGS_k3p5[InterpRegs[InterpRegs$Name == 'SWPA',],]
+WPA_k3p5 = NotOutliersWGS_k3p5[InterpRegs[InterpRegs$Name == 'WPA',],]
+VR_k3p5 = NotOutliersWGS_k3p5[VR_Bounded,]
+FL_k3p5 = rbind(CT_k3p5, CWV_k3p5, CNY_k3p5, ENY_k3p5, ENYPA_k3p5, MT_k3p5, NWPANY_k3p5, SWPA_k3p5, WPA_k3p5, VR_k3p5)
+
+CT_k4p0 = NotOutliersWGS_k4p0[InterpRegs[InterpRegs$Name == 'CT',],]
+CNY_k4p0 = NotOutliersWGS_k4p0[InterpRegs[InterpRegs$Name == 'CNY',],]
+CWV_k4p0 = NotOutliersWGS_k4p0[CWV_Bounded,]
+ENY_k4p0 = NotOutliersWGS_k4p0[InterpRegs[InterpRegs$Name == 'ENY',],]
+ENYPA_k4p0 = NotOutliersWGS_k4p0[InterpRegs[InterpRegs$Name == 'ENYPA',],]
+MT_k4p0 = NotOutliersWGS_k4p0[MT_Bounded,]
+NWPANY_k4p0 = NotOutliersWGS_k4p0[InterpRegs[InterpRegs$Name == 'NWPANY',],]
+SWPA_k4p0 = NotOutliersWGS_k4p0[InterpRegs[InterpRegs$Name == 'SWPA',],]
+WPA_k4p0 = NotOutliersWGS_k4p0[InterpRegs[InterpRegs$Name == 'WPA',],]
+VR_k4p0 = NotOutliersWGS_k4p0[VR_Bounded,]
+FL_k4p0 = rbind(CT_k4p0, CWV_k4p0, CNY_k4p0, ENY_k4p0, ENYPA_k4p0, MT_k4p0, NWPANY_k4p0, SWPA_k4p0, WPA_k4p0, VR_k4p0)
+
+CT_k4p5 = NotOutliersWGS_k4p5[InterpRegs[InterpRegs$Name == 'CT',],]
+CNY_k4p5 = NotOutliersWGS_k4p5[InterpRegs[InterpRegs$Name == 'CNY',],]
+CWV_k4p5 = NotOutliersWGS_k4p5[CWV_Bounded,]
+ENY_k4p5 = NotOutliersWGS_k4p5[InterpRegs[InterpRegs$Name == 'ENY',],]
+ENYPA_k4p5 = NotOutliersWGS_k4p5[InterpRegs[InterpRegs$Name == 'ENYPA',],]
+MT_k4p5 = NotOutliersWGS_k4p5[MT_Bounded,]
+NWPANY_k4p5 = NotOutliersWGS_k4p5[InterpRegs[InterpRegs$Name == 'NWPANY',],]
+SWPA_k4p5 = NotOutliersWGS_k4p5[InterpRegs[InterpRegs$Name == 'SWPA',],]
+WPA_k4p5 = NotOutliersWGS_k4p5[InterpRegs[InterpRegs$Name == 'WPA',],]
+VR_k4p5 = NotOutliersWGS_k4p5[VR_Bounded,]
+FL_k4p5 = rbind(CT_k4p5, CWV_k4p5, CNY_k4p5, ENY_k4p5, ENYPA_k4p5, MT_k4p5, NWPANY_k4p5, SWPA_k4p5, WPA_k4p5, VR_k4p5)
+
+CT_k5p0 = NotOutliersWGS_k5p0[InterpRegs[InterpRegs$Name == 'CT',],]
+CNY_k5p0 = NotOutliersWGS_k5p0[InterpRegs[InterpRegs$Name == 'CNY',],]
+CWV_k5p0 = NotOutliersWGS_k5p0[CWV_Bounded,]
+ENY_k5p0 = NotOutliersWGS_k5p0[InterpRegs[InterpRegs$Name == 'ENY',],]
+ENYPA_k5p0 = NotOutliersWGS_k5p0[InterpRegs[InterpRegs$Name == 'ENYPA',],]
+MT_k5p0 = NotOutliersWGS_k5p0[MT_Bounded,]
+NWPANY_k5p0 = NotOutliersWGS_k5p0[InterpRegs[InterpRegs$Name == 'NWPANY',],]
+SWPA_k5p0 = NotOutliersWGS_k5p0[InterpRegs[InterpRegs$Name == 'SWPA',],]
+WPA_k5p0 = NotOutliersWGS_k5p0[InterpRegs[InterpRegs$Name == 'WPA',],]
+VR_k5p0 = NotOutliersWGS_k5p0[VR_Bounded,]
+FL_k5p0 = rbind(CT_k5p0, CWV_k5p0, CNY_k5p0, ENY_k5p0, ENYPA_k5p0, MT_k5p0, NWPANY_k5p0, SWPA_k5p0, WPA_k5p0, VR_k5p0)
+
+#   Evaluate the impact of removing the L lowest data points and H highest data points in a region----
+#Fixme: make into a function
+# L and H are the number of outliers identified in the local spatial outlier algorithm for k = 3.
+OutsCT = Outs[InterpRegs[InterpRegs$Name == 'CT',],]
+OutsCT = DeepCT[order(DeepCT$Qs),][-c(1:sum(OutsCT$out_loc_lo),(nrow(DeepCT)-(sum(OutsCT$out_loc_hi)-1)):nrow(DeepCT)),]
+t1 = plot(variogram(Qs~1, OutsCT, cutoff = 60000, width = 60000/50), ylim = c(0,20), col = 'black', pch = 16,
+          ylab=expression(Semivariance ~ (mW/m^2)^2), xlab = 'Separation Distance (m)', main="Chautauqua, NY")
+t2 = plot(variogram(Qs~1, spTransform(CT, CRS('+init=epsg:26917')), cutoff = 60000, width = 60000/50), ylim = c(0,20), col = 'blue', pch = 16,
+          ylab=expression(Semivariance ~ (mW/m^2)^2), xlab = 'Separation Distance (m)', main="Chautauqua, NY")
+plot(t1, more = T)
+plot(t2)
+
+OutsWPA = Outs[InterpRegs[InterpRegs$Name == 'WPA',],]
+OutsWPA = DeepWPA[order(DeepWPA$Qs),][-c(1:sum(OutsWPA$out_loc_lo),(nrow(DeepWPA)-(sum(OutsWPA$out_loc_hi)-1)):nrow(DeepWPA)),]
+t3 = plot(variogram(Qs~1, OutsWPA, cutoff = 60000, width = 60000/50), ylim = c(0,20), col = 'black', pch = 16,
+          ylab=expression(Semivariance ~ (mW/m^2)^2), xlab = 'Separation Distance (m)', main="Western PA")
+t4 = plot(variogram(Qs~1, spTransform(WPA, CRS('+init=epsg:26917')), cutoff = 60000, width = 60000/50), ylim = c(0,20), col = 'blue', pch = 16,
+          ylab=expression(Semivariance ~ (mW/m^2)^2), xlab = 'Separation Distance (m)', main="Western PA")
+plot(t3, more = T)
+plot(t4)
+
+OutsSWPA = Outs[InterpRegs[InterpRegs$Name == 'SWPA',],]
+OutsSWPA = DeepSWPA[order(DeepSWPA$Qs),][-c(1:sum(OutsSWPA$out_loc_lo),(nrow(DeepSWPA)-(sum(OutsSWPA$out_loc_hi)-1)):nrow(DeepSWPA)),]
+t5 = plot(variogram(Qs~1, OutsSWPA, cutoff = 60000, width = 60000/50), ylim = c(0,60), col = 'black', pch = 16,
+          ylab=expression(Semivariance ~ (mW/m^2)^2), xlab = 'Separation Distance (m)', main="Southwestern PA")
+t6 = plot(variogram(Qs~1, spTransform(SWPA, CRS('+init=epsg:26917')), cutoff = 60000, width = 60000/50), ylim = c(0,60), col = 'blue', pch = 16,
+          ylab=expression(Semivariance ~ (mW/m^2)^2), xlab = 'Separation Distance (m)', main="Southwestern PA")
+plot(t5, more = T)
+plot(t6)
+
+OutsCWV = Outs[CWV_Bounded,]
+OutsCWV = DeepCWV[order(DeepCWV$Qs),][-c(1:sum(OutsCWV$out_loc_lo),(nrow(DeepCWV)-(sum(OutsCWV$out_loc_hi)-1)):nrow(DeepCWV)),]
+t7 = plot(variogram(Qs~1, OutsCWV, cutoff = 60000, width = 60000/50), ylim = c(0,200), col = 'black', pch = 16,
+          ylab=expression(Semivariance ~ (mW/m^2)^2), xlab = 'Separation Distance (m)', main="Central WV")
+t8 = plot(variogram(Qs~1, spTransform(CWV, CRS('+init=epsg:26917')), cutoff = 60000, width = 60000/50), ylim = c(0,200), col = 'blue', pch = 16,
+          ylab=expression(Semivariance ~ (mW/m^2)^2), xlab = 'Separation Distance (m)', main="Central WV")
+plot(t7, more = T)
+plot(t8)
+
+OutsMT = Outs[MT_Bounded,]
+OutsMT = DeepMT[order(DeepMT$Qs),][-c(1:sum(OutsMT$out_loc_lo),(nrow(DeepMT)-(sum(OutsMT$out_loc_hi)-1)):nrow(DeepMT)),]
+t9 = plot(variogram(Qs~1, OutsMT, cutoff = 60000, width = 60000/50), ylim = c(0,300), col = 'black', pch = 16,
+          ylab=expression(Semivariance ~ (mW/m^2)^2), xlab = 'Separation Distance (m)', main="Western WV")
+t10 = plot(variogram(Qs~1, spTransform(MT, CRS('+init=epsg:26917')), cutoff = 60000, width = 60000/50), ylim = c(0,300), col = 'blue', pch = 16,
+           ylab=expression(Semivariance ~ (mW/m^2)^2), xlab = 'Separation Distance (m)', main="Western WV")
+plot(t9, more = T)
+plot(t10)
+
+OutsVR = Outs[VR_Bounded,]
+OutsVR = DeepVR[order(DeepVR$Qs),][-c(1:sum(OutsVR$out_loc_lo),(nrow(DeepVR)-(sum(OutsVR$out_loc_hi)-1)):nrow(DeepVR)),]
+t11 = plot(variogram(Qs~1, OutsVR, cutoff = 60000, width = 60000/10), ylim = c(0,300), col = 'black', pch = 16,
+           ylab=expression(Semivariance ~ (mW/m^2)^2), xlab = 'Separation Distance (m)', main="Valley and Ridge")
+t12 = plot(variogram(Qs~1, spTransform(VR, CRS('+init=epsg:26917')), cutoff = 60000, width = 60000/10), ylim = c(0,300), col = 'blue', pch = 16,
+           ylab=expression(Semivariance ~ (mW/m^2)^2), xlab = 'Separation Distance (m)', main="Valley and Ridge")
+plot(t11, more = T)
+plot(t12)
+
+OutsCNY = Outs[InterpRegs[InterpRegs$Name == 'CNY',],]
+OutsCNY = DeepCNY[order(DeepCNY$Qs),][-c(1:sum(OutsCNY$out_loc_lo),(nrow(DeepCNY)-(sum(OutsCNY$out_loc_hi)-1)):nrow(DeepCNY)),]
+t13 = plot(variogram(Qs~1, OutsCNY, cutoff = 60000, width = 60000/20), ylim = c(0,40), col = 'black', pch = 16,
+           ylab=expression(Semivariance ~ (mW/m^2)^2), xlab = 'Separation Distance (m)', main="Central NY")
+t14 = plot(variogram(Qs~1, spTransform(CNY, CRS('+init=epsg:26917')), cutoff = 60000, width = 60000/20), ylim = c(0,40), col = 'blue', pch = 16,
+           ylab=expression(Semivariance ~ (mW/m^2)^2), xlab = 'Separation Distance (m)', main="Central NY")
+plot(t13, more = T)
+plot(t14)
+
+OutsENY = Outs[InterpRegs[InterpRegs$Name == 'ENY',],]
+OutsENY = DeepENY[order(DeepENY$Qs),][-c(1:sum(OutsENY$out_loc_lo),(nrow(DeepENY)-(sum(OutsENY$out_loc_hi)-1)):nrow(DeepENY)),]
+t15 = plot(variogram(Qs~1, OutsENY, cutoff = 60000, width = 60000/20), ylim = c(0,50), col = 'black', pch = 16,
+           ylab=expression(Semivariance ~ (mW/m^2)^2), xlab = 'Separation Distance (m)', main="Eastern NY")
+t16 = plot(variogram(Qs~1, spTransform(ENY, CRS('+init=epsg:26917')), cutoff = 60000, width = 60000/20), ylim = c(0,50), col = 'blue', pch = 16,
+           ylab=expression(Semivariance ~ (mW/m^2)^2), xlab = 'Separation Distance (m)', main="Eastern NY")
+plot(t15, more = T)
+plot(t16)
+
+OutsENYPA = Outs[InterpRegs[InterpRegs$Name == 'ENYPA',],]
+OutsENYPA = DeepENYPA[order(DeepENYPA$Qs),][-c(1:sum(OutsENYPA$out_loc_lo),(nrow(DeepENYPA)-(sum(OutsENYPA$out_loc_hi)-1)):nrow(DeepENYPA)),]
+t17 = plot(variogram(Qs~1, OutsENYPA, cutoff = 60000, width = 60000/30), ylim = c(0,150), col = 'black', pch = 16,
+           ylab=expression(Semivariance ~ (mW/m^2)^2), xlab = 'Separation Distance (m)', main="Eastern NY & PA")
+t18 = plot(variogram(Qs~1, spTransform(ENYPA, CRS('+init=epsg:26917')), cutoff = 60000, width = 60000/30), ylim = c(0,150), col = 'blue', pch = 16,
+           ylab=expression(Semivariance ~ (mW/m^2)^2), xlab = 'Separation Distance (m)', main="Eastern NY & PA")
+plot(t17, more = T)
+plot(t18)
+
+OutsNWPANY = Outs[InterpRegs[InterpRegs$Name == 'NWPANY',],]
+OutsNWPANY = DeepNWPANY[order(DeepNWPANY$Qs),][-c(1:sum(OutsNWPANY$out_loc_lo),(nrow(DeepNWPANY)-(sum(OutsNWPANY$out_loc_hi)-1)):nrow(DeepNWPANY)),]
+t19 = plot(variogram(Qs~1, OutsNWPANY, cutoff = 60000, width = 60000/50), ylim = c(0,60), col = 'black', pch = 16,
+           ylab=expression(Semivariance ~ (mW/m^2)^2), xlab = 'Separation Distance (m)', main="Northwestern PA & NY")
+t20 = plot(variogram(Qs~1, spTransform(NWPANY, CRS('+init=epsg:26917')), cutoff = 60000, width = 60000/50), ylim = c(0,60), col = 'blue', pch = 16,
+           ylab=expression(Semivariance ~ (mW/m^2)^2), xlab = 'Separation Distance (m)', main="Northwestern PA & NY")
+plot(t19, more = T)
+plot(t20)
+
+
+png("Variograms_SpatialOutsVsRmExtremes.png", width=13, height=10, units="in", res=300)
+plot(t1, split = c(1,1,4,3), more=T)
+plot(t2, split = c(1,1,4,3), more=T)
+
+plot(t13, split = c(4,1,4,3), more=T)
+plot(t14, split = c(4,1,4,3), more=T)
+
+plot(t15, split = c(1,2,4,3), more=T)
+plot(t16, split = c(1,2,4,3), more=T)
+
+plot(t17, split = c(2,2,4,3), more=T)
+plot(t18, split = c(2,2,4,3), more=T)
+
+plot(t19, split = c(3,1,4,3), more=T)
+plot(t20, split = c(3,1,4,3), more=T)
+
+plot(t5, split = c(3,2,4,3), more=T)
+plot(t6, split = c(3,2,4,3), more=T)
+
+plot(t3, split = c(2,1,4,3), more=T)
+plot(t4, split = c(2,1,4,3), more=T)
+
+plot(t9, split = c(1,3,4,3), more=T)
+plot(t10, split = c(1,3,4,3), more=T)
+
+plot(t7, split = c(4,2,4,3), more=T)
+plot(t8, split = c(4,2,4,3), more=T)
+
+plot(t11, split = c(2,3,4,3), more=T)
+plot(t12, split = c(2,3,4,3), more=F)
+
+dev.off()
+
+#   Map of outliers----
+#Colors
+colPal = colorRampPalette(colors = rev(c('red', 'orange', 'yellow', 'green', 'blue')))
+scaleRange = c(10,90)
+scaleBy = 20
+Pal = colPal((scaleRange[2] - scaleRange[1])/scaleBy + 1)
+
 png('LoHiOuts_Map.png', res = 1200, units = 'in', width = 14, height = 7)
 layout(cbind(1,2))
 par(xaxs = 'i', yaxs = 'i', mar = c(2,3,3,1))
 plot(WellsDeepWGS, col = 'white', pch = 16, cex = 0.2, main = 'Low Outliers', cex.main = 2)
+plot(Counties[Counties$STATEFP %in% c(42,36,54,24,21,51),], border = 'grey', add=TRUE)
 plot(NY, lwd = 2, add=TRUE)
 plot(PA, lwd = 2, add=TRUE)
 plot(WV, lwd = 2, add=TRUE)
 plot(MD, lwd = 2, add=TRUE)
 plot(KY, lwd = 2, add=TRUE)
 plot(VA, lwd = 2, add=TRUE)
-plot(Counties[Counties$STATEFP %in% c(42,36,54,24,21,51),], border = 'grey', add=TRUE)
 plot(NotOutliersWGS[NotOutliersWGS$out_loc_error == 0,], pch = 16, cex = 0.2, add = TRUE)
 plot(NotOutliersWGS[NotOutliersWGS$out_loc_error == 1,], pch = 17, col = 'purple', cex = 0.4, add = TRUE)
 plot(OutliersWGS[OutliersWGS$out_loc_lo == 1,], pch = 16, col = colFun(OutliersWGS$Qs[OutliersWGS$out_loc_lo == 1]), cex = 0.7, add = TRUE)
@@ -2674,13 +2950,13 @@ legend('topleft', title = expression(paste('Q'[s], ' (mW/m'^2, ')')), legend = c
 
 par(xaxs = 'i', yaxs = 'i', mar = c(2,3,3,1))
 plot(WellsDeepWGS, col = 'white', pch = 16, cex = 0.2, main = 'High Outliers', cex.main = 2)
+plot(Counties[Counties$STATEFP %in% c(42,36,54,24,21,51),], border = 'grey', add=TRUE)
 plot(NY, lwd = 2, add=TRUE)
 plot(PA, lwd = 2, add=TRUE)
 plot(WV, lwd = 2, add=TRUE)
 plot(MD, lwd = 2, add=TRUE)
 plot(KY, lwd = 2, add=TRUE)
 plot(VA, lwd = 2, add=TRUE)
-plot(Counties[Counties$STATEFP %in% c(42,36,54,24,21,51),], border = 'grey', add=TRUE)
 plot(NotOutliersWGS[NotOutliersWGS$out_loc_error == 0,], pch = 16, cex = 0.2, add = TRUE)
 plot(NotOutliersWGS[NotOutliersWGS$out_loc_error == 1,], pch = 17, col = 'purple', cex = 0.4, add = TRUE)
 plot(OutliersWGS[OutliersWGS$out_loc_hi == 1,], pch = 16, col = colFun(OutliersWGS$Qs[OutliersWGS$out_loc_hi == 1]), cex = 0.7, add = TRUE)
@@ -2693,6 +2969,99 @@ degAxis(side = 3, seq(-70, -86, -1), labels = FALSE)
 degAxis(side = 1, seq(-70, -86, -1), labels = FALSE)
 legend('topleft', title = expression(paste('Q'[s], ' (mW/m'^2, ')')), legend = c('< 30', '30 - 50', '50 - 70', '70 - 90', '>= 90', 'Not Tested', 'Not Outlier'), col = c(colFun(c(20,40,60,80,100)), 'purple', 'black'), pch = c(16,16,16,16,16,17,16))
 dev.off()
+
+png('LoHiOuts_Map_NoDevNY.png', res = 1200, units = 'in', width = 14, height = 7)
+layout(cbind(1,2))
+par(xaxs = 'i', yaxs = 'i', mar = c(2,3,3,1))
+plot(WellsDeepWGS_NoDevNY, col = 'white', pch = 16, cex = 0.2, main = 'Low Outliers', cex.main = 2)
+plot(Counties[Counties$STATEFP %in% c(42,36,54,24,21,51),], border = 'grey', add=TRUE)
+plot(NY, lwd = 2, add=TRUE)
+plot(PA, lwd = 2, add=TRUE)
+plot(WV, lwd = 2, add=TRUE)
+plot(MD, lwd = 2, add=TRUE)
+plot(KY, lwd = 2, add=TRUE)
+plot(VA, lwd = 2, add=TRUE)
+plot(NotOutliersWGS_NoDevNY[NotOutliersWGS_NoDevNY$out_loc_error == 0,], pch = 16, cex = 0.2, add = TRUE)
+plot(NotOutliersWGS_NoDevNY[NotOutliersWGS_NoDevNY$out_loc_error == 1,], pch = 17, col = 'purple', cex = 0.4, add = TRUE)
+plot(OutliersWGS_NoDevNY[OutliersWGS_NoDevNY$out_loc_lo == 1,], pch = 16, col = colFun(OutliersWGS_NoDevNY$Qs[OutliersWGS_NoDevNY$out_loc_lo == 1]), cex = 0.7, add = TRUE)
+box()
+north.arrow(-75, 37.5, 0.1, lab = 'N', col='black', cex = 1.5)
+degAxis(side = 2, seq(34, 46, 2), cex.axis = 1.5)
+degAxis(side = 2, seq(34, 46, 1), labels = FALSE)
+degAxis(side = 4, seq(34, 46, 1), labels = FALSE)
+degAxis(side = 1, seq(-70, -86, -2), cex.axis = 1.5)
+degAxis(side = 3, seq(-70, -86, -1), labels = FALSE)
+degAxis(side = 1, seq(-70, -86, -1), labels = FALSE)
+legend('topleft', title = expression(paste('Q'[s], ' (mW/m'^2, ')')), legend = c('< 30', '30 - 50', '50 - 70', '70 - 90', '>= 90', 'Not Tested', 'Not Outlier'), col = c(colFun(c(20,40,60,80,100)), 'purple', 'black'), pch = c(16,16,16,16,16,17,16))
+
+par(xaxs = 'i', yaxs = 'i', mar = c(2,3,3,1))
+plot(WellsDeepWGS_NoDevNY, col = 'white', pch = 16, cex = 0.2, main = 'High Outliers', cex.main = 2)
+plot(Counties[Counties$STATEFP %in% c(42,36,54,24,21,51),], border = 'grey', add=TRUE)
+plot(NY, lwd = 2, add=TRUE)
+plot(PA, lwd = 2, add=TRUE)
+plot(WV, lwd = 2, add=TRUE)
+plot(MD, lwd = 2, add=TRUE)
+plot(KY, lwd = 2, add=TRUE)
+plot(VA, lwd = 2, add=TRUE)
+plot(NotOutliersWGS_NoDevNY[NotOutliersWGS_NoDevNY$out_loc_error == 0,], pch = 16, cex = 0.2, add = TRUE)
+plot(NotOutliersWGS_NoDevNY[NotOutliersWGS_NoDevNY$out_loc_error == 1,], pch = 17, col = 'purple', cex = 0.4, add = TRUE)
+plot(OutliersWGS_NoDevNY[OutliersWGS_NoDevNY$out_loc_hi == 1,], pch = 16, col = colFun(OutliersWGS_NoDevNY$Qs[OutliersWGS_NoDevNY$out_loc_hi == 1]), cex = 0.7, add = TRUE)
+box()
+north.arrow(-75, 37.5, 0.1, lab = 'N', col='black', cex = 1.5)
+degAxis(side = 2, seq(34, 46, 1), labels = FALSE)
+degAxis(side = 4, seq(34, 46, 1), labels = FALSE)
+degAxis(side = 1, seq(-70, -86, -2), cex.axis = 1.5)
+degAxis(side = 3, seq(-70, -86, -1), labels = FALSE)
+degAxis(side = 1, seq(-70, -86, -1), labels = FALSE)
+legend('topleft', title = expression(paste('Q'[s], ' (mW/m'^2, ')')), legend = c('< 30', '30 - 50', '50 - 70', '70 - 90', '>= 90', 'Not Tested', 'Not Outlier'), col = c(colFun(c(20,40,60,80,100)), 'purple', 'black'), pch = c(16,16,16,16,16,17,16))
+dev.off()
+
+png('LoHiOuts_Map_RmOps.png', res = 1200, units = 'in', width = 14, height = 7)
+layout(cbind(1,2))
+par(xaxs = 'i', yaxs = 'i', mar = c(2,3,3,1))
+plot(WellsDeepWGS_RmOps, col = 'white', pch = 16, cex = 0.2, main = 'Low Outliers', cex.main = 2)
+plot(Counties[Counties$STATEFP %in% c(42,36,54,24,21,51),], border = 'grey', add=TRUE)
+plot(NY, lwd = 2, add=TRUE)
+plot(PA, lwd = 2, add=TRUE)
+plot(WV, lwd = 2, add=TRUE)
+plot(MD, lwd = 2, add=TRUE)
+plot(KY, lwd = 2, add=TRUE)
+plot(VA, lwd = 2, add=TRUE)
+plot(NotOutliersWGS_RmOps[NotOutliersWGS_RmOps$out_loc_error == 0,], pch = 16, cex = 0.2, add = TRUE)
+plot(NotOutliersWGS_RmOps[NotOutliersWGS_RmOps$out_loc_error == 1,], pch = 17, col = 'purple', cex = 0.4, add = TRUE)
+plot(OutliersWGS_RmOps[OutliersWGS_RmOps$out_loc_lo == 1,], pch = 16, col = colFun(OutliersWGS_RmOps$Qs[OutliersWGS_RmOps$out_loc_lo == 1]), cex = 0.7, add = TRUE)
+box()
+north.arrow(-75, 37.5, 0.1, lab = 'N', col='black', cex = 1.5)
+degAxis(side = 2, seq(34, 46, 2), cex.axis = 1.5)
+degAxis(side = 2, seq(34, 46, 1), labels = FALSE)
+degAxis(side = 4, seq(34, 46, 1), labels = FALSE)
+degAxis(side = 1, seq(-70, -86, -2), cex.axis = 1.5)
+degAxis(side = 3, seq(-70, -86, -1), labels = FALSE)
+degAxis(side = 1, seq(-70, -86, -1), labels = FALSE)
+legend('topleft', title = expression(paste('Q'[s], ' (mW/m'^2, ')')), legend = c('< 30', '30 - 50', '50 - 70', '70 - 90', '>= 90', 'Not Tested', 'Not Outlier'), col = c(colFun(c(20,40,60,80,100)), 'purple', 'black'), pch = c(16,16,16,16,16,17,16))
+
+par(xaxs = 'i', yaxs = 'i', mar = c(2,3,3,1))
+plot(WellsDeepWGS_RmOps, col = 'white', pch = 16, cex = 0.2, main = 'High Outliers', cex.main = 2)
+plot(Counties[Counties$STATEFP %in% c(42,36,54,24,21,51),], border = 'grey', add=TRUE)
+plot(NY, lwd = 2, add=TRUE)
+plot(PA, lwd = 2, add=TRUE)
+plot(WV, lwd = 2, add=TRUE)
+plot(MD, lwd = 2, add=TRUE)
+plot(KY, lwd = 2, add=TRUE)
+plot(VA, lwd = 2, add=TRUE)
+plot(NotOutliersWGS_RmOps[NotOutliersWGS_RmOps$out_loc_error == 0,], pch = 16, cex = 0.2, add = TRUE)
+plot(NotOutliersWGS_RmOps[NotOutliersWGS_RmOps$out_loc_error == 1,], pch = 17, col = 'purple', cex = 0.4, add = TRUE)
+plot(OutliersWGS_RmOps[OutliersWGS_RmOps$out_loc_hi == 1,], pch = 16, col = colFun(OutliersWGS_RmOps$Qs[OutliersWGS_RmOps$out_loc_hi == 1]), cex = 0.7, add = TRUE)
+box()
+north.arrow(-75, 37.5, 0.1, lab = 'N', col='black', cex = 1.5)
+degAxis(side = 2, seq(34, 46, 1), labels = FALSE)
+degAxis(side = 4, seq(34, 46, 1), labels = FALSE)
+degAxis(side = 1, seq(-70, -86, -2), cex.axis = 1.5)
+degAxis(side = 3, seq(-70, -86, -1), labels = FALSE)
+degAxis(side = 1, seq(-70, -86, -1), labels = FALSE)
+legend('topleft', title = expression(paste('Q'[s], ' (mW/m'^2, ')')), legend = c('< 30', '30 - 50', '50 - 70', '70 - 90', '>= 90', 'Not Tested', 'Not Outlier'), col = c(colFun(c(20,40,60,80,100)), 'purple', 'black'), pch = c(16,16,16,16,16,17,16))
+dev.off()
+
 
 #   Map of the depth ranks of outliers ----
 scaleRange = c(1,25)
@@ -2712,7 +3081,7 @@ minor.tick(nx = 5, ny = 1, tick.ratio = 0.5)
 #Map Low
 par(mar=c(2,2,1,1))
 plot(Outs, col = 'white')
-plot(Counties[which(Counties$STATEFP == 42 | Counties$STATEFP == 36 | Counties$STATEFP == 54 | Counties$STATEFP == 51| Counties$STATEFP == 24| Counties$STATEFP == 21),], lwd = 1, add = TRUE)
+plot(Counties[which(Counties$STATEFP == 42 | Counties$STATEFP == 36 | Counties$STATEFP == 54 | Counties$STATEFP == 51| Counties$STATEFP == 24| Counties$STATEFP == 21),], lwd = 1, add = TRUE, border = 'grey')
 plot(NY, lwd = 2, add=TRUE)
 plot(PA, lwd = 2, add=TRUE)
 plot(WV, lwd = 2, add=TRUE)
@@ -2734,7 +3103,7 @@ degAxis(side = 1, seq(-70, -86, -1), labels = FALSE)
 legend('topleft', title = 'Depth Rank', legend = c('1 - 5', '6 - 10', '11 - 15', '16 - 20', '21 - 25'), pch = 16, cex = 1.5, col = colFun(c(1, 7, 12, 17, 22)), bty = 'n')
 #Map High
 plot(Outs, col = 'white')
-plot(Counties[which(Counties$STATEFP == 42 | Counties$STATEFP == 36 | Counties$STATEFP == 54 | Counties$STATEFP == 51| Counties$STATEFP == 24| Counties$STATEFP == 21),], lwd = 1, add = TRUE)
+plot(Counties[which(Counties$STATEFP == 42 | Counties$STATEFP == 36 | Counties$STATEFP == 54 | Counties$STATEFP == 51| Counties$STATEFP == 24| Counties$STATEFP == 21),], lwd = 1, add = TRUE, border = 'grey')
 plot(NY, lwd = 2, add=TRUE)
 plot(PA, lwd = 2, add=TRUE)
 plot(WV, lwd = 2, add=TRUE)
@@ -2756,16 +3125,139 @@ degAxis(side = 1, seq(-70, -86, -1), labels = FALSE)
 legend('topleft', title = 'Depth Rank', legend = c('1 - 5', '6 - 10', '11 - 15', '16 - 20', '21 - 25'), pch = 16, cex = 1.5, col = colFun(c(1, 7, 12, 17, 22)), bty = 'n')
 dev.off()
 
+png("OutlierRankMap_Counties_RmOps.png", width=8, height=8, units="in", res=600)
+layout(sets)
+par(mar=c(4.5,4.5,2,1))
+par(xaxs = 'i', yaxs = 'i')
+hist(OutliersWGS_RmOps$out_loc_drank[which(OutliersWGS_RmOps$out_loc_lo == 1)]*25, breaks = seq(0,25,1), main = 'Low Outliers', xlab = 'Depth Rank', cex.lab = 1.5, cex.main=1.5, cex.axis = 1.5)
+minor.tick(nx = 5, ny = 1, tick.ratio = 0.5)
+hist(OutliersWGS_RmOps$out_loc_drank[which(OutliersWGS_RmOps$out_loc_lo == 0)]*25, breaks = seq(0,25,1), main = 'High Outliers', xlab = 'Depth Rank', cex.lab = 1.5, cex.main=1.5, cex.axis = 1.5)
+minor.tick(nx = 5, ny = 1, tick.ratio = 0.5)
+#Map Low
+par(mar=c(2,2,1,1))
+plot(OutliersWGS_RmOps, col = 'white')
+plot(Counties[which(Counties$STATEFP == 42 | Counties$STATEFP == 36 | Counties$STATEFP == 54 | Counties$STATEFP == 51| Counties$STATEFP == 24| Counties$STATEFP == 21),], lwd = 1, add = TRUE, border = 'grey')
+plot(NY, lwd = 2, add=TRUE)
+plot(PA, lwd = 2, add=TRUE)
+plot(WV, lwd = 2, add=TRUE)
+plot(MD, lwd = 2, add=TRUE)
+plot(KY, lwd = 2, add=TRUE)
+plot(VA, lwd = 2, add=TRUE)
+#plot(NoOuts, pch = 16, add = TRUE, cex=0.5)
+plot(OutliersWGS_RmOps[which(OutliersWGS_RmOps$out_loc_lo == 1),][order(OutliersWGS_RmOps$WellDepth[which(OutliersWGS_RmOps$out_loc_lo == 1)], decreasing = TRUE), ],
+     pch = 16, 
+     col = colFun(OutliersWGS_RmOps[which(OutliersWGS_RmOps$out_loc_lo == 1),][order(OutliersWGS_RmOps$WellDepth[which(OutliersWGS_RmOps$out_loc_lo == 1)], decreasing = TRUE), ]$out_loc_drank*25), 
+     cex = 0.5, add = TRUE)
+north.arrow(-83, 39.5, 0.1, lab = 'N', col='black', cex = 1.5)
+degAxis(side = 2, seq(34, 46, 2), cex.axis = 1.5)
+degAxis(side = 2, seq(34, 46, 1), labels = FALSE)
+degAxis(side = 4, seq(34, 46, 1), labels = FALSE)
+degAxis(side = 1, seq(-70, -86, -2), cex.axis = 1.5)
+degAxis(side = 3, seq(-70, -86, -1), labels = FALSE)
+degAxis(side = 1, seq(-70, -86, -1), labels = FALSE)
+legend('topleft', title = 'Depth Rank', legend = c('1 - 5', '6 - 10', '11 - 15', '16 - 20', '21 - 25'), pch = 16, cex = 1.5, col = colFun(c(1, 7, 12, 17, 22)), bty = 'n')
+#Map High
+plot(OutliersWGS_RmOps, col = 'white')
+plot(Counties[which(Counties$STATEFP == 42 | Counties$STATEFP == 36 | Counties$STATEFP == 54 | Counties$STATEFP == 51| Counties$STATEFP == 24| Counties$STATEFP == 21),], lwd = 1, add = TRUE, border = 'grey')
+plot(NY, lwd = 2, add=TRUE)
+plot(PA, lwd = 2, add=TRUE)
+plot(WV, lwd = 2, add=TRUE)
+plot(MD, lwd = 2, add=TRUE)
+plot(KY, lwd = 2, add=TRUE)
+plot(VA, lwd = 2, add=TRUE)
+#plot(NoOuts, pch = 16, add = TRUE, cex=0.5)
+plot(OutliersWGS_RmOps[which(OutliersWGS_RmOps$out_loc_lo == 0),][order(OutliersWGS_RmOps$WellDepth[which(OutliersWGS_RmOps$out_loc_lo == 0)], decreasing = TRUE), ],
+     pch = 16, 
+     col = colFun(OutliersWGS_RmOps[which(OutliersWGS_RmOps$out_loc_lo == 0),][order(OutliersWGS_RmOps$WellDepth[which(OutliersWGS_RmOps$out_loc_lo == 0)], decreasing = TRUE), ]$out_loc_drank*25), 
+     cex = .5, add = TRUE)
+north.arrow(-83, 39.5, 0.1, lab = 'N', col='black', cex = 1.5)
+degAxis(side = 2, seq(34, 46, 2), cex.axis = 1.5)
+degAxis(side = 2, seq(34, 46, 1), labels = FALSE)
+degAxis(side = 4, seq(34, 46, 1), labels = FALSE)
+degAxis(side = 1, seq(-70, -86, -2), cex.axis = 1.5)
+degAxis(side = 3, seq(-70, -86, -1), labels = FALSE)
+degAxis(side = 1, seq(-70, -86, -1), labels = FALSE)
+legend('topleft', title = 'Depth Rank', legend = c('1 - 5', '6 - 10', '11 - 15', '16 - 20', '21 - 25'), pch = 16, cex = 1.5, col = colFun(c(1, 7, 12, 17, 22)), bty = 'n')
+dev.off()
+
+png("OutlierRankMap_Counties_NoDevNY.png", width=8, height=8, units="in", res=600)
+layout(sets)
+par(mar=c(4.5,4.5,2,1))
+par(xaxs = 'i', yaxs = 'i')
+hist(OutliersWGS_NoDevNY$out_loc_drank[which(OutliersWGS_NoDevNY$out_loc_lo == 1)]*25, breaks = seq(0,25,1), main = 'Low Outliers', xlab = 'Depth Rank', cex.lab = 1.5, cex.main=1.5, cex.axis = 1.5)
+minor.tick(nx = 5, ny = 1, tick.ratio = 0.5)
+hist(OutliersWGS_NoDevNY$out_loc_drank[which(OutliersWGS_NoDevNY$out_loc_lo == 0)]*25, breaks = seq(0,25,1), main = 'High Outliers', xlab = 'Depth Rank', cex.lab = 1.5, cex.main=1.5, cex.axis = 1.5)
+minor.tick(nx = 5, ny = 1, tick.ratio = 0.5)
+#Map Low
+par(mar=c(2,2,1,1))
+plot(OutliersWGS_NoDevNY, col = 'white')
+plot(Counties[which(Counties$STATEFP == 42 | Counties$STATEFP == 36 | Counties$STATEFP == 54 | Counties$STATEFP == 51| Counties$STATEFP == 24| Counties$STATEFP == 21),], lwd = 1, add = TRUE, border = 'grey')
+plot(NY, lwd = 2, add=TRUE)
+plot(PA, lwd = 2, add=TRUE)
+plot(WV, lwd = 2, add=TRUE)
+plot(MD, lwd = 2, add=TRUE)
+plot(KY, lwd = 2, add=TRUE)
+plot(VA, lwd = 2, add=TRUE)
+#plot(NoOuts, pch = 16, add = TRUE, cex=0.5)
+plot(OutliersWGS_NoDevNY[which(OutliersWGS_NoDevNY$out_loc_lo == 1),][order(OutliersWGS_NoDevNY$WellDepth[which(OutliersWGS_NoDevNY$out_loc_lo == 1)], decreasing = TRUE), ],
+     pch = 16, 
+     col = colFun(OutliersWGS_NoDevNY[which(OutliersWGS_NoDevNY$out_loc_lo == 1),][order(OutliersWGS_NoDevNY$WellDepth[which(OutliersWGS_NoDevNY$out_loc_lo == 1)], decreasing = TRUE), ]$out_loc_drank*25), 
+     cex = 0.5, add = TRUE)
+north.arrow(-83, 39.5, 0.1, lab = 'N', col='black', cex = 1.5)
+degAxis(side = 2, seq(34, 46, 2), cex.axis = 1.5)
+degAxis(side = 2, seq(34, 46, 1), labels = FALSE)
+degAxis(side = 4, seq(34, 46, 1), labels = FALSE)
+degAxis(side = 1, seq(-70, -86, -2), cex.axis = 1.5)
+degAxis(side = 3, seq(-70, -86, -1), labels = FALSE)
+degAxis(side = 1, seq(-70, -86, -1), labels = FALSE)
+legend('topleft', title = 'Depth Rank', legend = c('1 - 5', '6 - 10', '11 - 15', '16 - 20', '21 - 25'), pch = 16, cex = 1.5, col = colFun(c(1, 7, 12, 17, 22)), bty = 'n')
+#Map High
+plot(OutliersWGS_NoDevNY, col = 'white')
+plot(Counties[which(Counties$STATEFP == 42 | Counties$STATEFP == 36 | Counties$STATEFP == 54 | Counties$STATEFP == 51| Counties$STATEFP == 24| Counties$STATEFP == 21),], lwd = 1, add = TRUE, border = 'grey')
+plot(NY, lwd = 2, add=TRUE)
+plot(PA, lwd = 2, add=TRUE)
+plot(WV, lwd = 2, add=TRUE)
+plot(MD, lwd = 2, add=TRUE)
+plot(KY, lwd = 2, add=TRUE)
+plot(VA, lwd = 2, add=TRUE)
+#plot(NoOuts, pch = 16, add = TRUE, cex=0.5)
+plot(OutliersWGS_NoDevNY[which(OutliersWGS_NoDevNY$out_loc_lo == 0),][order(OutliersWGS_NoDevNY$WellDepth[which(OutliersWGS_NoDevNY$out_loc_lo == 0)], decreasing = TRUE), ],
+     pch = 16, 
+     col = colFun(OutliersWGS_NoDevNY[which(OutliersWGS_NoDevNY$out_loc_lo == 0),][order(OutliersWGS_NoDevNY$WellDepth[which(OutliersWGS_NoDevNY$out_loc_lo == 0)], decreasing = TRUE), ]$out_loc_drank*25), 
+     cex = .5, add = TRUE)
+north.arrow(-83, 39.5, 0.1, lab = 'N', col='black', cex = 1.5)
+degAxis(side = 2, seq(34, 46, 2), cex.axis = 1.5)
+degAxis(side = 2, seq(34, 46, 1), labels = FALSE)
+degAxis(side = 4, seq(34, 46, 1), labels = FALSE)
+degAxis(side = 1, seq(-70, -86, -2), cex.axis = 1.5)
+degAxis(side = 3, seq(-70, -86, -1), labels = FALSE)
+degAxis(side = 1, seq(-70, -86, -1), labels = FALSE)
+legend('topleft', title = 'Depth Rank', legend = c('1 - 5', '6 - 10', '11 - 15', '16 - 20', '21 - 25'), pch = 16, cex = 1.5, col = colFun(c(1, 7, 12, 17, 22)), bty = 'n')
+dev.off()
+
+
 #   Depth Rank Empircal CDFs and KS Test ----
 png('LowOutliers_wUniform.png', res = 300, units = 'in', width = 6, height = 6)
 hist(Outs$out_loc_drank[which(Outs$out_loc_lo == 1)]*25, breaks = seq(0,25,1), main = 'Low Outliers Depth Rank', xlab = 'Depth Rank', cex.lab = 1.5, cex.main=2, cex.axis = 1.5, ylim = c(0,35))
 lines(c(0,25), c(length(Outs$out_loc_drank[which(Outs$out_loc_lo == 1)])/25,length(Outs$out_loc_drank[which(Outs$out_loc_lo == 1)])/25), lwd = 2, col='blue')
 dev.off()
 
+hist(OutliersWGS_RmOps$out_loc_drank[which(OutliersWGS_RmOps$out_loc_lo == 1)]*25, breaks = seq(0,25,1), main = 'Low Outliers Depth Rank', xlab = 'Depth Rank', cex.lab = 1.5, cex.main=2, cex.axis = 1.5, ylim = c(0,35))
+lines(c(0,25), c(length(OutliersWGS_RmOps$out_loc_drank[which(OutliersWGS_RmOps$out_loc_lo == 1)])/25,length(OutliersWGS_RmOps$out_loc_drank[which(OutliersWGS_RmOps$out_loc_lo == 1)])/25), lwd = 2, col='blue')
+
+hist(OutliersWGS_NoDevNY$out_loc_drank[which(OutliersWGS_NoDevNY$out_loc_lo == 1)]*25, breaks = seq(0,25,1), main = 'Low Outliers Depth Rank', xlab = 'Depth Rank', cex.lab = 1.5, cex.main=2, cex.axis = 1.5, ylim = c(0,35))
+lines(c(0,25), c(length(OutliersWGS_NoDevNY$out_loc_drank[which(OutliersWGS_NoDevNY$out_loc_lo == 1)])/25,length(OutliersWGS_NoDevNY$out_loc_drank[which(OutliersWGS_NoDevNY$out_loc_lo == 1)])/25), lwd = 2, col='blue')
+
 png('HighOutliers_wUniform.png', res = 300, units = 'in', width = 6, height = 6)
 hist(Outs$out_loc_drank[which(Outs$out_loc_lo == 0)]*25, breaks = seq(0,25,1), main = 'High Outliers Depth Rank', xlab = 'Depth Rank', cex.lab = 1.5, cex.main=2, cex.axis = 1.5, ylim = c(0,35))
 lines(c(0,25), c(length(Outs$out_loc_drank[which(Outs$out_loc_lo == 0)])/25,length(Outs$out_loc_drank[which(Outs$out_loc_lo == 0)])/25), lwd = 2, col='red')
 dev.off()
+
+hist(OutliersWGS_RmOps$out_loc_drank[which(OutliersWGS_RmOps$out_loc_lo == 0)]*25, breaks = seq(0,25,1), main = 'High Outliers Depth Rank', xlab = 'Depth Rank', cex.lab = 1.5, cex.main=2, cex.axis = 1.5, ylim = c(0,35))
+lines(c(0,25), c(length(OutliersWGS_RmOps$out_loc_drank[which(OutliersWGS_RmOps$out_loc_lo == 0)])/25,length(OutliersWGS_RmOps$out_loc_drank[which(OutliersWGS_RmOps$out_loc_lo == 0)])/25), lwd = 2, col='red')
+
+hist(OutliersWGS_NoDevNY$out_loc_drank[which(OutliersWGS_NoDevNY$out_loc_lo == 0)]*25, breaks = seq(0,25,1), main = 'High Outliers Depth Rank', xlab = 'Depth Rank', cex.lab = 1.5, cex.main=2, cex.axis = 1.5, ylim = c(0,35))
+lines(c(0,25), c(length(OutliersWGS_NoDevNY$out_loc_drank[which(OutliersWGS_NoDevNY$out_loc_lo == 0)])/25,length(OutliersWGS_NoDevNY$out_loc_drank[which(OutliersWGS_NoDevNY$out_loc_lo == 0)])/25), lwd = 2, col='red')
 
 hist(Outs$out_loc_drank*25, breaks = seq(0,25,1), main = 'All Outliers Depth Rank', xlab = 'Depth Rank', cex.lab = 1.5, cex.main=2, cex.axis = 1.5)
 
@@ -2919,7 +3411,7 @@ boxplot(Outs$out_loc_rmrank[which(Outs$out_loc_lo == 1)] ~ as.factor(Outs$out_lo
 boxplot(Outs$out_loc_rmrank[which(Outs$out_loc_lo == 0)] ~ as.factor(Outs$out_loc_drank[which(Outs$out_loc_lo == 0)]*25), cex.axis = 1.5, cex.main = 2)
 
 #Fixme: Are any ranks clustered more than would be expected under a random process?
-
+#Could also check spatial correlation of the ranks
 
 # Make panel plot of depth horizons with low and high outliers colored in, as well as missing datapoints
 sets = rbind(c(1,2,3,4),c(5,6,7,8))
@@ -3112,7 +3604,6 @@ text(x = -81.2, y = 43.2, '3000 - 6600 m', cex = 2)
 legend('topleft', title = ' ', legend = c('Not Outlier', 'Low Outlier', 'High Outlier', 'Not Tested'), pch = c(16,16,16,17), cex = 1.3, col = c('black','blue', 'red', 'purple'), bty = 'n')
 dev.off()
 
-
 #Plot outliers in the depth range from 2 - 2.4 km
 plot(NoOuts_max2k[which(NoOuts_max2k$WellDepth >= 2000 & NoOuts_max2k$WellDepth < 2400 & NoOuts_max2k$out_loc_error == 0),], pch = 16)
 plot(Outs_max2k[which(Outs_max2k$WellDepth >= 2000 & Outs_max2k$WellDepth < 2400 & Outs_max2k$out_loc_lo == 1),], pch = 16, add = TRUE, col = 'blue')
@@ -3123,7 +3614,7 @@ plot(PA, lwd = 2, add = TRUE)
 plot(WV, lwd = 2, add = TRUE)
 plot(Counties, add = TRUE)
 
-# Test Spatial Patterns in Outliers - by Depth
+# Test Spatial Patterns in Outliers - by Depth. Doesn't seem useful.
 # scaleRange = c(750,4200)
 # scaleBy = 690
 # Pal = colPal((scaleRange[2] - scaleRange[1])/scaleBy + 1)
@@ -3136,117 +3627,386 @@ plot(Counties, add = TRUE)
 # plot(KY, lwd = 2, add=TRUE)
 # plot(VA, lwd = 2, add=TRUE)
 
+png('OutsByDepth_Panels_RmOps.png', res = 300, height = 8, width = 16, units = 'in')
+layout(sets)
+par(xaxs = 'i', yaxs = 'i', mar = c(2,2.5,1,1))
+#Data from 750 - 1000 - 4 low outliers that are not clustered. Not problematic.
+plot(AllData, col = 'white')
+plot(Counties[which(Counties$STATEFP == 42 | Counties$STATEFP == 36 | Counties$STATEFP == 54 | Counties$STATEFP == 51| Counties$STATEFP == 24| Counties$STATEFP == 21),], lwd = 1, add = TRUE, border='grey')
+plot(NY, add = TRUE, lwd = 2)
+plot(PA, add = TRUE, lwd = 2)
+plot(WV, add = TRUE, lwd = 2)
+plot(MD, lwd = 2, add=TRUE)
+plot(KY, lwd = 2, add=TRUE)
+plot(VA, lwd = 2, add=TRUE)
+plot(NotOutliersWGS_RmOps[which(NotOutliersWGS_RmOps$WellDepth >= 750 & NotOutliersWGS_RmOps$WellDepth < 1000 & NotOutliersWGS_RmOps$out_loc_error == 0),], pch = 16, add = TRUE, cex = 0.7)
+plot(OutliersWGS_RmOps[which(OutliersWGS_RmOps$WellDepth >= 750 & OutliersWGS_RmOps$WellDepth < 1000 & OutliersWGS_RmOps$out_loc_lo == 1),], pch = 16, add = TRUE, col = 'blue', cex = 0.7)
+plot(OutliersWGS_RmOps[which(OutliersWGS_RmOps$WellDepth >= 750 & OutliersWGS_RmOps$WellDepth < 1000 & OutliersWGS_RmOps$out_loc_lo == 0),], pch = 16, add = TRUE, col = 'red', cex = 0.7)
+plot(NotOutliersWGS_RmOps[which(NotOutliersWGS_RmOps$WellDepth >= 750 & NotOutliersWGS_RmOps$WellDepth < 1000 & NotOutliersWGS_RmOps$out_loc_error == 1),], pch = 17, add = TRUE, col = 'purple', cex = 0.7)
+north.arrow(-75, 37.5, 0.1, lab = 'N', col='black', cex = 1.5)
+degAxis(side = 2, seq(34, 46, 2), cex.axis = 1.5)
+degAxis(side = 2, seq(34, 46, 1), labels = FALSE)
+degAxis(side = 4, seq(34, 46, 1), labels = FALSE)
+degAxis(side = 1, seq(-70, -86, -2), cex.axis = 1.5)
+degAxis(side = 3, seq(-70, -86, -1), labels = FALSE)
+degAxis(side = 1, seq(-70, -86, -1), labels = FALSE)
+text(x = -81.2, y = 43.2, '750 - 1000 m', cex = 2)
+legend('topleft', title = ' ', legend = c('Not Outlier', 'Low Outlier', 'High Outlier', 'Not Tested'), pch = c(16,16,16,17), cex = 1.3, col = c('black','blue', 'red', 'purple'), bty = 'n')
+
+#Data from 1000 - 1200
+plot(AllData, col = 'white')
+plot(Counties[which(Counties$STATEFP == 42 | Counties$STATEFP == 36 | Counties$STATEFP == 54 | Counties$STATEFP == 51| Counties$STATEFP == 24| Counties$STATEFP == 21),], lwd = 1, add = TRUE, border = 'grey')
+plot(NY, add = TRUE, lwd = 2)
+plot(PA, add = TRUE, lwd = 2)
+plot(WV, add = TRUE, lwd = 2)
+plot(MD, lwd = 2, add=TRUE)
+plot(KY, lwd = 2, add=TRUE)
+plot(VA, lwd = 2, add=TRUE)
+plot(NotOutliersWGS_RmOps[which(NotOutliersWGS_RmOps$WellDepth >= 1000 & NotOutliersWGS_RmOps$WellDepth < 1200 & NotOutliersWGS_RmOps$out_loc_error == 0),], pch = 16, add = TRUE, cex = 0.7)
+plot(OutliersWGS_RmOps[which(OutliersWGS_RmOps$WellDepth >= 1000 & OutliersWGS_RmOps$WellDepth < 1200 & OutliersWGS_RmOps$out_loc_lo == 1),], pch = 16, add = TRUE, col = 'blue', cex = 0.7)
+plot(OutliersWGS_RmOps[which(OutliersWGS_RmOps$WellDepth >= 1000 & OutliersWGS_RmOps$WellDepth < 1200 & OutliersWGS_RmOps$out_loc_lo == 0),], pch = 16, add = TRUE, col = 'red', cex = 0.7)
+plot(NotOutliersWGS_RmOps[which(NotOutliersWGS_RmOps$WellDepth >= 1000 & NotOutliersWGS_RmOps$WellDepth < 1200 & NotOutliersWGS_RmOps$out_loc_error == 1),], pch = 17, add = TRUE, col = 'purple', cex = 0.7)
+north.arrow(-75, 37.5, 0.1, lab = 'N', col='black', cex = 1.5)
+degAxis(side = 2, seq(34, 46, 2), cex.axis = 1.5)
+degAxis(side = 2, seq(34, 46, 1), labels = FALSE)
+degAxis(side = 4, seq(34, 46, 1), labels = FALSE)
+degAxis(side = 1, seq(-70, -86, -2), cex.axis = 1.5)
+degAxis(side = 3, seq(-70, -86, -1), labels = FALSE)
+degAxis(side = 1, seq(-70, -86, -1), labels = FALSE)
+text(x = -81.2, y = 43.2, '1000 - 1200 m', cex = 2)
+legend('topleft', title = ' ', legend = c('Not Outlier', 'Low Outlier', 'High Outlier', 'Not Tested'), pch = c(16,16,16,17), cex = 1.3, col = c('black','blue', 'red', 'purple'), bty = 'n')
+
+#Data from 1200 - 1400
+plot(AllData, col = 'white')
+plot(Counties[which(Counties$STATEFP == 42 | Counties$STATEFP == 36 | Counties$STATEFP == 54 | Counties$STATEFP == 51| Counties$STATEFP == 24| Counties$STATEFP == 21),], lwd = 1, add = TRUE, border = 'grey')
+plot(NY, add = TRUE, lwd = 2)
+plot(PA, add = TRUE, lwd = 2)
+plot(WV, add = TRUE, lwd = 2)
+plot(MD, lwd = 2, add=TRUE)
+plot(KY, lwd = 2, add=TRUE)
+plot(VA, lwd = 2, add=TRUE)
+plot(NotOutliersWGS_RmOps[which(NotOutliersWGS_RmOps$WellDepth >= 1200 & NotOutliersWGS_RmOps$WellDepth < 1400 & NotOutliersWGS_RmOps$out_loc_error == 0),], pch = 16, add = TRUE, cex = 0.7)
+plot(OutliersWGS_RmOps[which(OutliersWGS_RmOps$WellDepth >= 1200 & OutliersWGS_RmOps$WellDepth < 1400 & OutliersWGS_RmOps$out_loc_lo == 1),], pch = 16, add = TRUE, col = 'blue', cex = 0.7)
+plot(OutliersWGS_RmOps[which(OutliersWGS_RmOps$WellDepth >= 1200 & OutliersWGS_RmOps$WellDepth < 1400 & OutliersWGS_RmOps$out_loc_lo == 0),], pch = 16, add = TRUE, col = 'red', cex = 0.7)
+plot(NotOutliersWGS_RmOps[which(NotOutliersWGS_RmOps$WellDepth >= 1200 & NotOutliersWGS_RmOps$WellDepth < 1400 & NotOutliersWGS_RmOps$out_loc_error == 1),], pch = 17, add = TRUE, col = 'purple', cex = 0.7)
+north.arrow(-75, 37.5, 0.1, lab = 'N', col='black', cex = 1.5)
+degAxis(side = 2, seq(34, 46, 2), cex.axis = 1.5)
+degAxis(side = 2, seq(34, 46, 1), labels = FALSE)
+degAxis(side = 4, seq(34, 46, 1), labels = FALSE)
+degAxis(side = 1, seq(-70, -86, -2), cex.axis = 1.5)
+degAxis(side = 3, seq(-70, -86, -1), labels = FALSE)
+degAxis(side = 1, seq(-70, -86, -1), labels = FALSE)
+text(x = -81.2, y = 43.2, '1200 - 1400 m', cex = 2)
+legend('topleft', title = ' ', legend = c('Not Outlier', 'Low Outlier', 'High Outlier', 'Not Tested'), pch = c(16,16,16,17), cex = 1.3, col = c('black','blue', 'red', 'purple'), bty = 'n')
+
+#Data from 1400 - 1600
+plot(AllData, col = 'white')
+plot(Counties[which(Counties$STATEFP == 42 | Counties$STATEFP == 36 | Counties$STATEFP == 54 | Counties$STATEFP == 51| Counties$STATEFP == 24| Counties$STATEFP == 21),], lwd = 1, add = TRUE, border = 'grey')
+plot(NY, add = TRUE, lwd = 2)
+plot(PA, add = TRUE, lwd = 2)
+plot(WV, add = TRUE, lwd = 2)
+plot(MD, lwd = 2, add=TRUE)
+plot(KY, lwd = 2, add=TRUE)
+plot(VA, lwd = 2, add=TRUE)
+plot(NotOutliersWGS_RmOps[which(NotOutliersWGS_RmOps$WellDepth >= 1400 & NotOutliersWGS_RmOps$WellDepth < 1600 & NotOutliersWGS_RmOps$out_loc_error == 0),], pch = 16, add = TRUE, cex = 0.7)
+plot(OutliersWGS_RmOps[which(OutliersWGS_RmOps$WellDepth >= 1400 & OutliersWGS_RmOps$WellDepth < 1600 & OutliersWGS_RmOps$out_loc_lo == 1),], pch = 16, add = TRUE, col = 'blue', cex = 0.7)
+plot(OutliersWGS_RmOps[which(OutliersWGS_RmOps$WellDepth >= 1400 & OutliersWGS_RmOps$WellDepth < 1600 & OutliersWGS_RmOps$out_loc_lo == 0),], pch = 16, add = TRUE, col = 'red', cex = 0.7)
+plot(NotOutliersWGS_RmOps[which(NotOutliersWGS_RmOps$WellDepth >= 1400 & NotOutliersWGS_RmOps$WellDepth < 1600 & NotOutliersWGS_RmOps$out_loc_error == 1),], pch = 17, add = TRUE, col = 'purple', cex = 0.7)
+north.arrow(-75, 37.5, 0.1, lab = 'N', col='black', cex = 1.5)
+degAxis(side = 2, seq(34, 46, 2), cex.axis = 1.5)
+degAxis(side = 2, seq(34, 46, 1), labels = FALSE)
+degAxis(side = 4, seq(34, 46, 1), labels = FALSE)
+degAxis(side = 1, seq(-70, -86, -2), cex.axis = 1.5)
+degAxis(side = 3, seq(-70, -86, -1), labels = FALSE)
+degAxis(side = 1, seq(-70, -86, -1), labels = FALSE)
+text(x = -81.2, y = 43.2, '1400 - 1600 m', cex = 2)
+legend('topleft', title = ' ', legend = c('Not Outlier', 'Low Outlier', 'High Outlier', 'Not Tested'), pch = c(16,16,16,17), cex = 1.3, col = c('black','blue', 'red', 'purple'), bty = 'n')
+
+#Data from 1600 - 2000
+plot(AllData, col = 'white')
+plot(Counties[which(Counties$STATEFP == 42 | Counties$STATEFP == 36 | Counties$STATEFP == 54 | Counties$STATEFP == 51| Counties$STATEFP == 24| Counties$STATEFP == 21),], lwd = 1, add = TRUE, border = 'grey')
+plot(NY, add = TRUE, lwd = 2)
+plot(PA, add = TRUE, lwd = 2)
+plot(WV, add = TRUE, lwd = 2)
+plot(MD, lwd = 2, add=TRUE)
+plot(KY, lwd = 2, add=TRUE)
+plot(VA, lwd = 2, add=TRUE)
+plot(NotOutliersWGS_RmOps[which(NotOutliersWGS_RmOps$WellDepth >= 1600 & NotOutliersWGS_RmOps$WellDepth < 2000 & NotOutliersWGS_RmOps$out_loc_error == 0),], pch = 16, add = TRUE, cex = 0.7)
+plot(OutliersWGS_RmOps[which(OutliersWGS_RmOps$WellDepth >= 1600 & OutliersWGS_RmOps$WellDepth < 2000 & OutliersWGS_RmOps$out_loc_lo == 1),], pch = 16, add = TRUE, col = 'blue', cex = 0.7)
+plot(OutliersWGS_RmOps[which(OutliersWGS_RmOps$WellDepth >= 1600 & OutliersWGS_RmOps$WellDepth < 2000 & OutliersWGS_RmOps$out_loc_lo == 0),], pch = 16, add = TRUE, col = 'red', cex = 0.7)
+plot(NotOutliersWGS_RmOps[which(NotOutliersWGS_RmOps$WellDepth >= 1600 & NotOutliersWGS_RmOps$WellDepth < 2000 & NotOutliersWGS_RmOps$out_loc_error == 1),], pch = 17, add = TRUE, col = 'purple', cex = 0.7)
+north.arrow(-75, 37.5, 0.1, lab = 'N', col='black', cex = 1.5)
+degAxis(side = 2, seq(34, 46, 2), cex.axis = 1.5)
+degAxis(side = 2, seq(34, 46, 1), labels = FALSE)
+degAxis(side = 4, seq(34, 46, 1), labels = FALSE)
+degAxis(side = 1, seq(-70, -86, -2), cex.axis = 1.5)
+degAxis(side = 3, seq(-70, -86, -1), labels = FALSE)
+degAxis(side = 1, seq(-70, -86, -1), labels = FALSE)
+text(x = -81.2, y = 43.2, '1600 - 2000 m', cex = 2)
+legend('topleft', title = ' ', legend = c('Not Outlier', 'Low Outlier', 'High Outlier', 'Not Tested'), pch = c(16,16,16,17), cex = 1.3, col = c('black','blue', 'red', 'purple'), bty = 'n')
+
+#Data from 2000 - 2400
+plot(AllData, col = 'white')
+plot(Counties[which(Counties$STATEFP == 42 | Counties$STATEFP == 36 | Counties$STATEFP == 54 | Counties$STATEFP == 51| Counties$STATEFP == 24| Counties$STATEFP == 21),], lwd = 1, add = TRUE, border = 'grey')
+plot(NY, add = TRUE, lwd = 2)
+plot(PA, add = TRUE, lwd = 2)
+plot(WV, add = TRUE, lwd = 2)
+plot(MD, lwd = 2, add=TRUE)
+plot(KY, lwd = 2, add=TRUE)
+plot(VA, lwd = 2, add=TRUE)
+plot(NotOutliersWGS_RmOps[which(NotOutliersWGS_RmOps$WellDepth >= 2000 & NotOutliersWGS_RmOps$WellDepth < 2400 & NotOutliersWGS_RmOps$out_loc_error == 0),], pch = 16, add = TRUE, cex = 0.7)
+plot(OutliersWGS_RmOps[which(OutliersWGS_RmOps$WellDepth >= 2000 & OutliersWGS_RmOps$WellDepth < 2400 & OutliersWGS_RmOps$out_loc_lo == 1),], pch = 16, add = TRUE, col = 'blue', cex = 0.7)
+plot(OutliersWGS_RmOps[which(OutliersWGS_RmOps$WellDepth >= 2000 & OutliersWGS_RmOps$WellDepth < 2400 & OutliersWGS_RmOps$out_loc_lo == 0),], pch = 16, add = TRUE, col = 'red', cex = 0.7)
+plot(NotOutliersWGS_RmOps[which(NotOutliersWGS_RmOps$WellDepth >= 2000 & NotOutliersWGS_RmOps$WellDepth < 2400 & NotOutliersWGS_RmOps$out_loc_error == 1),], pch = 17, add = TRUE, col = 'purple', cex = 0.7)
+north.arrow(-75, 37.5, 0.1, lab = 'N', col='black', cex = 1.5)
+degAxis(side = 2, seq(34, 46, 2), cex.axis = 1.5)
+degAxis(side = 2, seq(34, 46, 1), labels = FALSE)
+degAxis(side = 4, seq(34, 46, 1), labels = FALSE)
+degAxis(side = 1, seq(-70, -86, -2), cex.axis = 1.5)
+degAxis(side = 3, seq(-70, -86, -1), labels = FALSE)
+degAxis(side = 1, seq(-70, -86, -1), labels = FALSE)
+text(x = -81.2, y = 43.2, '2000 - 2400 m', cex = 2)
+legend('topleft', title = ' ', legend = c('Not Outlier', 'Low Outlier', 'High Outlier', 'Not Tested'), pch = c(16,16,16,17), cex = 1.3, col = c('black','blue', 'red', 'purple'), bty = 'n')
+
+#Data from 2400 - 3000
+plot(AllData, col = 'white')
+plot(Counties[which(Counties$STATEFP == 42 | Counties$STATEFP == 36 | Counties$STATEFP == 54 | Counties$STATEFP == 51| Counties$STATEFP == 24| Counties$STATEFP == 21),], lwd = 1, add = TRUE, border = 'grey')
+plot(NY, add = TRUE, lwd = 2)
+plot(PA, add = TRUE, lwd = 2)
+plot(WV, add = TRUE, lwd = 2)
+plot(MD, lwd = 2, add=TRUE)
+plot(KY, lwd = 2, add=TRUE)
+plot(VA, lwd = 2, add=TRUE)
+plot(NotOutliersWGS_RmOps[which(NotOutliersWGS_RmOps$WellDepth >= 2400 & NotOutliersWGS_RmOps$WellDepth < 3000 & NotOutliersWGS_RmOps$out_loc_error == 0),], pch = 16, add = TRUE, cex = 0.7)
+plot(OutliersWGS_RmOps[which(OutliersWGS_RmOps$WellDepth >= 2400 & OutliersWGS_RmOps$WellDepth < 3000 & OutliersWGS_RmOps$out_loc_lo == 1),], pch = 16, add = TRUE, col = 'blue', cex = 0.7)
+plot(OutliersWGS_RmOps[which(OutliersWGS_RmOps$WellDepth >= 2400 & OutliersWGS_RmOps$WellDepth < 3000 & OutliersWGS_RmOps$out_loc_lo == 0),], pch = 16, add = TRUE, col = 'red', cex = 0.7)
+plot(NotOutliersWGS_RmOps[which(NotOutliersWGS_RmOps$WellDepth >= 2400 & NotOutliersWGS_RmOps$WellDepth < 3000 & NotOutliersWGS_RmOps$out_loc_error == 1),], pch = 17, add = TRUE, col = 'purple', cex = 0.7)
+north.arrow(-75, 37.5, 0.1, lab = 'N', col='black', cex = 1.5)
+degAxis(side = 2, seq(34, 46, 2), cex.axis = 1.5)
+degAxis(side = 2, seq(34, 46, 1), labels = FALSE)
+degAxis(side = 4, seq(34, 46, 1), labels = FALSE)
+degAxis(side = 1, seq(-70, -86, -2), cex.axis = 1.5)
+degAxis(side = 3, seq(-70, -86, -1), labels = FALSE)
+degAxis(side = 1, seq(-70, -86, -1), labels = FALSE)
+text(x = -81.2, y = 43.2, '2400 - 3000 m', cex = 2)
+legend('topleft', title = ' ', legend = c('Not Outlier', 'Low Outlier', 'High Outlier', 'Not Tested'), pch = c(16,16,16,17), cex = 1.3, col = c('black','blue', 'red', 'purple'), bty = 'n')
+
+#Data deeper than 3000 m are 86% in New York (Not really clustered)
+nrow(AllData[which(AllData$WellDepth >= 3000 & AllData$WellDepth < 6600 & AllData$State == 'NY'),])/nrow(AllData[which(AllData$WellDepth >= 3000 & AllData$WellDepth < 6600),])
+plot(AllData, col = 'white')
+plot(Counties[which(Counties$STATEFP == 42 | Counties$STATEFP == 36 | Counties$STATEFP == 54 | Counties$STATEFP == 51| Counties$STATEFP == 24| Counties$STATEFP == 21),], lwd = 1, add = TRUE, border = 'grey')
+plot(NY, add = TRUE, lwd = 2)
+plot(PA, add = TRUE, lwd = 2)
+plot(WV, add = TRUE, lwd = 2)
+plot(MD, lwd = 2, add=TRUE)
+plot(KY, lwd = 2, add=TRUE)
+plot(VA, lwd = 2, add=TRUE)
+plot(NotOutliersWGS_RmOps[which(NotOutliersWGS_RmOps$WellDepth >= 3000 & NotOutliersWGS_RmOps$WellDepth < 6600 & NotOutliersWGS_RmOps$out_loc_error == 0),], pch = 16, add = TRUE, cex = 0.7)
+plot(OutliersWGS_RmOps[which(OutliersWGS_RmOps$WellDepth >= 3000 & OutliersWGS_RmOps$WellDepth < 6600 & OutliersWGS_RmOps$out_loc_lo == 1),], pch = 16, add = TRUE, col = 'blue', cex = 0.7)
+plot(OutliersWGS_RmOps[which(OutliersWGS_RmOps$WellDepth >= 3000 & OutliersWGS_RmOps$WellDepth < 6600 & OutliersWGS_RmOps$out_loc_lo == 0),], pch = 16, add = TRUE, col = 'red', cex = 0.7)
+plot(NotOutliersWGS_RmOps[which(NotOutliersWGS_RmOps$WellDepth >= 3000 & NotOutliersWGS_RmOps$WellDepth < 6600 & NotOutliersWGS_RmOps$out_loc_error == 1),], pch = 17, add = TRUE, col = 'purple', cex = 0.7)
+north.arrow(-75, 37.5, 0.1, lab = 'N', col='black', cex = 1.5)
+degAxis(side = 2, seq(34, 46, 2), cex.axis = 1.5)
+degAxis(side = 2, seq(34, 46, 1), labels = FALSE)
+degAxis(side = 4, seq(34, 46, 1), labels = FALSE)
+degAxis(side = 1, seq(-70, -86, -2), cex.axis = 1.5)
+degAxis(side = 3, seq(-70, -86, -1), labels = FALSE)
+degAxis(side = 1, seq(-70, -86, -1), labels = FALSE)
+text(x = -81.2, y = 43.2, '3000 - 6600 m', cex = 2)
+legend('topleft', title = ' ', legend = c('Not Outlier', 'Low Outlier', 'High Outlier', 'Not Tested'), pch = c(16,16,16,17), cex = 1.3, col = c('black','blue', 'red', 'purple'), bty = 'n')
+dev.off()
+
+png('OutsByDepth_Panels_NoDevNY.png', res = 300, height = 8, width = 16, units = 'in')
+layout(sets)
+par(xaxs = 'i', yaxs = 'i', mar = c(2,2.5,1,1))
+#Data from 750 - 1000 - 4 low outliers that are not clustered. Not problematic.
+plot(AllData, col = 'white')
+plot(Counties[which(Counties$STATEFP == 42 | Counties$STATEFP == 36 | Counties$STATEFP == 54 | Counties$STATEFP == 51| Counties$STATEFP == 24| Counties$STATEFP == 21),], lwd = 1, add = TRUE, border='grey')
+plot(NY, add = TRUE, lwd = 2)
+plot(PA, add = TRUE, lwd = 2)
+plot(WV, add = TRUE, lwd = 2)
+plot(MD, lwd = 2, add=TRUE)
+plot(KY, lwd = 2, add=TRUE)
+plot(VA, lwd = 2, add=TRUE)
+plot(NotOutliersWGS_NoDevNY[which(NotOutliersWGS_NoDevNY$WellDepth >= 750 & NotOutliersWGS_NoDevNY$WellDepth < 1000 & NotOutliersWGS_NoDevNY$out_loc_error == 0),], pch = 16, add = TRUE, cex = 0.7)
+plot(OutliersWGS_NoDevNY[which(OutliersWGS_NoDevNY$WellDepth >= 750 & OutliersWGS_NoDevNY$WellDepth < 1000 & OutliersWGS_NoDevNY$out_loc_lo == 1),], pch = 16, add = TRUE, col = 'blue', cex = 0.7)
+plot(OutliersWGS_NoDevNY[which(OutliersWGS_NoDevNY$WellDepth >= 750 & OutliersWGS_NoDevNY$WellDepth < 1000 & OutliersWGS_NoDevNY$out_loc_lo == 0),], pch = 16, add = TRUE, col = 'red', cex = 0.7)
+plot(NotOutliersWGS_NoDevNY[which(NotOutliersWGS_NoDevNY$WellDepth >= 750 & NotOutliersWGS_NoDevNY$WellDepth < 1000 & NotOutliersWGS_NoDevNY$out_loc_error == 1),], pch = 17, add = TRUE, col = 'purple', cex = 0.7)
+north.arrow(-75, 37.5, 0.1, lab = 'N', col='black', cex = 1.5)
+degAxis(side = 2, seq(34, 46, 2), cex.axis = 1.5)
+degAxis(side = 2, seq(34, 46, 1), labels = FALSE)
+degAxis(side = 4, seq(34, 46, 1), labels = FALSE)
+degAxis(side = 1, seq(-70, -86, -2), cex.axis = 1.5)
+degAxis(side = 3, seq(-70, -86, -1), labels = FALSE)
+degAxis(side = 1, seq(-70, -86, -1), labels = FALSE)
+text(x = -81.2, y = 43.2, '750 - 1000 m', cex = 2)
+legend('topleft', title = ' ', legend = c('Not Outlier', 'Low Outlier', 'High Outlier', 'Not Tested'), pch = c(16,16,16,17), cex = 1.3, col = c('black','blue', 'red', 'purple'), bty = 'n')
+
+#Data from 1000 - 1200
+plot(AllData, col = 'white')
+plot(Counties[which(Counties$STATEFP == 42 | Counties$STATEFP == 36 | Counties$STATEFP == 54 | Counties$STATEFP == 51| Counties$STATEFP == 24| Counties$STATEFP == 21),], lwd = 1, add = TRUE, border = 'grey')
+plot(NY, add = TRUE, lwd = 2)
+plot(PA, add = TRUE, lwd = 2)
+plot(WV, add = TRUE, lwd = 2)
+plot(MD, lwd = 2, add=TRUE)
+plot(KY, lwd = 2, add=TRUE)
+plot(VA, lwd = 2, add=TRUE)
+plot(NotOutliersWGS_NoDevNY[which(NotOutliersWGS_NoDevNY$WellDepth >= 1000 & NotOutliersWGS_NoDevNY$WellDepth < 1200 & NotOutliersWGS_NoDevNY$out_loc_error == 0),], pch = 16, add = TRUE, cex = 0.7)
+plot(OutliersWGS_NoDevNY[which(OutliersWGS_NoDevNY$WellDepth >= 1000 & OutliersWGS_NoDevNY$WellDepth < 1200 & OutliersWGS_NoDevNY$out_loc_lo == 1),], pch = 16, add = TRUE, col = 'blue', cex = 0.7)
+plot(OutliersWGS_NoDevNY[which(OutliersWGS_NoDevNY$WellDepth >= 1000 & OutliersWGS_NoDevNY$WellDepth < 1200 & OutliersWGS_NoDevNY$out_loc_lo == 0),], pch = 16, add = TRUE, col = 'red', cex = 0.7)
+plot(NotOutliersWGS_NoDevNY[which(NotOutliersWGS_NoDevNY$WellDepth >= 1000 & NotOutliersWGS_NoDevNY$WellDepth < 1200 & NotOutliersWGS_NoDevNY$out_loc_error == 1),], pch = 17, add = TRUE, col = 'purple', cex = 0.7)
+north.arrow(-75, 37.5, 0.1, lab = 'N', col='black', cex = 1.5)
+degAxis(side = 2, seq(34, 46, 2), cex.axis = 1.5)
+degAxis(side = 2, seq(34, 46, 1), labels = FALSE)
+degAxis(side = 4, seq(34, 46, 1), labels = FALSE)
+degAxis(side = 1, seq(-70, -86, -2), cex.axis = 1.5)
+degAxis(side = 3, seq(-70, -86, -1), labels = FALSE)
+degAxis(side = 1, seq(-70, -86, -1), labels = FALSE)
+text(x = -81.2, y = 43.2, '1000 - 1200 m', cex = 2)
+legend('topleft', title = ' ', legend = c('Not Outlier', 'Low Outlier', 'High Outlier', 'Not Tested'), pch = c(16,16,16,17), cex = 1.3, col = c('black','blue', 'red', 'purple'), bty = 'n')
+
+#Data from 1200 - 1400
+plot(AllData, col = 'white')
+plot(Counties[which(Counties$STATEFP == 42 | Counties$STATEFP == 36 | Counties$STATEFP == 54 | Counties$STATEFP == 51| Counties$STATEFP == 24| Counties$STATEFP == 21),], lwd = 1, add = TRUE, border = 'grey')
+plot(NY, add = TRUE, lwd = 2)
+plot(PA, add = TRUE, lwd = 2)
+plot(WV, add = TRUE, lwd = 2)
+plot(MD, lwd = 2, add=TRUE)
+plot(KY, lwd = 2, add=TRUE)
+plot(VA, lwd = 2, add=TRUE)
+plot(NotOutliersWGS_NoDevNY[which(NotOutliersWGS_NoDevNY$WellDepth >= 1200 & NotOutliersWGS_NoDevNY$WellDepth < 1400 & NotOutliersWGS_NoDevNY$out_loc_error == 0),], pch = 16, add = TRUE, cex = 0.7)
+plot(OutliersWGS_NoDevNY[which(OutliersWGS_NoDevNY$WellDepth >= 1200 & OutliersWGS_NoDevNY$WellDepth < 1400 & OutliersWGS_NoDevNY$out_loc_lo == 1),], pch = 16, add = TRUE, col = 'blue', cex = 0.7)
+plot(OutliersWGS_NoDevNY[which(OutliersWGS_NoDevNY$WellDepth >= 1200 & OutliersWGS_NoDevNY$WellDepth < 1400 & OutliersWGS_NoDevNY$out_loc_lo == 0),], pch = 16, add = TRUE, col = 'red', cex = 0.7)
+plot(NotOutliersWGS_NoDevNY[which(NotOutliersWGS_NoDevNY$WellDepth >= 1200 & NotOutliersWGS_NoDevNY$WellDepth < 1400 & NotOutliersWGS_NoDevNY$out_loc_error == 1),], pch = 17, add = TRUE, col = 'purple', cex = 0.7)
+north.arrow(-75, 37.5, 0.1, lab = 'N', col='black', cex = 1.5)
+degAxis(side = 2, seq(34, 46, 2), cex.axis = 1.5)
+degAxis(side = 2, seq(34, 46, 1), labels = FALSE)
+degAxis(side = 4, seq(34, 46, 1), labels = FALSE)
+degAxis(side = 1, seq(-70, -86, -2), cex.axis = 1.5)
+degAxis(side = 3, seq(-70, -86, -1), labels = FALSE)
+degAxis(side = 1, seq(-70, -86, -1), labels = FALSE)
+text(x = -81.2, y = 43.2, '1200 - 1400 m', cex = 2)
+legend('topleft', title = ' ', legend = c('Not Outlier', 'Low Outlier', 'High Outlier', 'Not Tested'), pch = c(16,16,16,17), cex = 1.3, col = c('black','blue', 'red', 'purple'), bty = 'n')
+
+#Data from 1400 - 1600
+plot(AllData, col = 'white')
+plot(Counties[which(Counties$STATEFP == 42 | Counties$STATEFP == 36 | Counties$STATEFP == 54 | Counties$STATEFP == 51| Counties$STATEFP == 24| Counties$STATEFP == 21),], lwd = 1, add = TRUE, border = 'grey')
+plot(NY, add = TRUE, lwd = 2)
+plot(PA, add = TRUE, lwd = 2)
+plot(WV, add = TRUE, lwd = 2)
+plot(MD, lwd = 2, add=TRUE)
+plot(KY, lwd = 2, add=TRUE)
+plot(VA, lwd = 2, add=TRUE)
+plot(NotOutliersWGS_NoDevNY[which(NotOutliersWGS_NoDevNY$WellDepth >= 1400 & NotOutliersWGS_NoDevNY$WellDepth < 1600 & NotOutliersWGS_NoDevNY$out_loc_error == 0),], pch = 16, add = TRUE, cex = 0.7)
+plot(OutliersWGS_NoDevNY[which(OutliersWGS_NoDevNY$WellDepth >= 1400 & OutliersWGS_NoDevNY$WellDepth < 1600 & OutliersWGS_NoDevNY$out_loc_lo == 1),], pch = 16, add = TRUE, col = 'blue', cex = 0.7)
+plot(OutliersWGS_NoDevNY[which(OutliersWGS_NoDevNY$WellDepth >= 1400 & OutliersWGS_NoDevNY$WellDepth < 1600 & OutliersWGS_NoDevNY$out_loc_lo == 0),], pch = 16, add = TRUE, col = 'red', cex = 0.7)
+plot(NotOutliersWGS_NoDevNY[which(NotOutliersWGS_NoDevNY$WellDepth >= 1400 & NotOutliersWGS_NoDevNY$WellDepth < 1600 & NotOutliersWGS_NoDevNY$out_loc_error == 1),], pch = 17, add = TRUE, col = 'purple', cex = 0.7)
+north.arrow(-75, 37.5, 0.1, lab = 'N', col='black', cex = 1.5)
+degAxis(side = 2, seq(34, 46, 2), cex.axis = 1.5)
+degAxis(side = 2, seq(34, 46, 1), labels = FALSE)
+degAxis(side = 4, seq(34, 46, 1), labels = FALSE)
+degAxis(side = 1, seq(-70, -86, -2), cex.axis = 1.5)
+degAxis(side = 3, seq(-70, -86, -1), labels = FALSE)
+degAxis(side = 1, seq(-70, -86, -1), labels = FALSE)
+text(x = -81.2, y = 43.2, '1400 - 1600 m', cex = 2)
+legend('topleft', title = ' ', legend = c('Not Outlier', 'Low Outlier', 'High Outlier', 'Not Tested'), pch = c(16,16,16,17), cex = 1.3, col = c('black','blue', 'red', 'purple'), bty = 'n')
+
+#Data from 1600 - 2000
+plot(AllData, col = 'white')
+plot(Counties[which(Counties$STATEFP == 42 | Counties$STATEFP == 36 | Counties$STATEFP == 54 | Counties$STATEFP == 51| Counties$STATEFP == 24| Counties$STATEFP == 21),], lwd = 1, add = TRUE, border = 'grey')
+plot(NY, add = TRUE, lwd = 2)
+plot(PA, add = TRUE, lwd = 2)
+plot(WV, add = TRUE, lwd = 2)
+plot(MD, lwd = 2, add=TRUE)
+plot(KY, lwd = 2, add=TRUE)
+plot(VA, lwd = 2, add=TRUE)
+plot(NotOutliersWGS_NoDevNY[which(NotOutliersWGS_NoDevNY$WellDepth >= 1600 & NotOutliersWGS_NoDevNY$WellDepth < 2000 & NotOutliersWGS_NoDevNY$out_loc_error == 0),], pch = 16, add = TRUE, cex = 0.7)
+plot(OutliersWGS_NoDevNY[which(OutliersWGS_NoDevNY$WellDepth >= 1600 & OutliersWGS_NoDevNY$WellDepth < 2000 & OutliersWGS_NoDevNY$out_loc_lo == 1),], pch = 16, add = TRUE, col = 'blue', cex = 0.7)
+plot(OutliersWGS_NoDevNY[which(OutliersWGS_NoDevNY$WellDepth >= 1600 & OutliersWGS_NoDevNY$WellDepth < 2000 & OutliersWGS_NoDevNY$out_loc_lo == 0),], pch = 16, add = TRUE, col = 'red', cex = 0.7)
+plot(NotOutliersWGS_NoDevNY[which(NotOutliersWGS_NoDevNY$WellDepth >= 1600 & NotOutliersWGS_NoDevNY$WellDepth < 2000 & NotOutliersWGS_NoDevNY$out_loc_error == 1),], pch = 17, add = TRUE, col = 'purple', cex = 0.7)
+north.arrow(-75, 37.5, 0.1, lab = 'N', col='black', cex = 1.5)
+degAxis(side = 2, seq(34, 46, 2), cex.axis = 1.5)
+degAxis(side = 2, seq(34, 46, 1), labels = FALSE)
+degAxis(side = 4, seq(34, 46, 1), labels = FALSE)
+degAxis(side = 1, seq(-70, -86, -2), cex.axis = 1.5)
+degAxis(side = 3, seq(-70, -86, -1), labels = FALSE)
+degAxis(side = 1, seq(-70, -86, -1), labels = FALSE)
+text(x = -81.2, y = 43.2, '1600 - 2000 m', cex = 2)
+legend('topleft', title = ' ', legend = c('Not Outlier', 'Low Outlier', 'High Outlier', 'Not Tested'), pch = c(16,16,16,17), cex = 1.3, col = c('black','blue', 'red', 'purple'), bty = 'n')
+
+#Data from 2000 - 2400
+plot(AllData, col = 'white')
+plot(Counties[which(Counties$STATEFP == 42 | Counties$STATEFP == 36 | Counties$STATEFP == 54 | Counties$STATEFP == 51| Counties$STATEFP == 24| Counties$STATEFP == 21),], lwd = 1, add = TRUE, border = 'grey')
+plot(NY, add = TRUE, lwd = 2)
+plot(PA, add = TRUE, lwd = 2)
+plot(WV, add = TRUE, lwd = 2)
+plot(MD, lwd = 2, add=TRUE)
+plot(KY, lwd = 2, add=TRUE)
+plot(VA, lwd = 2, add=TRUE)
+plot(NotOutliersWGS_NoDevNY[which(NotOutliersWGS_NoDevNY$WellDepth >= 2000 & NotOutliersWGS_NoDevNY$WellDepth < 2400 & NotOutliersWGS_NoDevNY$out_loc_error == 0),], pch = 16, add = TRUE, cex = 0.7)
+plot(OutliersWGS_NoDevNY[which(OutliersWGS_NoDevNY$WellDepth >= 2000 & OutliersWGS_NoDevNY$WellDepth < 2400 & OutliersWGS_NoDevNY$out_loc_lo == 1),], pch = 16, add = TRUE, col = 'blue', cex = 0.7)
+plot(OutliersWGS_NoDevNY[which(OutliersWGS_NoDevNY$WellDepth >= 2000 & OutliersWGS_NoDevNY$WellDepth < 2400 & OutliersWGS_NoDevNY$out_loc_lo == 0),], pch = 16, add = TRUE, col = 'red', cex = 0.7)
+plot(NotOutliersWGS_NoDevNY[which(NotOutliersWGS_NoDevNY$WellDepth >= 2000 & NotOutliersWGS_NoDevNY$WellDepth < 2400 & NotOutliersWGS_NoDevNY$out_loc_error == 1),], pch = 17, add = TRUE, col = 'purple', cex = 0.7)
+north.arrow(-75, 37.5, 0.1, lab = 'N', col='black', cex = 1.5)
+degAxis(side = 2, seq(34, 46, 2), cex.axis = 1.5)
+degAxis(side = 2, seq(34, 46, 1), labels = FALSE)
+degAxis(side = 4, seq(34, 46, 1), labels = FALSE)
+degAxis(side = 1, seq(-70, -86, -2), cex.axis = 1.5)
+degAxis(side = 3, seq(-70, -86, -1), labels = FALSE)
+degAxis(side = 1, seq(-70, -86, -1), labels = FALSE)
+text(x = -81.2, y = 43.2, '2000 - 2400 m', cex = 2)
+legend('topleft', title = ' ', legend = c('Not Outlier', 'Low Outlier', 'High Outlier', 'Not Tested'), pch = c(16,16,16,17), cex = 1.3, col = c('black','blue', 'red', 'purple'), bty = 'n')
+
+#Data from 2400 - 3000
+plot(AllData, col = 'white')
+plot(Counties[which(Counties$STATEFP == 42 | Counties$STATEFP == 36 | Counties$STATEFP == 54 | Counties$STATEFP == 51| Counties$STATEFP == 24| Counties$STATEFP == 21),], lwd = 1, add = TRUE, border = 'grey')
+plot(NY, add = TRUE, lwd = 2)
+plot(PA, add = TRUE, lwd = 2)
+plot(WV, add = TRUE, lwd = 2)
+plot(MD, lwd = 2, add=TRUE)
+plot(KY, lwd = 2, add=TRUE)
+plot(VA, lwd = 2, add=TRUE)
+plot(NotOutliersWGS_NoDevNY[which(NotOutliersWGS_NoDevNY$WellDepth >= 2400 & NotOutliersWGS_NoDevNY$WellDepth < 3000 & NotOutliersWGS_NoDevNY$out_loc_error == 0),], pch = 16, add = TRUE, cex = 0.7)
+plot(OutliersWGS_NoDevNY[which(OutliersWGS_NoDevNY$WellDepth >= 2400 & OutliersWGS_NoDevNY$WellDepth < 3000 & OutliersWGS_NoDevNY$out_loc_lo == 1),], pch = 16, add = TRUE, col = 'blue', cex = 0.7)
+plot(OutliersWGS_NoDevNY[which(OutliersWGS_NoDevNY$WellDepth >= 2400 & OutliersWGS_NoDevNY$WellDepth < 3000 & OutliersWGS_NoDevNY$out_loc_lo == 0),], pch = 16, add = TRUE, col = 'red', cex = 0.7)
+plot(NotOutliersWGS_NoDevNY[which(NotOutliersWGS_NoDevNY$WellDepth >= 2400 & NotOutliersWGS_NoDevNY$WellDepth < 3000 & NotOutliersWGS_NoDevNY$out_loc_error == 1),], pch = 17, add = TRUE, col = 'purple', cex = 0.7)
+north.arrow(-75, 37.5, 0.1, lab = 'N', col='black', cex = 1.5)
+degAxis(side = 2, seq(34, 46, 2), cex.axis = 1.5)
+degAxis(side = 2, seq(34, 46, 1), labels = FALSE)
+degAxis(side = 4, seq(34, 46, 1), labels = FALSE)
+degAxis(side = 1, seq(-70, -86, -2), cex.axis = 1.5)
+degAxis(side = 3, seq(-70, -86, -1), labels = FALSE)
+degAxis(side = 1, seq(-70, -86, -1), labels = FALSE)
+text(x = -81.2, y = 43.2, '2400 - 3000 m', cex = 2)
+legend('topleft', title = ' ', legend = c('Not Outlier', 'Low Outlier', 'High Outlier', 'Not Tested'), pch = c(16,16,16,17), cex = 1.3, col = c('black','blue', 'red', 'purple'), bty = 'n')
+
+#Data deeper than 3000 m are 86% in New York (Not really clustered)
+nrow(AllData[which(AllData$WellDepth >= 3000 & AllData$WellDepth < 6600 & AllData$State == 'NY'),])/nrow(AllData[which(AllData$WellDepth >= 3000 & AllData$WellDepth < 6600),])
+plot(AllData, col = 'white')
+plot(Counties[which(Counties$STATEFP == 42 | Counties$STATEFP == 36 | Counties$STATEFP == 54 | Counties$STATEFP == 51| Counties$STATEFP == 24| Counties$STATEFP == 21),], lwd = 1, add = TRUE, border = 'grey')
+plot(NY, add = TRUE, lwd = 2)
+plot(PA, add = TRUE, lwd = 2)
+plot(WV, add = TRUE, lwd = 2)
+plot(MD, lwd = 2, add=TRUE)
+plot(KY, lwd = 2, add=TRUE)
+plot(VA, lwd = 2, add=TRUE)
+plot(NotOutliersWGS_NoDevNY[which(NotOutliersWGS_NoDevNY$WellDepth >= 3000 & NotOutliersWGS_NoDevNY$WellDepth < 6600 & NotOutliersWGS_NoDevNY$out_loc_error == 0),], pch = 16, add = TRUE, cex = 0.7)
+plot(OutliersWGS_NoDevNY[which(OutliersWGS_NoDevNY$WellDepth >= 3000 & OutliersWGS_NoDevNY$WellDepth < 6600 & OutliersWGS_NoDevNY$out_loc_lo == 1),], pch = 16, add = TRUE, col = 'blue', cex = 0.7)
+plot(OutliersWGS_NoDevNY[which(OutliersWGS_NoDevNY$WellDepth >= 3000 & OutliersWGS_NoDevNY$WellDepth < 6600 & OutliersWGS_NoDevNY$out_loc_lo == 0),], pch = 16, add = TRUE, col = 'red', cex = 0.7)
+plot(NotOutliersWGS_NoDevNY[which(NotOutliersWGS_NoDevNY$WellDepth >= 3000 & NotOutliersWGS_NoDevNY$WellDepth < 6600 & NotOutliersWGS_NoDevNY$out_loc_error == 1),], pch = 17, add = TRUE, col = 'purple', cex = 0.7)
+north.arrow(-75, 37.5, 0.1, lab = 'N', col='black', cex = 1.5)
+degAxis(side = 2, seq(34, 46, 2), cex.axis = 1.5)
+degAxis(side = 2, seq(34, 46, 1), labels = FALSE)
+degAxis(side = 4, seq(34, 46, 1), labels = FALSE)
+degAxis(side = 1, seq(-70, -86, -2), cex.axis = 1.5)
+degAxis(side = 3, seq(-70, -86, -1), labels = FALSE)
+degAxis(side = 1, seq(-70, -86, -1), labels = FALSE)
+text(x = -81.2, y = 43.2, '3000 - 6600 m', cex = 2)
+legend('topleft', title = ' ', legend = c('Not Outlier', 'Low Outlier', 'High Outlier', 'Not Tested'), pch = c(16,16,16,17), cex = 1.3, col = c('black','blue', 'red', 'purple'), bty = 'n')
+dev.off()
+
 
 #   Q-Q plot for the points that are not outliers ----
-#Clip points that are not outliers to geologic regions
-CT = NotOutliersWGS[InterpRegs[InterpRegs$Name == 'CT',],]
-CNY = NotOutliersWGS[InterpRegs[InterpRegs$Name == 'CNY',],]
-CWV = NotOutliersWGS[CWV_Bounded,]
-ENY = NotOutliersWGS[InterpRegs[InterpRegs$Name == 'ENY',],]
-ENYPA = NotOutliersWGS[InterpRegs[InterpRegs$Name == 'ENYPA',],]
-MT = NotOutliersWGS[MT_Bounded,]
-NWPANY = NotOutliersWGS[InterpRegs[InterpRegs$Name == 'NWPANY',],]
-SWPA = NotOutliersWGS[InterpRegs[InterpRegs$Name == 'SWPA',],]
-WPA = NotOutliersWGS[InterpRegs[InterpRegs$Name == 'WPA',],]
-VR = NotOutliersWGS[VR_Bounded,]
-FL = rbind(CT, CWV, CNY, ENY, ENYPA, MT, NWPANY, SWPA, WPA, VR)
-
-CT_k1p0 = NotOutliersWGS_k1p0[InterpRegs[InterpRegs$Name == 'CT',],]
-CNY_k1p0 = NotOutliersWGS_k1p0[InterpRegs[InterpRegs$Name == 'CNY',],]
-CWV_k1p0 = NotOutliersWGS_k1p0[CWV_Bounded,]
-ENY_k1p0 = NotOutliersWGS_k1p0[InterpRegs[InterpRegs$Name == 'ENY',],]
-ENYPA_k1p0 = NotOutliersWGS_k1p0[InterpRegs[InterpRegs$Name == 'ENYPA',],]
-MT_k1p0 = NotOutliersWGS_k1p0[MT_Bounded,]
-NWPANY_k1p0 = NotOutliersWGS_k1p0[InterpRegs[InterpRegs$Name == 'NWPANY',],]
-SWPA_k1p0 = NotOutliersWGS_k1p0[InterpRegs[InterpRegs$Name == 'SWPA',],]
-WPA_k1p0 = NotOutliersWGS_k1p0[InterpRegs[InterpRegs$Name == 'WPA',],]
-VR_k1p0 = NotOutliersWGS_k1p0[VR_Bounded,]
-FL_k1p0 = rbind(CT_k1p0, CWV_k1p0, CNY_k1p0, ENY_k1p0, ENYPA_k1p0, MT_k1p0, NWPANY_k1p0, SWPA_k1p0, WPA_k1p0, VR_k1p0)
-
-CT_k1p5 = NotOutliersWGS_k1p5[InterpRegs[InterpRegs$Name == 'CT',],]
-CNY_k1p5 = NotOutliersWGS_k1p5[InterpRegs[InterpRegs$Name == 'CNY',],]
-CWV_k1p5 = NotOutliersWGS_k1p5[CWV_Bounded,]
-ENY_k1p5 = NotOutliersWGS_k1p5[InterpRegs[InterpRegs$Name == 'ENY',],]
-ENYPA_k1p5 = NotOutliersWGS_k1p5[InterpRegs[InterpRegs$Name == 'ENYPA',],]
-MT_k1p5 = NotOutliersWGS_k1p5[MT_Bounded,]
-NWPANY_k1p5 = NotOutliersWGS_k1p5[InterpRegs[InterpRegs$Name == 'NWPANY',],]
-SWPA_k1p5 = NotOutliersWGS_k1p5[InterpRegs[InterpRegs$Name == 'SWPA',],]
-WPA_k1p5 = NotOutliersWGS_k1p5[InterpRegs[InterpRegs$Name == 'WPA',],]
-VR_k1p5 = NotOutliersWGS_k1p5[VR_Bounded,]
-FL_k1p5 = rbind(CT_k1p5, CWV_k1p5, CNY_k1p5, ENY_k1p5, ENYPA_k1p5, MT_k1p5, NWPANY_k1p5, SWPA_k1p5, WPA_k1p5, VR_k1p5)
-
-CT_k2p0 = NotOutliersWGS_k2p0[InterpRegs[InterpRegs$Name == 'CT',],]
-CNY_k2p0 = NotOutliersWGS_k2p0[InterpRegs[InterpRegs$Name == 'CNY',],]
-CWV_k2p0 = NotOutliersWGS_k2p0[CWV_Bounded,]
-ENY_k2p0 = NotOutliersWGS_k2p0[InterpRegs[InterpRegs$Name == 'ENY',],]
-ENYPA_k2p0 = NotOutliersWGS_k2p0[InterpRegs[InterpRegs$Name == 'ENYPA',],]
-MT_k2p0 = NotOutliersWGS_k2p0[MT_Bounded,]
-NWPANY_k2p0 = NotOutliersWGS_k2p0[InterpRegs[InterpRegs$Name == 'NWPANY',],]
-SWPA_k2p0 = NotOutliersWGS_k2p0[InterpRegs[InterpRegs$Name == 'SWPA',],]
-WPA_k2p0 = NotOutliersWGS_k2p0[InterpRegs[InterpRegs$Name == 'WPA',],]
-VR_k2p0 = NotOutliersWGS_k2p0[VR_Bounded,]
-FL_k2p0 = rbind(CT_k2p0, CWV_k2p0, CNY_k2p0, ENY_k2p0, ENYPA_k2p0, MT_k2p0, NWPANY_k2p0, SWPA_k2p0, WPA_k2p0, VR_k2p0)
-
-CT_k2p5 = NotOutliersWGS_k2p5[InterpRegs[InterpRegs$Name == 'CT',],]
-CNY_k2p5 = NotOutliersWGS_k2p5[InterpRegs[InterpRegs$Name == 'CNY',],]
-CWV_k2p5 = NotOutliersWGS_k2p5[CWV_Bounded,]
-ENY_k2p5 = NotOutliersWGS_k2p5[InterpRegs[InterpRegs$Name == 'ENY',],]
-ENYPA_k2p5 = NotOutliersWGS_k2p5[InterpRegs[InterpRegs$Name == 'ENYPA',],]
-MT_k2p5 = NotOutliersWGS_k2p5[MT_Bounded,]
-NWPANY_k2p5 = NotOutliersWGS_k2p5[InterpRegs[InterpRegs$Name == 'NWPANY',],]
-SWPA_k2p5 = NotOutliersWGS_k2p5[InterpRegs[InterpRegs$Name == 'SWPA',],]
-WPA_k2p5 = NotOutliersWGS_k2p5[InterpRegs[InterpRegs$Name == 'WPA',],]
-VR_k2p5 = NotOutliersWGS_k2p5[VR_Bounded,]
-FL_k2p5 = rbind(CT_k2p5, CWV_k2p5, CNY_k2p5, ENY_k2p5, ENYPA_k2p5, MT_k2p5, NWPANY_k2p5, SWPA_k2p5, WPA_k2p5, VR_k2p5)
-
-CT_k3p5 = NotOutliersWGS_k3p5[InterpRegs[InterpRegs$Name == 'CT',],]
-CNY_k3p5 = NotOutliersWGS_k3p5[InterpRegs[InterpRegs$Name == 'CNY',],]
-CWV_k3p5 = NotOutliersWGS_k3p5[CWV_Bounded,]
-ENY_k3p5 = NotOutliersWGS_k3p5[InterpRegs[InterpRegs$Name == 'ENY',],]
-ENYPA_k3p5 = NotOutliersWGS_k3p5[InterpRegs[InterpRegs$Name == 'ENYPA',],]
-MT_k3p5 = NotOutliersWGS_k3p5[MT_Bounded,]
-NWPANY_k3p5 = NotOutliersWGS_k3p5[InterpRegs[InterpRegs$Name == 'NWPANY',],]
-SWPA_k3p5 = NotOutliersWGS_k3p5[InterpRegs[InterpRegs$Name == 'SWPA',],]
-WPA_k3p5 = NotOutliersWGS_k3p5[InterpRegs[InterpRegs$Name == 'WPA',],]
-VR_k3p5 = NotOutliersWGS_k3p5[VR_Bounded,]
-FL_k3p5 = rbind(CT_k3p5, CWV_k3p5, CNY_k3p5, ENY_k3p5, ENYPA_k3p5, MT_k3p5, NWPANY_k3p5, SWPA_k3p5, WPA_k3p5, VR_k3p5)
-
-CT_k4p0 = NotOutliersWGS_k4p0[InterpRegs[InterpRegs$Name == 'CT',],]
-CNY_k4p0 = NotOutliersWGS_k4p0[InterpRegs[InterpRegs$Name == 'CNY',],]
-CWV_k4p0 = NotOutliersWGS_k4p0[CWV_Bounded,]
-ENY_k4p0 = NotOutliersWGS_k4p0[InterpRegs[InterpRegs$Name == 'ENY',],]
-ENYPA_k4p0 = NotOutliersWGS_k4p0[InterpRegs[InterpRegs$Name == 'ENYPA',],]
-MT_k4p0 = NotOutliersWGS_k4p0[MT_Bounded,]
-NWPANY_k4p0 = NotOutliersWGS_k4p0[InterpRegs[InterpRegs$Name == 'NWPANY',],]
-SWPA_k4p0 = NotOutliersWGS_k4p0[InterpRegs[InterpRegs$Name == 'SWPA',],]
-WPA_k4p0 = NotOutliersWGS_k4p0[InterpRegs[InterpRegs$Name == 'WPA',],]
-VR_k4p0 = NotOutliersWGS_k4p0[VR_Bounded,]
-FL_k4p0 = rbind(CT_k4p0, CWV_k4p0, CNY_k4p0, ENY_k4p0, ENYPA_k4p0, MT_k4p0, NWPANY_k4p0, SWPA_k4p0, WPA_k4p0, VR_k4p0)
-
-CT_k4p5 = NotOutliersWGS_k4p5[InterpRegs[InterpRegs$Name == 'CT',],]
-CNY_k4p5 = NotOutliersWGS_k4p5[InterpRegs[InterpRegs$Name == 'CNY',],]
-CWV_k4p5 = NotOutliersWGS_k4p5[CWV_Bounded,]
-ENY_k4p5 = NotOutliersWGS_k4p5[InterpRegs[InterpRegs$Name == 'ENY',],]
-ENYPA_k4p5 = NotOutliersWGS_k4p5[InterpRegs[InterpRegs$Name == 'ENYPA',],]
-MT_k4p5 = NotOutliersWGS_k4p5[MT_Bounded,]
-NWPANY_k4p5 = NotOutliersWGS_k4p5[InterpRegs[InterpRegs$Name == 'NWPANY',],]
-SWPA_k4p5 = NotOutliersWGS_k4p5[InterpRegs[InterpRegs$Name == 'SWPA',],]
-WPA_k4p5 = NotOutliersWGS_k4p5[InterpRegs[InterpRegs$Name == 'WPA',],]
-VR_k4p5 = NotOutliersWGS_k4p5[VR_Bounded,]
-FL_k4p5 = rbind(CT_k4p5, CWV_k4p5, CNY_k4p5, ENY_k4p5, ENYPA_k4p5, MT_k4p5, NWPANY_k4p5, SWPA_k4p5, WPA_k4p5, VR_k4p5)
-
-CT_k5p0 = NotOutliersWGS_k5p0[InterpRegs[InterpRegs$Name == 'CT',],]
-CNY_k5p0 = NotOutliersWGS_k5p0[InterpRegs[InterpRegs$Name == 'CNY',],]
-CWV_k5p0 = NotOutliersWGS_k5p0[CWV_Bounded,]
-ENY_k5p0 = NotOutliersWGS_k5p0[InterpRegs[InterpRegs$Name == 'ENY',],]
-ENYPA_k5p0 = NotOutliersWGS_k5p0[InterpRegs[InterpRegs$Name == 'ENYPA',],]
-MT_k5p0 = NotOutliersWGS_k5p0[MT_Bounded,]
-NWPANY_k5p0 = NotOutliersWGS_k5p0[InterpRegs[InterpRegs$Name == 'NWPANY',],]
-SWPA_k5p0 = NotOutliersWGS_k5p0[InterpRegs[InterpRegs$Name == 'SWPA',],]
-WPA_k5p0 = NotOutliersWGS_k5p0[InterpRegs[InterpRegs$Name == 'WPA',],]
-VR_k5p0 = NotOutliersWGS_k5p0[VR_Bounded,]
-FL_k5p0 = rbind(CT_k5p0, CWV_k5p0, CNY_k5p0, ENY_k5p0, ENYPA_k5p0, MT_k5p0, NWPANY_k5p0, SWPA_k5p0, WPA_k5p0, VR_k5p0)
-
 #Q-Q plots for data in each interpolation region
 #Unique axes
 sets = rbind(c(1,2,3), c(4,5,6),c(7,8,9))
@@ -3295,6 +4055,53 @@ qqline(MT@data$Qs)
 temp = qqnorm(MT@data$Qs, plot.it = FALSE)$x[which(MT@data$out_loc_error == 1)]
 par(new = TRUE)
 plot(x = temp, y = MT@data$Qs[which(MT@data$out_loc_error == 1)], col = 'black', pch = 16, xlab = '', ylab = '', axes = FALSE, xlim = c(-3.5,3.5), ylim = c(5,120))
+dev.off()
+
+png('QQPlotHeatFlow_NotTestedOuts_RmOps.png', res=600, units='in', width=10, height=10)
+layout(sets)
+par(mar=c(4,5,3,2))
+qqnorm(CT_RmOps@data$Qs, cex.axis=1.5, cex.lab=1.5, main='Chautauqua, NY', ylab=expression('Sample Quantiles' ~ (mW/m^2)), cex.main=2, col='red')
+qqline(CT_RmOps@data$Qs)
+qqnorm(WPA_RmOps@data$Qs, cex.axis=1.5, cex.lab=1.5, main='Western PA', ylab=expression('Sample Quantiles' ~ (mW/m^2)), cex.main=2, col='orange', xlim = c(-3.5,3.5), ylim = c(10,70))
+qqline(WPA_RmOps@data$Qs)
+temp = qqnorm(WPA_RmOps@data$Qs, plot.it = FALSE)$x[which(WPA_RmOps@data$out_loc_error == 1)]
+par(new = TRUE)
+plot(x = temp, y = WPA_RmOps@data$Qs[which(WPA_RmOps@data$out_loc_error == 1)], col = 'black', pch = 16, xlab = '', ylab = '', axes = FALSE, xlim = c(-3.5,3.5), ylim = c(10,70))
+qqnorm(NWPANY_RmOps@data$Qs, cex.axis=1.5, cex.lab=1.5, main='Northwestern NY and PA', ylab=expression('Sample Quantiles' ~ (mW/m^2)), cex.main=2, col='yellow', xlim = c(-3,3), ylim = c(5,75))
+qqline(NWPANY_RmOps@data$Qs)
+temp = qqnorm(NWPANY_RmOps@data$Qs, plot.it = FALSE)$x[which(NWPANY_RmOps@data$out_loc_error == 1)]
+par(new = TRUE)
+plot(x = temp, y = NWPANY_RmOps@data$Qs[which(NWPANY_RmOps@data$out_loc_error == 1)], col = 'black', pch = 16, xlab = '', ylab = '', axes = FALSE, xlim = c(-3,3), ylim = c(5,75))
+qqnorm(CNY_RmOps@data$Qs, cex.axis=1.5, cex.lab=1.5, main='Central NY', ylab=expression('Sample Quantiles' ~ (mW/m^2)), cex.main=2, col='green', xlim = c(-2.75,2.75), ylim = c(35,65))
+qqline(CNY_RmOps@data$Qs)
+temp = qqnorm(CNY_RmOps@data$Qs, plot.it = FALSE)$x[which(CNY_RmOps@data$out_loc_error == 1)]
+par(new = TRUE)
+plot(x = temp, y = CNY_RmOps@data$Qs[which(CNY_RmOps@data$out_loc_error == 1)], col = 'black', pch = 16, xlab = '', ylab = '', axes = FALSE, xlim = c(-2.75,2.75), ylim = c(35,65))
+qqnorm(ENY_RmOps@data$Qs, cex.axis=1.5, cex.lab=1.5, main='Eastern NY', ylab=expression('Sample Quantiles' ~ (mW/m^2)), cex.main=2, col='springgreen', xlim = c(-3,3), ylim = c(30,75))
+qqline(ENY_RmOps@data$Qs)
+temp = qqnorm(ENY_RmOps@data$Qs, plot.it = FALSE)$x[which(ENY_RmOps@data$out_loc_error == 1)]
+par(new = TRUE)
+plot(x = temp, y = ENY_RmOps@data$Qs[which(ENY_RmOps@data$out_loc_error == 1)], col = 'black', pch = 16, xlab = '', ylab = '', axes = FALSE, xlim = c(-3,3), ylim = c(30,75))
+qqnorm(ENYPA_RmOps@data$Qs, cex.axis=1.5, cex.lab=1.5, main='Eastern NY and PA', ylab=expression('Sample Quantiles' ~ (mW/m^2)), cex.main=2, col='skyblue', xlim = c(-3,3), ylim = c(10,110))
+qqline(ENYPA_RmOps@data$Qs)
+temp = qqnorm(ENYPA_RmOps@data$Qs, plot.it = FALSE)$x[which(ENYPA_RmOps@data$out_loc_error == 1)]
+par(new = TRUE)
+plot(x = temp, y = ENYPA_RmOps@data$Qs[which(ENYPA_RmOps@data$out_loc_error == 1)], col = 'black', pch = 16, xlab = '', ylab = '', axes = FALSE, xlim = c(-3,3), ylim = c(10,110))
+qqnorm(SWPA_RmOps@data$Qs, cex.axis=1.5, cex.lab=1.5, main='Southwestern PA', ylab=expression('Sample Quantiles' ~ (mW/m^2)), cex.main=2, col='blue', xlim = c(-4,4), ylim = c(5,110))
+qqline(SWPA_RmOps@data$Qs)
+temp = qqnorm(SWPA_RmOps@data$Qs, plot.it = FALSE)$x[which(SWPA_RmOps@data$out_loc_error == 1)]
+par(new = TRUE)
+plot(x = temp, y = SWPA_RmOps@data$Qs[which(SWPA_RmOps@data$out_loc_error == 1)], col = 'black', pch = 16, xlab = '', ylab = '', axes = FALSE, xlim = c(-4,4), ylim = c(5,110))
+qqnorm(CWV_RmOps@data$Qs, cex.axis=1.5, cex.lab=1.5, main='Central WV', ylab=expression('Sample Quantiles' ~ (mW/m^2)), cex.main=2, col='purple', xlim = c(-4,4), ylim = c(5,120))
+qqline(CWV_RmOps@data$Qs)
+temp = qqnorm(CWV_RmOps@data$Qs, plot.it = FALSE)$x[which(CWV_RmOps@data$out_loc_error == 1)]
+par(new = TRUE)
+plot(x = temp, y = CWV_RmOps@data$Qs[which(CWV_RmOps@data$out_loc_error == 1)], col = 'black', pch = 16, xlab = '', ylab = '', axes = FALSE, xlim = c(-4,4), ylim = c(5,120))
+qqnorm(MT_RmOps@data$Qs, cex.axis=1.5, cex.lab=1.5, main='Western WV', ylab=expression('Sample Quantiles' ~ (mW/m^2)), cex.main=2, col='violet', xlim = c(-3.5,3.5), ylim = c(5,120))
+qqline(MT_RmOps@data$Qs)
+temp = qqnorm(MT_RmOps@data$Qs, plot.it = FALSE)$x[which(MT_RmOps@data$out_loc_error == 1)]
+par(new = TRUE)
+plot(x = temp, y = MT_RmOps@data$Qs[which(MT_RmOps@data$out_loc_error == 1)], col = 'black', pch = 16, xlab = '', ylab = '', axes = FALSE, xlim = c(-3.5,3.5), ylim = c(5,120))
 dev.off()
 
 #QQ-Student t3 - May not be great.
@@ -3807,6 +4614,87 @@ degAxis(side = 1, seq(-70, -86, -1), labels = FALSE)
 box()
 dev.off()
 
+png('QQPlotHeatFlow_NotTestedOuts_Map_RmOps.png', res=600, units='in', width=13, height=10)
+layout(sets)
+par(mar=c(4,5,3,2))
+qqnorm(CT_RmOps@data$Qs, cex.axis=1.5, cex.lab=1.5, main='Chautauqua, NY', ylab=expression('Sample Quantiles' ~ (mW/m^2)), cex.main=2, col='red')
+qqline(CT_RmOps@data$Qs)
+qqnorm(WPA_RmOps@data$Qs, cex.axis=1.5, cex.lab=1.5, main='Western PA', ylab=expression('Sample Quantiles' ~ (mW/m^2)), cex.main=2, col='orange', xlim = c(-3.5,3.5), ylim = c(10,70))
+qqline(WPA_RmOps@data$Qs)
+temp = qqnorm(WPA_RmOps@data$Qs, plot.it = FALSE)$x[which(WPA_RmOps@data$out_loc_error == 1)]
+par(new = TRUE)
+plot(x = temp, y = WPA_RmOps@data$Qs[which(WPA_RmOps@data$out_loc_error == 1)], col = 'black', pch = 16, xlab = '', ylab = '', axes = FALSE, xlim = c(-3.5,3.5), ylim = c(10,70))
+qqnorm(NWPANY_RmOps@data$Qs, cex.axis=1.5, cex.lab=1.5, main='Northwestern NY and PA', ylab=expression('Sample Quantiles' ~ (mW/m^2)), cex.main=2, col='yellow', xlim = c(-3,3), ylim = c(5,75))
+qqline(NWPANY_RmOps@data$Qs)
+temp = qqnorm(NWPANY_RmOps@data$Qs, plot.it = FALSE)$x[which(NWPANY_RmOps@data$out_loc_error == 1)]
+par(new = TRUE)
+plot(x = temp, y = NWPANY_RmOps@data$Qs[which(NWPANY_RmOps@data$out_loc_error == 1)], col = 'black', pch = 16, xlab = '', ylab = '', axes = FALSE, xlim = c(-3,3), ylim = c(5,75))
+qqnorm(CNY_RmOps@data$Qs, cex.axis=1.5, cex.lab=1.5, main='Central NY', ylab=expression('Sample Quantiles' ~ (mW/m^2)), cex.main=2, col='green', xlim = c(-2.75,2.75), ylim = c(35,65))
+qqline(CNY_RmOps@data$Qs)
+temp = qqnorm(CNY_RmOps@data$Qs, plot.it = FALSE)$x[which(CNY_RmOps@data$out_loc_error == 1)]
+par(new = TRUE)
+plot(x = temp, y = CNY_RmOps@data$Qs[which(CNY_RmOps@data$out_loc_error == 1)], col = 'black', pch = 16, xlab = '', ylab = '', axes = FALSE, xlim = c(-2.75,2.75), ylim = c(35,65))
+qqnorm(ENY_RmOps@data$Qs, cex.axis=1.5, cex.lab=1.5, main='Eastern NY', ylab=expression('Sample Quantiles' ~ (mW/m^2)), cex.main=2, col='springgreen', xlim = c(-3,3), ylim = c(30,75))
+qqline(ENY_RmOps@data$Qs)
+temp = qqnorm(ENY_RmOps@data$Qs, plot.it = FALSE)$x[which(ENY_RmOps@data$out_loc_error == 1)]
+par(new = TRUE)
+plot(x = temp, y = ENY_RmOps@data$Qs[which(ENY_RmOps@data$out_loc_error == 1)], col = 'black', pch = 16, xlab = '', ylab = '', axes = FALSE, xlim = c(-3,3), ylim = c(30,75))
+qqnorm(ENYPA_RmOps@data$Qs, cex.axis=1.5, cex.lab=1.5, main='Eastern NY and PA', ylab=expression('Sample Quantiles' ~ (mW/m^2)), cex.main=2, col='skyblue', xlim = c(-3,3), ylim = c(10,110))
+qqline(ENYPA_RmOps@data$Qs)
+temp = qqnorm(ENYPA_RmOps@data$Qs, plot.it = FALSE)$x[which(ENYPA_RmOps@data$out_loc_error == 1)]
+par(new = TRUE)
+plot(x = temp, y = ENYPA_RmOps@data$Qs[which(ENYPA_RmOps@data$out_loc_error == 1)], col = 'black', pch = 16, xlab = '', ylab = '', axes = FALSE, xlim = c(-3,3), ylim = c(10,110))
+qqnorm(SWPA_RmOps@data$Qs, cex.axis=1.5, cex.lab=1.5, main='Southwestern PA', ylab=expression('Sample Quantiles' ~ (mW/m^2)), cex.main=2, col='blue', xlim = c(-4,4), ylim = c(5,110))
+qqline(SWPA_RmOps@data$Qs)
+temp = qqnorm(SWPA_RmOps@data$Qs, plot.it = FALSE)$x[which(SWPA_RmOps@data$out_loc_error == 1)]
+par(new = TRUE)
+plot(x = temp, y = SWPA_RmOps@data$Qs[which(SWPA_RmOps@data$out_loc_error == 1)], col = 'black', pch = 16, xlab = '', ylab = '', axes = FALSE, xlim = c(-4,4), ylim = c(5,110))
+qqnorm(CWV_RmOps@data$Qs, cex.axis=1.5, cex.lab=1.5, main='Central WV', ylab=expression('Sample Quantiles' ~ (mW/m^2)), cex.main=2, col='purple', xlim = c(-4,4), ylim = c(5,120))
+qqline(CWV_RmOps@data$Qs)
+temp = qqnorm(CWV_RmOps@data$Qs, plot.it = FALSE)$x[which(CWV_RmOps@data$out_loc_error == 1)]
+par(new = TRUE)
+plot(x = temp, y = CWV_RmOps@data$Qs[which(CWV_RmOps@data$out_loc_error == 1)], col = 'black', pch = 16, xlab = '', ylab = '', axes = FALSE, xlim = c(-4,4), ylim = c(5,120))
+qqnorm(MT_RmOps@data$Qs, cex.axis=1.5, cex.lab=1.5, main='Western WV', ylab=expression('Sample Quantiles' ~ (mW/m^2)), cex.main=2, col='violet', xlim = c(-3.5,3.5), ylim = c(5,120))
+qqline(MT_RmOps@data$Qs)
+temp = qqnorm(MT_RmOps@data$Qs, plot.it = FALSE)$x[which(MT_RmOps@data$out_loc_error == 1)]
+par(new = TRUE)
+plot(x = temp, y = MT_RmOps@data$Qs[which(MT_RmOps@data$out_loc_error == 1)], col = 'black', pch = 16, xlab = '', ylab = '', axes = FALSE, xlim = c(-3.5,3.5), ylim = c(5,120))
+qqnorm(VR_RmOps@data$Qs, cex.axis=1.5, cex.lab=1.5, main='Valley and Ridge', ylab=expression('Sample Quantiles' ~ (mW/m^2)), cex.main=2, col='grey', xlim = c(-3.5,3.5), ylim = c(5,120))
+qqline(VR_RmOps@data$Qs)
+temp = qqnorm(VR_RmOps@data$Qs, plot.it = FALSE)$x[which(VR_RmOps@data$out_loc_error == 1)]
+par(new = TRUE)
+plot(x = temp, y = VR_RmOps@data$Qs[which(VR_RmOps@data$out_loc_error == 1)], col = 'black', pch = 16, xlab = '', ylab = '', axes = FALSE, xlim = c(-3.5,3.5), ylim = c(5,120))
+
+#Map
+par(xaxs = 'i', yaxs = 'i', mar = c(2,10,2,10))
+#par(pin = c(par('pin')[1], ratio*par('pin')[1]))
+plot(InterpRegs, xlim = c(-82.64474, -74.5), ylim = c(36.75, 43.4))
+plot(InterpRegs[which(InterpRegs$Name == "CT"),], col = 'red', add = TRUE)
+plot(InterpRegs[which(InterpRegs$Name == "WPA"),], col = 'orange', add = TRUE)
+plot(InterpRegs[which(InterpRegs$Name == "NWPANY"),], col = 'yellow', add = TRUE)
+plot(InterpRegs[which(InterpRegs$Name == "CNY"),], col = 'green', add = TRUE)
+plot(InterpRegs[which(InterpRegs$Name == "ENY"),], col = 'springgreen', add = TRUE)
+plot(InterpRegs[which(InterpRegs$Name == "ENYPA"),], col = 'skyblue', add = TRUE)
+plot(InterpRegs[which(InterpRegs$Name == "SWPA"),], col = 'blue', add = TRUE)
+plot(CWV_Bounded, col = 'purple', add = TRUE)
+plot(MT_Bounded, col = 'magenta', add = TRUE)
+plot(VR_Bounded, col = 'gray', add = TRUE)
+plot(NY, lwd = 2, add=TRUE)
+plot(PA, lwd = 2, add=TRUE)
+plot(WV, lwd = 2, add=TRUE)
+plot(MD, lwd = 2, add=TRUE)
+plot(KY, lwd = 2, add=TRUE)
+plot(VA, lwd = 2, add=TRUE)
+north.arrow(-75, 37.5, 0.1, lab = 'N', col='black', cex = 1.5)
+degAxis(side = 2, seq(34, 46, 2), cex.axis = 1.5)
+degAxis(side = 2, seq(34, 46, 1), labels = FALSE)
+degAxis(side = 4, seq(34, 46, 1), labels = FALSE)
+degAxis(side = 1, seq(-70, -86, -2), cex.axis = 1.5)
+degAxis(side = 3, seq(-70, -86, -1), labels = FALSE)
+degAxis(side = 1, seq(-70, -86, -1), labels = FALSE)
+box()
+dev.off()
+
 rm(temp)
 
 #    Label points as outliers and switch geologic region ownership for one point----
@@ -3825,16 +4713,22 @@ qqnorm(ENY@data$Qs)#Based on points that were not tested as outliers, RowID_1269
 qqline(ENY@data$Qs)
 ENY = ENY[-which(ENY$RowID_ == 12690),]
 FL = FL[-which(FL$RowID_ == 12690),]
+ENY_RmOps = ENY_RmOps[-which(ENY_RmOps$RowID_ == 12690),]
+FL_RmOps = FL_RmOps[-which(FL_RmOps$RowID_ == 12690),]
 qqnorm(ENYPA@data$Qs) #Definite outlier that did not get removed is in here. 30 mW/m^3 greater than others. Remove it from ENYPA and FL.
 FL = FL[-which(FL$RowID_ == 19770),]
 ENYPA = ENYPA[which(ENYPA$Qs < 100),]
+FL_RmOps = FL_RmOps[-which(FL_RmOps$RowID_ == 19770),]
+ENYPA_RmOps = ENYPA_RmOps[which(ENYPA_RmOps$Qs < 100),]
 qqnorm(ENYPA@data$Qs)
 qqline(ENYPA@data$Qs)
-qqnorm(MT@data$Qs)
+qqnorm(MT@data$Qs) #The two < 25 mW/m^2 points are clustered in an area with low heat flow. Looks OK
 qqline(MT@data$Qs)
 qqnorm(NWPANY@data$Qs) #The low heat flow of 7 was not tested for outliers. It should be removed.
 FL = FL[-which(FL$RowID_ == 29908),]
 NWPANY = NWPANY[which(NWPANY$Qs > 10),]
+FL_RmOps = FL_RmOps[-which(FL_RmOps$RowID_ == 29908),]
+NWPANY_RmOps = NWPANY_RmOps[which(NWPANY_RmOps$Qs > 10),]
 qqnorm(NWPANY@data$Qs)
 qqline(NWPANY@data$Qs)
 qqnorm(SWPA@data$Qs)
@@ -3930,6 +4824,29 @@ qqnorm(CWV@data$Qs, cex.axis=1.5, cex.lab=1.5, main='Central WV', ylab=expressio
 qqline(CWV@data$Qs)
 qqnorm(MT@data$Qs, cex.axis=1.5, cex.lab=1.5, main='Western WV', ylab=expression('Sample Quantiles' ~ (mW/m^2)), cex.main=2, col='violet')
 qqline(MT@data$Qs)
+dev.off()
+
+png('QQPlotHeatFlow_corrPoints_RmOps_2018.png', res=300, units='in', width=10, height=10)
+layout(sets)
+par(mar=c(4,5,3,2))
+qqnorm(CT_RmOps@data$Qs, cex.axis=1.5, cex.lab=1.5, main='Chautauqua, NY', ylab=expression('Sample Quantiles' ~ (mW/m^2)), cex.main=2, col='red')
+qqline(CT_RmOps@data$Qs)
+qqnorm(WPA_RmOps@data$Qs, cex.axis=1.5, cex.lab=1.5, main='Western PA', ylab=expression('Sample Quantiles' ~ (mW/m^2)), cex.main=2, col='orange')
+qqline(WPA_RmOps@data$Qs)
+qqnorm(NWPANY_RmOps@data$Qs, cex.axis=1.5, cex.lab=1.5, main='Northwestern NY and PA', ylab=expression('Sample Quantiles' ~ (mW/m^2)), cex.main=2, col='yellow')
+qqline(NWPANY_RmOps@data$Qs)
+qqnorm(CNY_RmOps@data$Qs, cex.axis=1.5, cex.lab=1.5, main='Central NY', ylab=expression('Sample Quantiles' ~ (mW/m^2)), cex.main=2, col='green')
+qqline(CNY_RmOps@data$Qs)
+qqnorm(ENY_RmOps@data$Qs, cex.axis=1.5, cex.lab=1.5, main='Eastern NY', ylab=expression('Sample Quantiles' ~ (mW/m^2)), cex.main=2, col='springgreen')
+qqline(ENY_RmOps@data$Qs)
+qqnorm(ENYPA_RmOps@data$Qs, cex.axis=1.5, cex.lab=1.5, main='Eastern NY and PA', ylab=expression('Sample Quantiles' ~ (mW/m^2)), cex.main=2, col='skyblue')
+qqline(ENYPA_RmOps@data$Qs)
+qqnorm(SWPA_RmOps@data$Qs, cex.axis=1.5, cex.lab=1.5, main='Southwestern PA', ylab=expression('Sample Quantiles' ~ (mW/m^2)), cex.main=2, col='blue')
+qqline(SWPA_RmOps@data$Qs)
+qqnorm(CWV_RmOps@data$Qs, cex.axis=1.5, cex.lab=1.5, main='Central WV', ylab=expression('Sample Quantiles' ~ (mW/m^2)), cex.main=2, col='purple')
+qqline(CWV_RmOps@data$Qs)
+qqnorm(MT_RmOps@data$Qs, cex.axis=1.5, cex.lab=1.5, main='Western WV', ylab=expression('Sample Quantiles' ~ (mW/m^2)), cex.main=2, col='violet')
+qqline(MT_RmOps@data$Qs)
 dev.off()
 
 qqnorm(FL@data$Qs, cex.axis=1.5, cex.lab=1.5, main='Full Region', ylab=expression('Sample Quantiles' ~ (mW/m^2)), cex.main=2, ylim=c(0,120), xlim=c(-4,4))
@@ -4062,7 +4979,7 @@ text(x = -15, y = 5500, expression(bold('B')), cex = 2)
 dev.off()
 
 #  Post analysis of variograms in each geologic region pre and post----
-#Transform to NAD UTM17N
+#   Transform to NAD UTM17N----
 CT = spTransform(CT, CRS('+init=epsg:26917'))
 CNY = spTransform(CNY, CRS('+init=epsg:26917'))
 CWV = spTransform(CWV, CRS('+init=epsg:26917'))
@@ -4074,6 +4991,18 @@ SWPA = spTransform(SWPA, CRS('+init=epsg:26917'))
 WPA = spTransform(WPA, CRS('+init=epsg:26917'))
 VR = spTransform(VR, CRS('+init=epsg:26917'))
 FL = spTransform(FL, CRS('+init=epsg:26917'))
+
+CT_RmOps = spTransform(CT_RmOps, CRS('+init=epsg:26917'))
+CNY_RmOps = spTransform(CNY_RmOps, CRS('+init=epsg:26917'))
+CWV_RmOps = spTransform(CWV_RmOps, CRS('+init=epsg:26917'))
+ENY_RmOps = spTransform(ENY_RmOps, CRS('+init=epsg:26917'))
+ENYPA_RmOps = spTransform(ENYPA_RmOps, CRS('+init=epsg:26917'))
+MT_RmOps = spTransform(MT_RmOps, CRS('+init=epsg:26917'))
+NWPANY_RmOps = spTransform(NWPANY_RmOps, CRS('+init=epsg:26917'))
+SWPA_RmOps = spTransform(SWPA_RmOps, CRS('+init=epsg:26917'))
+WPA_RmOps = spTransform(WPA_RmOps, CRS('+init=epsg:26917'))
+VR_RmOps = spTransform(VR_RmOps, CRS('+init=epsg:26917'))
+FL_RmOps = spTransform(FL_RmOps, CRS('+init=epsg:26917'))
 
 CT_k1p0 = spTransform(CT_k1p0, CRS('+init=epsg:26917'))
 CNY_k1p0 = spTransform(CNY_k1p0, CRS('+init=epsg:26917'))
@@ -4171,7 +5100,8 @@ WPA_k5p0 = spTransform(WPA_k5p0, CRS('+init=epsg:26917'))
 VR_k5p0 = spTransform(VR_k5p0, CRS('+init=epsg:26917'))
 FL_k5p0 = spTransform(FL_k5p0, CRS('+init=epsg:26917'))
 
-#Using oringal dataset for points without negative gradients, and no points in same spatial location
+#   Get dataset pre-processing into geologic regions----
+#Using points without negative gradients, and no points in same spatial location
 PreCT = spTransform(WellsSort[InterpRegs[InterpRegs$Name == 'CT',],], CRS('+init=epsg:26917'))
 PreCNY = spTransform(WellsSort[InterpRegs[InterpRegs$Name == 'CNY',],], CRS('+init=epsg:26917'))
 PreCWV = spTransform(WellsSort[CWV_Bounded,], CRS('+init=epsg:26917'))
@@ -4184,20 +5114,9 @@ PreWPA = spTransform(WellsSort[InterpRegs[InterpRegs$Name == 'WPA',],], CRS('+in
 PreVR = spTransform(WellsSort[VR_Bounded,], CRS('+init=epsg:26917'))
 PreFL = rbind(PreCT, PreCWV, PreCNY, PreENY, PreENYPA, PreMT, PreNWPANY, PreSWPA, PreWPA, PreVR)
 
-#Using oringal dataset for points without negative gradients, and no points in same spatial location
-DeepCT = spTransform(WellsDeepWGS[InterpRegs[InterpRegs$Name == 'CT',],], CRS('+init=epsg:26917'))
-DeepCNY = spTransform(WellsDeepWGS[InterpRegs[InterpRegs$Name == 'CNY',],], CRS('+init=epsg:26917'))
-DeepCWV = spTransform(WellsDeepWGS[CWV_Bounded,], CRS('+init=epsg:26917'))
-DeepENY = spTransform(WellsDeepWGS[InterpRegs[InterpRegs$Name == 'ENY',],], CRS('+init=epsg:26917'))
-DeepENYPA = spTransform(WellsDeepWGS[InterpRegs[InterpRegs$Name == 'ENYPA',],], CRS('+init=epsg:26917'))
-DeepMT = spTransform(WellsDeepWGS[MT_Bounded,], CRS('+init=epsg:26917'))
-DeepNWPANY = spTransform(WellsDeepWGS[InterpRegs[InterpRegs$Name == 'NWPANY',],], CRS('+init=epsg:26917'))
-DeepSWPA = spTransform(WellsDeepWGS[InterpRegs[InterpRegs$Name == 'SWPA',],], CRS('+init=epsg:26917'))
-DeepWPA = spTransform(WellsDeepWGS[InterpRegs[InterpRegs$Name == 'WPA',],], CRS('+init=epsg:26917'))
-DeepVR = spTransform(WellsDeepWGS[VR_Bounded,], CRS('+init=epsg:26917'))
-DeepFL = rbind(DeepCT, DeepCWV, DeepCNY, DeepENY, DeepENYPA, DeepMT, DeepNWPANY, DeepSWPA, DeepWPA, DeepVR)
+#   Make variograms for each ESDA proceedure----
+#Compute variograms - 1) All data, 2) Data deeper than 1 km, 3) Data that have been fully proessed. Plot all on same plot
 
-#Compute variograms - All data, Data deeper than 1 km, Data that have been fully proessed. Plot all on same plot
 #Possible parameters for Universal Kriging / regression kriging are:
 # basement depth, surface temperature, BHT correction region, COSUNA section, Rome trough, spatial coordinates
 # These are challenging to select because a trend in space can be captured by most of those parameters
@@ -4219,6 +5138,18 @@ v.SWPA <- variogram(Qs~1, SWPA, cutoff=60000, width=60000/50)
 v.WPA <- variogram(Qs~1, WPA, cutoff=60000, width=60000/50) 
 v.VR <- variogram(Qs~1, VR, cutoff=60000, width=60000/20) 
 v.FL <- variogram(Qs~1, FL, cutoff=60000, width=60000/200)
+
+v.CT_RmOps <- variogram(Qs~1, CT_RmOps, cutoff=60000, width=60000/50)
+v.CNY_RmOps <- variogram(Qs~1, CNY_RmOps, cutoff=60000, width=60000/15)
+v.CWV_RmOps <- variogram(Qs~1, CWV_RmOps, cutoff=60000, width=60000/50)
+v.ENY_RmOps <- variogram(Qs~1, ENY_RmOps, cutoff=60000, width=60000/15)
+v.ENYPA_RmOps <- variogram(Qs~1, ENYPA_RmOps, cutoff=60000, width=60000/40)
+v.MT_RmOps <- variogram(Qs~1, MT_RmOps, cutoff=60000, width=60000/50)
+v.NWPANY_RmOps <- variogram(Qs~1, NWPANY_RmOps, cutoff=60000, width=60000/20) 
+v.SWPA_RmOps <- variogram(Qs~1, SWPA_RmOps, cutoff=60000, width=60000/50) 
+v.WPA_RmOps <- variogram(Qs~1, WPA_RmOps, cutoff=60000, width=60000/50) 
+v.VR_RmOps <- variogram(Qs~1, VR_RmOps, cutoff=60000, width=60000/20) 
+v.FL_RmOps <- variogram(Qs~1, FL_RmOps, cutoff=60000, width=60000/200)
 
 v.CT_k1p0 <- variogram(Qs~1, CT_k1p0, cutoff=60000, width=60000/50)
 v.CNY_k1p0 <- variogram(Qs~1, CNY_k1p0, cutoff=60000, width=60000/15)
@@ -4340,6 +5271,42 @@ v.DeepWPA <- variogram(Qs~1, DeepWPA, cutoff=60000, width=60000/50)
 v.DeepVR <- variogram(Qs~1, DeepVR, cutoff=60000, width=60000/20) 
 v.DeepFL <- variogram(Qs~1, DeepFL, cutoff=60000, width=60000/200)
 
+rv.DeepCT <- variogram(Qs~1, DeepCT, cutoff=60000, width=60000/50, cressie = T) 
+rv.DeepCNY <- variogram(Qs~1, DeepCNY, cutoff=60000, width=60000/15, cressie = T) 
+rv.DeepCWV <- variogram(Qs~1, DeepCWV, cutoff=60000, width=60000/50, cressie = T)
+rv.DeepENY <- variogram(Qs~1, DeepENY, cutoff=60000, width=60000/15, cressie = T)
+rv.DeepENYPA <- variogram(Qs~1, DeepENYPA, cutoff=60000, width=60000/40, cressie = T)
+rv.DeepMT <- variogram(Qs~1, DeepMT, cutoff=60000, width=60000/50, cressie = T)
+rv.DeepNWPANY <- variogram(Qs~1, DeepNWPANY, cutoff=60000, width=60000/20, cressie = T) 
+rv.DeepSWPA <- variogram(Qs~1, DeepSWPA, cutoff=60000, width=60000/50, cressie = T) 
+rv.DeepWPA <- variogram(Qs~1, DeepWPA, cutoff=60000, width=60000/50, cressie = T) 
+rv.DeepVR <- variogram(Qs~1, DeepVR, cutoff=60000, width=60000/20, cressie = T) 
+rv.DeepFL <- variogram(Qs~1, DeepFL, cutoff=60000, width=60000/200, cressie = T)
+
+v.DeepCT_RmOps <- variogram(Qs~1, DeepCT_RmOps, cutoff=60000, width=60000/50) 
+v.DeepCNY_RmOps <- variogram(Qs~1, DeepCNY_RmOps, cutoff=60000, width=60000/15) 
+v.DeepCWV_RmOps <- variogram(Qs~1, DeepCWV_RmOps, cutoff=60000, width=60000/50)
+v.DeepENY_RmOps <- variogram(Qs~1, DeepENY_RmOps, cutoff=60000, width=60000/15)
+v.DeepENYPA_RmOps <- variogram(Qs~1, DeepENYPA_RmOps, cutoff=60000, width=60000/40)
+v.DeepMT_RmOps <- variogram(Qs~1, DeepMT_RmOps, cutoff=60000, width=60000/50)
+v.DeepNWPANY_RmOps <- variogram(Qs~1, DeepNWPANY_RmOps, cutoff=60000, width=60000/20) 
+v.DeepSWPA_RmOps <- variogram(Qs~1, DeepSWPA_RmOps, cutoff=60000, width=60000/50) 
+v.DeepWPA_RmOps <- variogram(Qs~1, DeepWPA_RmOps, cutoff=60000, width=60000/50) 
+v.DeepVR_RmOps <- variogram(Qs~1, DeepVR_RmOps, cutoff=60000, width=60000/20) 
+v.DeepFL_RmOps <- variogram(Qs~1, DeepFL_RmOps, cutoff=60000, width=60000/200)
+
+rv.DeepCT_RmOps <- variogram(Qs~1, DeepCT_RmOps, cutoff=60000, width=60000/50, cressie = T) 
+rv.DeepCNY_RmOps <- variogram(Qs~1, DeepCNY_RmOps, cutoff=60000, width=60000/15, cressie = T) 
+rv.DeepCWV_RmOps <- variogram(Qs~1, DeepCWV_RmOps, cutoff=60000, width=60000/50, cressie = T)
+rv.DeepENY_RmOps <- variogram(Qs~1, DeepENY_RmOps, cutoff=60000, width=60000/15, cressie = T)
+rv.DeepENYPA_RmOps <- variogram(Qs~1, DeepENYPA_RmOps, cutoff=60000, width=60000/40, cressie = T)
+rv.DeepMT_RmOps <- variogram(Qs~1, DeepMT_RmOps, cutoff=60000, width=60000/50, cressie = T)
+rv.DeepNWPANY_RmOps <- variogram(Qs~1, DeepNWPANY_RmOps, cutoff=60000, width=60000/20, cressie = T) 
+rv.DeepSWPA_RmOps <- variogram(Qs~1, DeepSWPA_RmOps, cutoff=60000, width=60000/50, cressie = T) 
+rv.DeepWPA_RmOps <- variogram(Qs~1, DeepWPA_RmOps, cutoff=60000, width=60000/50, cressie = T) 
+rv.DeepVR_RmOps <- variogram(Qs~1, DeepVR_RmOps, cutoff=60000, width=60000/20, cressie = T) 
+rv.DeepFL_RmOps <- variogram(Qs~1, DeepFL_RmOps, cutoff=60000, width=60000/200, cressie = T)
+
 p1 = plot(v.CT, plot.numbers=F, ylab=expression(Semivariance ~ (mW/m^2)^2), main="Chautauqua, NY", xlab = 'Separation Distance (m)', pch = 16, ylim = c(0,50), col = 'red', xlim = c(0,60000), cex=0.5)
 p2 = plot(v.CNY,plot.numbers=F, ylab=expression(Semivariance ~ (mW/m^2)^2), main="Central NY", xlab = 'Separation Distance (m)', pch = 16, ylim = c(0,1500), col = 'red', xlim = c(0,60000), cex=0.5)
 p9 = plot(v.CWV, plot.numbers=F, ylab=expression(Semivariance ~ (mW/m^2)^2), main="Central WV", xlab = 'Separation Distance (m)', pch = 16, col = 'red', ylim = c(0,1200), xlim = c(0,60000), cex=0.5)
@@ -4357,6 +5324,25 @@ p7 = plot(v.WPA, plot.numbers=F, ylab=expression(Semivariance ~ (mW/m^2)^2), mai
 p7z = plot(v.WPA, plot.numbers=F, ylab=expression(Semivariance ~ (mW/m^2)^2), main="Western PA Zoom", xlab = 'Separation Distance (m)', pch = 16, col = 'red', xlim = c(0,60000), ylim = c(0,50), cex=0.5)
 p7zz = plot(v.WPA, plot.numbers=F, ylab=expression(Semivariance ~ (mW/m^2)^2), main="Western PA", xlab = 'Separation Distance (m)', pch = 16, col = 'red', xlim = c(0,60000), ylim = c(0,50), cex=0.5)
 p11 = plot(v.FL, plot.numbers=F, ylab=expression(Semivariance ~ (mW/m^2)^2), main="Full Region", xlab = 'Separation Distance (m)', pch = 16, col = 'red', xlim = c(0,60000), ylim = c(0,1000), cex=0.5)
+
+p1RmOps = plot(v.CT_RmOps, plot.numbers=F, ylab=expression(Semivariance ~ (mW/m^2)^2), main="Chautauqua, NY", xlab = 'Separation Distance (m)', pch = 16, ylim = c(0,50), col = 'red', xlim = c(0,60000), cex=0.5)
+p2RmOps = plot(v.CNY_RmOps,plot.numbers=F, ylab=expression(Semivariance ~ (mW/m^2)^2), main="Central NY", xlab = 'Separation Distance (m)', pch = 16, ylim = c(0,1500), col = 'red', xlim = c(0,60000), cex=0.5)
+p9RmOps = plot(v.CWV_RmOps, plot.numbers=F, ylab=expression(Semivariance ~ (mW/m^2)^2), main="Central WV", xlab = 'Separation Distance (m)', pch = 16, col = 'red', ylim = c(0,1200), xlim = c(0,60000), cex=0.5)
+p3RmOps = plot(v.ENY_RmOps, plot.numbers=F, ylab=expression(Semivariance ~ (mW/m^2)^2), main="Eastern NY", xlab = 'Separation Distance (m)', pch = 16, col = 'red', ylim = c(0,1500), xlim = c(0,60000), cex=0.5)
+p4RmOps = plot(v.ENYPA_RmOps, plot.numbers=F, ylab=expression(Semivariance ~ (mW/m^2)^2), main="Eastern NY & PA", xlab = 'Separation Distance (m)', pch = 16, col = 'red', xlim = c(0,60000), ylim = c(0,400), cex=0.5)
+p8RmOps = plot(v.MT_RmOps, plot.numbers=F, ylab=expression(Semivariance ~ (mW/m^2)^2), main="Western WV", xlab = 'Separation Distance (m)', pch = 16, col = 'red', xlim = c(0,60000), ylim = c(0,700), cex=0.5)
+p5RmOps = plot(v.NWPANY_RmOps, plot.numbers=F, ylab=expression(Semivariance ~ (mW/m^2)^2), main="Northwestern PA & NY", xlab = 'Separation Distance (m)', pch = 16, col = 'red', xlim = c(0,60000), ylim = c(0,500), cex=0.5)
+p6RmOps = plot(v.SWPA_RmOps, plot.numbers=F, ylab=expression(Semivariance ~ (mW/m^2)^2), main="Southwestern PA", xlab = 'Separation Distance (m)', pch = 16, col = 'red', xlim = c(0,60000), ylim = c(0,850), cex=0.5)
+p6zRmOps = plot(v.SWPA_RmOps, plot.numbers=F, ylab=expression(Semivariance ~ (mW/m^2)^2), main="Southwestern PA Zoom", xlab = 'Separation Distance (m)', pch = 16, col = 'red', xlim = c(0,60000), ylim = c(0,60), cex=0.5)
+p6zzRmOps = plot(v.SWPA_RmOps, plot.numbers=F, ylab=expression(Semivariance ~ (mW/m^2)^2), main="Southwestern PA", xlab = 'Separation Distance (m)', pch = 16, col = 'red', xlim = c(0,60000), ylim = c(0,60), cex=0.5)
+p10RmOps = plot(v.VR_RmOps, plot.numbers=F, ylab=expression(Semivariance ~ (mW/m^2)^2), main="Valley and Ridge", xlab = 'Separation Distance (m)', pch = 16, col = 'red', xlim = c(0,60000), ylim = c(0,11000), cex=0.5)
+p10zRmOps = plot(v.VR_RmOps, plot.numbers=F, ylab=expression(Semivariance ~ (mW/m^2)^2), main="Valley and Ridge Zoom", xlab = 'Separation Distance (m)', pch = 16, col = 'red', xlim = c(0,60000), ylim = c(0,300), cex=0.5)
+p10zzRmOps = plot(v.VR_RmOps, plot.numbers=F, ylab=expression(Semivariance ~ (mW/m^2)^2), main="Valley and Ridge", xlab = 'Separation Distance (m)', pch = 16, col = 'red', xlim = c(0,60000), ylim = c(0,300), cex=0.5)
+p7RmOps = plot(v.WPA_RmOps, plot.numbers=F, ylab=expression(Semivariance ~ (mW/m^2)^2), main="Western PA", xlab = 'Separation Distance (m)', pch = 16, col = 'red', xlim = c(0,60000), ylim = c(0,700), cex=0.5)
+p7zRmOps = plot(v.WPA_RmOps, plot.numbers=F, ylab=expression(Semivariance ~ (mW/m^2)^2), main="Western PA Zoom", xlab = 'Separation Distance (m)', pch = 16, col = 'red', xlim = c(0,60000), ylim = c(0,50), cex=0.5)
+p7zzRmOps = plot(v.WPA_RmOps, plot.numbers=F, ylab=expression(Semivariance ~ (mW/m^2)^2), main="Western PA", xlab = 'Separation Distance (m)', pch = 16, col = 'red', xlim = c(0,60000), ylim = c(0,50), cex=0.5)
+p11RmOps = plot(v.FL_RmOps, plot.numbers=F, ylab=expression(Semivariance ~ (mW/m^2)^2), main="Full Region", xlab = 'Separation Distance (m)', pch = 16, col = 'red', xlim = c(0,60000), ylim = c(0,1000), cex=0.5)
+
 
 kcols = c(adjustcolor('green', alpha.f = 0.1),adjustcolor('green', alpha.f = 0.2),adjustcolor('green', alpha.f = 0.3),adjustcolor('green', alpha.f = 0.4),adjustcolor('green', alpha.f = 0.6),adjustcolor('green', alpha.f = 0.7),adjustcolor('green', alpha.f = 0.8),adjustcolor('green', alpha.f = 0.9))
 
@@ -4510,6 +5496,60 @@ p7dz = plot(v.DeepWPA, plot.numbers=F, ylab=expression(Semivariance ~ (mW/m^2)^2
 p7dzz = plot(v.DeepWPA, plot.numbers=F, ylab=expression(Semivariance ~ (mW/m^2)^2), main="Western PA", xlab = 'Separation Distance (m)', pch = 16, col = 'blue', xlim = c(0,60000), ylim = c(0,50), cex=0.5)
 p11d = plot(v.DeepFL, plot.numbers=F, ylab=expression(Semivariance ~ (mW/m^2)^2), main="Full Region", xlab = 'Separation Distance (m)', pch = 16, col = 'blue', xlim = c(0,60000), ylim = c(0,1000), cex=0.5)
 
+p1dRmOps = plot(v.DeepCT_RmOps, plot.numbers=F, ylab=expression(Semivariance ~ (mW/m^2)^2), main="Chautauqua, NY", xlab = 'Separation Distance (m)', pch = 16, ylim = c(0,50), col = 'green', xlim = c(0,60000), cex=0.5)
+p2dRmOps = plot(v.DeepCNY_RmOps, plot.numbers=F, ylab=expression(Semivariance ~ (mW/m^2)^2), main="Central NY", xlab = 'Separation Distance (m)', pch = 16, col = 'green', ylim = c(0,1500), xlim = c(0,60000), cex=0.5)
+p9dRmOps = plot(v.DeepCWV_RmOps, plot.numbers=F, ylab=expression(Semivariance ~ (mW/m^2)^2), main="Central WV", xlab = 'Separation Distance (m)', pch = 16, col = 'green', ylim = c(0,1200), xlim = c(0,60000), cex=0.5)
+p3dRmOps = plot(v.DeepENY_RmOps, plot.numbers=F, ylab=expression(Semivariance ~ (mW/m^2)^2), main="Eastern NY", xlab = 'Separation Distance (m)', pch = 16, col = 'green', ylim = c(0,1500), xlim = c(0,60000), cex=0.5)
+p4dRmOps = plot(v.DeepENYPA_RmOps, plot.numbers=F, ylab=expression(Semivariance ~ (mW/m^2)^2), main="Eastern NY & PA", xlab = 'Separation Distance (m)', pch = 16, col = 'green', xlim = c(0,60000), ylim = c(0,400), cex=0.5)
+p8dRmOps = plot(v.DeepMT_RmOps, plot.numbers=F, ylab=expression(Semivariance ~ (mW/m^2)^2), main="Western WV", xlab = 'Separation Distance (m)', pch = 16, col = 'green', xlim = c(0,60000), ylim = c(0,700), cex=0.5)
+p5dRmOps = plot(v.DeepNWPANY_RmOps, plot.numbers=F, ylab=expression(Semivariance ~ (mW/m^2)^2), main="Northwestern PA & NY", xlab = 'Separation Distance (m)', pch = 16, col = 'green', xlim = c(0,60000), ylim = c(0,500), cex=0.5)
+p6dRmOps = plot(v.DeepSWPA_RmOps, plot.numbers=F, ylab=expression(Semivariance ~ (mW/m^2)^2), main="Southwestern PA", xlab = 'Separation Distance (m)', pch = 16, col = 'green', xlim = c(0,60000), ylim = c(0,850), cex=0.5)
+p6dzRmOps = plot(v.DeepSWPA_RmOps, plot.numbers=F, ylab=expression(Semivariance ~ (mW/m^2)^2), main="Southwestern PA Zoom", xlab = 'Separation Distance (m)', pch = 16, col = 'green', xlim = c(0,60000), ylim = c(0,60), cex=0.5)
+p6dzzRmOps = plot(v.DeepSWPA_RmOps, plot.numbers=F, ylab=expression(Semivariance ~ (mW/m^2)^2), main="Southwestern PA", xlab = 'Separation Distance (m)', pch = 16, col = 'green', xlim = c(0,60000), ylim = c(0,60), cex=0.5)
+p10dRmOps = plot(v.DeepVR_RmOps, plot.numbers=F, ylab=expression(Semivariance ~ (mW/m^2)^2), main="Valley and Ridge", xlab = 'Separation Distance (m)', pch = 16, col = 'green', xlim = c(0,60000), ylim = c(0,11000), cex=0.5)
+p10dzRmOps = plot(v.DeepVR_RmOps, plot.numbers=F, ylab=expression(Semivariance ~ (mW/m^2)^2), main="Valley and Ridge Zoom", xlab = 'Separation Distance (m)', pch = 16, col = 'green', xlim = c(0,60000), ylim = c(0,300), cex=0.5)
+p10dzzRmOps = plot(v.DeepVR_RmOps, plot.numbers=F, ylab=expression(Semivariance ~ (mW/m^2)^2), main="Valley and Ridge", xlab = 'Separation Distance (m)', pch = 16, col = 'green', xlim = c(0,60000), ylim = c(0,300), cex=0.5)
+p7dRmOps = plot(v.DeepWPA_RmOps, plot.numbers=F, ylab=expression(Semivariance ~ (mW/m^2)^2), main="Western PA", xlab = 'Separation Distance (m)', pch = 16, col = 'green', xlim = c(0,60000), ylim = c(0,700), cex=0.5)
+p7dzRmOps = plot(v.DeepWPA_RmOps, plot.numbers=F, ylab=expression(Semivariance ~ (mW/m^2)^2), main="Western PA Zoom", xlab = 'Separation Distance (m)', pch = 16, col = 'green', xlim = c(0,60000), ylim = c(0,50), cex=0.5)
+p7dzzRmOps = plot(v.DeepWPA_RmOps, plot.numbers=F, ylab=expression(Semivariance ~ (mW/m^2)^2), main="Western PA", xlab = 'Separation Distance (m)', pch = 16, col = 'green', xlim = c(0,60000), ylim = c(0,50), cex=0.5)
+p11dRmOps = plot(v.DeepFL_RmOps, plot.numbers=F, ylab=expression(Semivariance ~ (mW/m^2)^2), main="Full Region", xlab = 'Separation Distance (m)', pch = 16, col = 'green', xlim = c(0,60000), ylim = c(0,1000), cex=0.5)
+
+p1dr = plot(rv.DeepCT, plot.numbers=F, ylab=expression(Semivariance ~ (mW/m^2)^2), main="Chautauqua, NY", xlab = 'Separation Distance (m)', pch = 16, ylim = c(0,50), col = 'blue', xlim = c(0,60000), cex=0.5)
+p2dr = plot(rv.DeepCNY,plot.numbers=F, ylab=expression(Semivariance ~ (mW/m^2)^2), main="Central NY", xlab = 'Separation Distance (m)', pch = 16, col = 'blue', ylim = c(0,1500), xlim = c(0,60000), cex=0.5)
+p9dr = plot(rv.DeepCWV, plot.numbers=F, ylab=expression(Semivariance ~ (mW/m^2)^2), main="Central WV", xlab = 'Separation Distance (m)', pch = 16, col = 'blue', ylim = c(0,1200), xlim = c(0,60000), cex=0.5)
+p3dr = plot(rv.DeepENY, plot.numbers=F, ylab=expression(Semivariance ~ (mW/m^2)^2), main="Eastern NY", xlab = 'Separation Distance (m)', pch = 16, col = 'blue', ylim = c(0,1500), xlim = c(0,60000), cex=0.5)
+p4dr = plot(rv.DeepENYPA, plot.numbers=F, ylab=expression(Semivariance ~ (mW/m^2)^2), main="Eastern NY & PA", xlab = 'Separation Distance (m)', pch = 16, col = 'blue', xlim = c(0,60000), ylim = c(0,400), cex=0.5)
+p8dr = plot(rv.DeepMT, plot.numbers=F, ylab=expression(Semivariance ~ (mW/m^2)^2), main="Western WV", xlab = 'Separation Distance (m)', pch = 16, col = 'blue', xlim = c(0,60000), ylim = c(0,700), cex=0.5)
+p5dr = plot(rv.DeepNWPANY, plot.numbers=F, ylab=expression(Semivariance ~ (mW/m^2)^2), main="Northwestern PA & NY", xlab = 'Separation Distance (m)', pch = 16, col = 'blue', xlim = c(0,60000), ylim = c(0,500), cex=0.5)
+p6dr = plot(rv.DeepSWPA, plot.numbers=F, ylab=expression(Semivariance ~ (mW/m^2)^2), main="Southwestern PA", xlab = 'Separation Distance (m)', pch = 16, col = 'blue', xlim = c(0,60000), ylim = c(0,850), cex=0.5)
+p6dzr = plot(rv.DeepSWPA, plot.numbers=F, ylab=expression(Semivariance ~ (mW/m^2)^2), main="Southwestern PA Zoom", xlab = 'Separation Distance (m)', pch = 16, col = 'blue', xlim = c(0,60000), ylim = c(0,60), cex=0.5)
+p6dzzr = plot(rv.DeepSWPA, plot.numbers=F, ylab=expression(Semivariance ~ (mW/m^2)^2), main="Southwestern PA", xlab = 'Separation Distance (m)', pch = 16, col = 'blue', xlim = c(0,60000), ylim = c(0,60), cex=0.5)
+p10dr = plot(rv.DeepVR, plot.numbers=F, ylab=expression(Semivariance ~ (mW/m^2)^2), main="Valley and Ridge", xlab = 'Separation Distance (m)', pch = 16, col = 'blue', xlim = c(0,60000), ylim = c(0,11000), cex=0.5)
+p10dzr = plot(rv.DeepVR, plot.numbers=F, ylab=expression(Semivariance ~ (mW/m^2)^2), main="Valley and Ridge Zoom", xlab = 'Separation Distance (m)', pch = 16, col = 'blue', xlim = c(0,60000), ylim = c(0,300), cex=0.5)
+p10dzzr = plot(rv.DeepVR, plot.numbers=F, ylab=expression(Semivariance ~ (mW/m^2)^2), main="Valley and Ridge", xlab = 'Separation Distance (m)', pch = 16, col = 'blue', xlim = c(0,60000), ylim = c(0,300), cex=0.5)
+p7dr = plot(rv.DeepWPA, plot.numbers=F, ylab=expression(Semivariance ~ (mW/m^2)^2), main="Western PA", xlab = 'Separation Distance (m)', pch = 16, col = 'blue', xlim = c(0,60000), ylim = c(0,700), cex=0.5)
+p7dzr = plot(rv.DeepWPA, plot.numbers=F, ylab=expression(Semivariance ~ (mW/m^2)^2), main="Western PA Zoom", xlab = 'Separation Distance (m)', pch = 16, col = 'blue', xlim = c(0,60000), ylim = c(0,50), cex=0.5)
+p7dzzr = plot(rv.DeepWPA, plot.numbers=F, ylab=expression(Semivariance ~ (mW/m^2)^2), main="Western PA", xlab = 'Separation Distance (m)', pch = 16, col = 'blue', xlim = c(0,60000), ylim = c(0,50), cex=0.5)
+p11dr = plot(rv.DeepFL, plot.numbers=F, ylab=expression(Semivariance ~ (mW/m^2)^2), main="Full Region", xlab = 'Separation Distance (m)', pch = 16, col = 'blue', xlim = c(0,60000), ylim = c(0,1000), cex=0.5)
+
+p1dRmOpsr = plot(rv.DeepCT_RmOps, plot.numbers=F, ylab=expression(Semivariance ~ (mW/m^2)^2), main="Chautauqua, NY", xlab = 'Separation Distance (m)', pch = 16, ylim = c(0,50), col = 'green', xlim = c(0,60000), cex=0.5)
+p2dRmOpsr = plot(rv.DeepCNY_RmOps, plot.numbers=F, ylab=expression(Semivariance ~ (mW/m^2)^2), main="Central NY", xlab = 'Separation Distance (m)', pch = 16, col = 'green', ylim = c(0,1500), xlim = c(0,60000), cex=0.5)
+p9dRmOpsr = plot(rv.DeepCWV_RmOps, plot.numbers=F, ylab=expression(Semivariance ~ (mW/m^2)^2), main="Central WV", xlab = 'Separation Distance (m)', pch = 16, col = 'green', ylim = c(0,1200), xlim = c(0,60000), cex=0.5)
+p3dRmOpsr = plot(rv.DeepENY_RmOps, plot.numbers=F, ylab=expression(Semivariance ~ (mW/m^2)^2), main="Eastern NY", xlab = 'Separation Distance (m)', pch = 16, col = 'green', ylim = c(0,1500), xlim = c(0,60000), cex=0.5)
+p4dRmOpsr = plot(rv.DeepENYPA_RmOps, plot.numbers=F, ylab=expression(Semivariance ~ (mW/m^2)^2), main="Eastern NY & PA", xlab = 'Separation Distance (m)', pch = 16, col = 'green', xlim = c(0,60000), ylim = c(0,400), cex=0.5)
+p8dRmOpsr = plot(rv.DeepMT_RmOps, plot.numbers=F, ylab=expression(Semivariance ~ (mW/m^2)^2), main="Western WV", xlab = 'Separation Distance (m)', pch = 16, col = 'green', xlim = c(0,60000), ylim = c(0,700), cex=0.5)
+p5dRmOpsr = plot(rv.DeepNWPANY_RmOps, plot.numbers=F, ylab=expression(Semivariance ~ (mW/m^2)^2), main="Northwestern PA & NY", xlab = 'Separation Distance (m)', pch = 16, col = 'green', xlim = c(0,60000), ylim = c(0,500), cex=0.5)
+p6dRmOpsr = plot(rv.DeepSWPA_RmOps, plot.numbers=F, ylab=expression(Semivariance ~ (mW/m^2)^2), main="Southwestern PA", xlab = 'Separation Distance (m)', pch = 16, col = 'green', xlim = c(0,60000), ylim = c(0,850), cex=0.5)
+p6dzRmOpsr = plot(rv.DeepSWPA_RmOps, plot.numbers=F, ylab=expression(Semivariance ~ (mW/m^2)^2), main="Southwestern PA Zoom", xlab = 'Separation Distance (m)', pch = 16, col = 'green', xlim = c(0,60000), ylim = c(0,60), cex=0.5)
+p6dzzRmOpsr = plot(rv.DeepSWPA_RmOps, plot.numbers=F, ylab=expression(Semivariance ~ (mW/m^2)^2), main="Southwestern PA", xlab = 'Separation Distance (m)', pch = 16, col = 'green', xlim = c(0,60000), ylim = c(0,60), cex=0.5)
+p10dRmOpsr = plot(rv.DeepVR_RmOps, plot.numbers=F, ylab=expression(Semivariance ~ (mW/m^2)^2), main="Valley and Ridge", xlab = 'Separation Distance (m)', pch = 16, col = 'green', xlim = c(0,60000), ylim = c(0,11000), cex=0.5)
+p10dzRmOpsr = plot(rv.DeepVR_RmOps, plot.numbers=F, ylab=expression(Semivariance ~ (mW/m^2)^2), main="Valley and Ridge Zoom", xlab = 'Separation Distance (m)', pch = 16, col = 'green', xlim = c(0,60000), ylim = c(0,300), cex=0.5)
+p10dzzRmOpsr = plot(rv.DeepVR_RmOps, plot.numbers=F, ylab=expression(Semivariance ~ (mW/m^2)^2), main="Valley and Ridge", xlab = 'Separation Distance (m)', pch = 16, col = 'green', xlim = c(0,60000), ylim = c(0,300), cex=0.5)
+p7dRmOpsr = plot(rv.DeepWPA_RmOps, plot.numbers=F, ylab=expression(Semivariance ~ (mW/m^2)^2), main="Western PA", xlab = 'Separation Distance (m)', pch = 16, col = 'green', xlim = c(0,60000), ylim = c(0,700), cex=0.5)
+p7dzRmOpsr = plot(rv.DeepWPA_RmOps, plot.numbers=F, ylab=expression(Semivariance ~ (mW/m^2)^2), main="Western PA Zoom", xlab = 'Separation Distance (m)', pch = 16, col = 'green', xlim = c(0,60000), ylim = c(0,50), cex=0.5)
+p7dzzRmOpsr = plot(rv.DeepWPA_RmOps, plot.numbers=F, ylab=expression(Semivariance ~ (mW/m^2)^2), main="Western PA", xlab = 'Separation Distance (m)', pch = 16, col = 'green', xlim = c(0,60000), ylim = c(0,50), cex=0.5)
+p11dRmOpsr = plot(rv.DeepFL_RmOps, plot.numbers=F, ylab=expression(Semivariance ~ (mW/m^2)^2), main="Full Region", xlab = 'Separation Distance (m)', pch = 16, col = 'green', xlim = c(0,60000), ylim = c(0,1000), cex=0.5)
+
 
 png("Variograms_UniqueYAxis_CompareESDA.png", width=13, height=10, units="in", res=300)
 plot(p1p, split=c(1,1,4,3), more=T)
@@ -4560,7 +5600,58 @@ plot(p7z, split = c(4,3,4,3), more=F)
 
 dev.off()
 
+png("Variograms_UniqueYAxis_CompareESDA_RmOps.png", width=13, height=10, units="in", res=300)
+plot(p1p, split=c(1,1,4,3), more=T)
+plot(p1dRmOps, split=c(1,1,4,3), more=T)
+plot(p1RmOps, split = c(1,1,4,3), more=T)
+
+plot(p2p, split=c(4,1,4,3), more=T)
+plot(p2dRmOps, split=c(4,1,4,3), more=T)
+plot(p2RmOps, split = c(4,1,4,3), more=T)
+
+plot(p3p, split=c(1,2,4,3), more=T)
+plot(p3dRmOps, split=c(1,2,4,3), more=T)
+plot(p3RmOps, split = c(1,2,4,3), more=T)
+
+plot(p4p, split=c(2,2,4,3), more=T)
+plot(p4dRmOps, split=c(2,2,4,3), more=T)
+plot(p4RmOps, split = c(2,2,4,3), more=T)
+
+plot(p5p, split=c(3,1,4,3), more=T)
+plot(p5dRmOps, split=c(3,1,4,3), more=T)
+plot(p5RmOps, split = c(3,1,4,3), more=T)
+
+plot(p6p, split=c(3,2,4,3), more=T)
+plot(p6dRmOps, split=c(3,2,4,3), more=T)
+plot(p6RmOps, split = c(3,2,4,3), more=T)
+
+plot(p7p, split=c(2,1,4,3), more=T)
+plot(p7dRmOps, split=c(2,1,4,3), more=T)
+plot(p7RmOps, split = c(2,1,4,3), more=T)
+
+plot(p8p, split=c(1,3,4,3), more=T)
+plot(p8dRmOps, split=c(1,3,4,3), more=T)
+plot(p8RmOps, split = c(1,3,4,3), more=T)
+
+plot(p9p, split=c(4,2,4,3), more=T)
+plot(p9dRmOps, split=c(4,2,4,3), more=T)
+plot(p9RmOps, split = c(4,2,4,3), more=T)
+
+plot(p10p, split=c(2,3,4,3), more=T)
+plot(p10dRmOps, split=c(2,3,4,3), more=T)
+plot(p10RmOps, split = c(2,3,4,3), more=T)
+
+plot(p6dzRmOps, split=c(3,3,4,3), more=T)
+plot(p6zRmOps, split = c(3,3,4,3), more=T)
+
+plot(p7dzRmOps, split=c(4,3,4,3), more=T)
+plot(p7zRmOps, split = c(4,3,4,3), more=F)
+
+dev.off()
+
+
 p2 = plot(v.CNY,plot.numbers=F, ylab=expression(Semivariance ~ (mW/m^2)^2), main="Central NY", xlab = 'Separation Distance (m)', pch = 16, ylim = c(0,200), col = 'red', xlim = c(0,60000), cex=0.5)
+p2RmOps = plot(v.CNY_RmOps,plot.numbers=F, ylab=expression(Semivariance ~ (mW/m^2)^2), main="Central NY", xlab = 'Separation Distance (m)', pch = 16, ylim = c(0,200), col = 'red', xlim = c(0,60000), cex=0.5)
 p2_k1p0 = plot(v.CNY_k1p0,plot.numbers=F, ylab=expression(Semivariance ~ (mW/m^2)^2), main="Central NY", xlab = 'Separation Distance (m)', pch = 16, ylim = c(0,200), col = kcols[1], xlim = c(0,60000), cex=0.5)
 p2_k1p5 = plot(v.CNY_k1p5,plot.numbers=F, ylab=expression(Semivariance ~ (mW/m^2)^2), main="Central NY", xlab = 'Separation Distance (m)', pch = 16, ylim = c(0,200), col = kcols[2], xlim = c(0,60000), cex=0.5)
 p2_k2p0 = plot(v.CNY_k2p0,plot.numbers=F, ylab=expression(Semivariance ~ (mW/m^2)^2), main="Central NY", xlab = 'Separation Distance (m)', pch = 16, ylim = c(0,200), col = kcols[3], xlim = c(0,60000), cex=0.5)
@@ -4570,8 +5661,12 @@ p2_k4p0 = plot(v.CNY_k4p0,plot.numbers=F, ylab=expression(Semivariance ~ (mW/m^2
 p2_k4p5 = plot(v.CNY_k4p5,plot.numbers=F, ylab=expression(Semivariance ~ (mW/m^2)^2), main="Central NY", xlab = 'Separation Distance (m)', pch = 16, ylim = c(0,200), col = kcols[7], xlim = c(0,60000), cex=0.5)
 p2_k5p0 = plot(v.CNY_k5p0,plot.numbers=F, ylab=expression(Semivariance ~ (mW/m^2)^2), main="Central NY", xlab = 'Separation Distance (m)', pch = 16, ylim = c(0,200), col = kcols[8], xlim = c(0,60000), cex=0.5)
 p2d = plot(v.DeepCNY,plot.numbers=F, ylab=expression(Semivariance ~ (mW/m^2)^2), main="Central NY", xlab = 'Separation Distance (m)', pch = 16, col = 'blue', ylim = c(0,200), xlim = c(0,60000), cex=0.5)
+p2dRmOps = plot(v.DeepCNY_RmOps,plot.numbers=F, ylab=expression(Semivariance ~ (mW/m^2)^2), main="Central NY", xlab = 'Separation Distance (m)', pch = 16, col = 'green', ylim = c(0,200), xlim = c(0,60000), cex=0.5)
+p2dr = plot(rv.DeepCNY,plot.numbers=F, ylab=expression(Semivariance ~ (mW/m^2)^2), main="Central NY", xlab = 'Separation Distance (m)', pch = 16, col = 'blue', ylim = c(0,200), xlim = c(0,60000), cex=0.5)
+p2dRmOpsr = plot(rv.DeepCNY_RmOps,plot.numbers=F, ylab=expression(Semivariance ~ (mW/m^2)^2), main="Central NY", xlab = 'Separation Distance (m)', pch = 16, col = 'green', ylim = c(0,200), xlim = c(0,60000), cex=0.5)
 
 p3 = plot(v.ENY, plot.numbers=F, ylab=expression(Semivariance ~ (mW/m^2)^2), main="Eastern NY", xlab = 'Separation Distance (m)', pch = 16, col = 'red', ylim = c(0,100), xlim = c(0,60000), cex=0.5)
+p3RmOps = plot(v.ENY_RmOps, plot.numbers=F, ylab=expression(Semivariance ~ (mW/m^2)^2), main="Eastern NY", xlab = 'Separation Distance (m)', pch = 16, col = 'red', ylim = c(0,100), xlim = c(0,60000), cex=0.5)
 p3_k1p0 = plot(v.ENY_k1p0, plot.numbers=F, ylab=expression(Semivariance ~ (mW/m^2)^2), main="Eastern NY", xlab = 'Separation Distance (m)', pch = 16, col = kcols[1], ylim = c(0,100), xlim = c(0,60000), cex=0.5)
 p3_k1p5 = plot(v.ENY_k1p5, plot.numbers=F, ylab=expression(Semivariance ~ (mW/m^2)^2), main="Eastern NY", xlab = 'Separation Distance (m)', pch = 16, col = kcols[2], ylim = c(0,100), xlim = c(0,60000), cex=0.5)
 p3_k2p0 = plot(v.ENY_k2p0, plot.numbers=F, ylab=expression(Semivariance ~ (mW/m^2)^2), main="Eastern NY", xlab = 'Separation Distance (m)', pch = 16, col = kcols[3], ylim = c(0,100), xlim = c(0,60000), cex=0.5)
@@ -4581,8 +5676,12 @@ p3_k4p0 = plot(v.ENY_k4p0, plot.numbers=F, ylab=expression(Semivariance ~ (mW/m^
 p3_k4p5 = plot(v.ENY_k4p5, plot.numbers=F, ylab=expression(Semivariance ~ (mW/m^2)^2), main="Eastern NY", xlab = 'Separation Distance (m)', pch = 16, col = kcols[7], ylim = c(0,100), xlim = c(0,60000), cex=0.5)
 p3_k5p0 = plot(v.ENY_k5p0, plot.numbers=F, ylab=expression(Semivariance ~ (mW/m^2)^2), main="Eastern NY", xlab = 'Separation Distance (m)', pch = 16, col = kcols[8], ylim = c(0,100), xlim = c(0,60000), cex=0.5)
 p3d = plot(v.DeepENY, plot.numbers=F, ylab=expression(Semivariance ~ (mW/m^2)^2), main="Eastern NY", xlab = 'Separation Distance (m)', pch = 16, col = 'blue', ylim = c(0,100), xlim = c(0,60000), cex=0.5)
+p3dRmOps = plot(v.DeepENY_RmOps, plot.numbers=F, ylab=expression(Semivariance ~ (mW/m^2)^2), main="Eastern NY", xlab = 'Separation Distance (m)', pch = 16, col = 'green', ylim = c(0,100), xlim = c(0,60000), cex=0.5)
+p3dr = plot(rv.DeepENY, plot.numbers=F, ylab=expression(Semivariance ~ (mW/m^2)^2), main="Eastern NY", xlab = 'Separation Distance (m)', pch = 16, col = 'blue', ylim = c(0,100), xlim = c(0,60000), cex=0.5)
+p3dRmOpsr = plot(rv.DeepENY_RmOps, plot.numbers=F, ylab=expression(Semivariance ~ (mW/m^2)^2), main="Eastern NY", xlab = 'Separation Distance (m)', pch = 16, col = 'green', ylim = c(0,100), xlim = c(0,60000), cex=0.5)
 
 p5 = plot(v.NWPANY, plot.numbers=F, ylab=expression(Semivariance ~ (mW/m^2)^2), main="Northwestern PA & NY", xlab = 'Separation Distance (m)', pch = 16, col = 'red', xlim = c(0,60000), ylim = c(0,150), cex=0.5)
+p5RmOps = plot(v.NWPANY_RmOps, plot.numbers=F, ylab=expression(Semivariance ~ (mW/m^2)^2), main="Northwestern PA & NY", xlab = 'Separation Distance (m)', pch = 16, col = 'red', xlim = c(0,60000), ylim = c(0,150), cex=0.5)
 p5_k1p0 = plot(v.NWPANY_k1p0, plot.numbers=F, ylab=expression(Semivariance ~ (mW/m^2)^2), main="Northwestern PA & NY", xlab = 'Separation Distance (m)', pch = 16, col = kcols[1], xlim = c(0,60000), ylim = c(0,150), cex=0.5)
 p5_k1p5 = plot(v.NWPANY_k1p5, plot.numbers=F, ylab=expression(Semivariance ~ (mW/m^2)^2), main="Northwestern PA & NY", xlab = 'Separation Distance (m)', pch = 16, col = kcols[2], xlim = c(0,60000), ylim = c(0,150), cex=0.5)
 p5_k2p0 = plot(v.NWPANY_k2p0, plot.numbers=F, ylab=expression(Semivariance ~ (mW/m^2)^2), main="Northwestern PA & NY", xlab = 'Separation Distance (m)', pch = 16, col = kcols[3], xlim = c(0,60000), ylim = c(0,150), cex=0.5)
@@ -4592,8 +5691,12 @@ p5_k4p0 = plot(v.NWPANY_k4p0, plot.numbers=F, ylab=expression(Semivariance ~ (mW
 p5_k4p5 = plot(v.NWPANY_k4p5, plot.numbers=F, ylab=expression(Semivariance ~ (mW/m^2)^2), main="Northwestern PA & NY", xlab = 'Separation Distance (m)', pch = 16, col = kcols[7], xlim = c(0,60000), ylim = c(0,150), cex=0.5)
 p5_k5p0 = plot(v.NWPANY_k5p0, plot.numbers=F, ylab=expression(Semivariance ~ (mW/m^2)^2), main="Northwestern PA & NY", xlab = 'Separation Distance (m)', pch = 16, col = kcols[8], xlim = c(0,60000), ylim = c(0,150), cex=0.5)
 p5d = plot(v.DeepNWPANY, plot.numbers=F, ylab=expression(Semivariance ~ (mW/m^2)^2), main="Northwestern PA & NY", xlab = 'Separation Distance (m)', pch = 16, col = 'blue', xlim = c(0,60000), ylim = c(0,150), cex=0.5)
+p5dRmOps = plot(v.DeepNWPANY_RmOps, plot.numbers=F, ylab=expression(Semivariance ~ (mW/m^2)^2), main="Northwestern PA & NY", xlab = 'Separation Distance (m)', pch = 16, col = 'green', xlim = c(0,60000), ylim = c(0,150), cex=0.5)
+p5dr = plot(rv.DeepNWPANY, plot.numbers=F, ylab=expression(Semivariance ~ (mW/m^2)^2), main="Northwestern PA & NY", xlab = 'Separation Distance (m)', pch = 16, col = 'blue', xlim = c(0,60000), ylim = c(0,150), cex=0.5)
+p5dRmOpsr = plot(rv.DeepNWPANY_RmOps, plot.numbers=F, ylab=expression(Semivariance ~ (mW/m^2)^2), main="Northwestern PA & NY", xlab = 'Separation Distance (m)', pch = 16, col = 'green', xlim = c(0,60000), ylim = c(0,150), cex=0.5)
 
 p9 = plot(v.CWV, plot.numbers=F, ylab=expression(Semivariance ~ (mW/m^2)^2), main="Central WV", xlab = 'Separation Distance (m)', pch = 16, col = 'red', ylim = c(0,400), xlim = c(0,60000), cex=0.5)
+p9RmOps = plot(v.CWV_RmOps, plot.numbers=F, ylab=expression(Semivariance ~ (mW/m^2)^2), main="Central WV", xlab = 'Separation Distance (m)', pch = 16, col = 'red', ylim = c(0,400), xlim = c(0,60000), cex=0.5)
 p9_k1p0 = plot(v.CWV_k1p0, plot.numbers=F, ylab=expression(Semivariance ~ (mW/m^2)^2), main="Central WV", xlab = 'Separation Distance (m)', pch = 16, col = kcols[1], ylim = c(0,400), xlim = c(0,60000), cex=0.5)
 p9_k1p5 = plot(v.CWV_k1p5, plot.numbers=F, ylab=expression(Semivariance ~ (mW/m^2)^2), main="Central WV", xlab = 'Separation Distance (m)', pch = 16, col = kcols[2], ylim = c(0,400), xlim = c(0,60000), cex=0.5)
 p9_k2p0 = plot(v.CWV_k2p0, plot.numbers=F, ylab=expression(Semivariance ~ (mW/m^2)^2), main="Central WV", xlab = 'Separation Distance (m)', pch = 16, col = kcols[3], ylim = c(0,400), xlim = c(0,60000), cex=0.5)
@@ -4603,6 +5706,9 @@ p9_k4p0 = plot(v.CWV_k4p0, plot.numbers=F, ylab=expression(Semivariance ~ (mW/m^
 p9_k4p5 = plot(v.CWV_k4p5, plot.numbers=F, ylab=expression(Semivariance ~ (mW/m^2)^2), main="Central WV", xlab = 'Separation Distance (m)', pch = 16, col = kcols[7], ylim = c(0,400), xlim = c(0,60000), cex=0.5)
 p9_k5p0 = plot(v.CWV_k5p0, plot.numbers=F, ylab=expression(Semivariance ~ (mW/m^2)^2), main="Central WV", xlab = 'Separation Distance (m)', pch = 16, col = kcols[8], ylim = c(0,400), xlim = c(0,60000), cex=0.5)
 p9d = plot(v.DeepCWV, plot.numbers=F, ylab=expression(Semivariance ~ (mW/m^2)^2), main="Central WV", xlab = 'Separation Distance (m)', pch = 16, col = 'blue', ylim = c(0,400), xlim = c(0,60000), cex=0.5)
+p9dRmOps = plot(v.DeepCWV_RmOps, plot.numbers=F, ylab=expression(Semivariance ~ (mW/m^2)^2), main="Central WV", xlab = 'Separation Distance (m)', pch = 16, col = 'green', ylim = c(0,400), xlim = c(0,60000), cex=0.5)
+p9dr = plot(rv.DeepCWV, plot.numbers=F, ylab=expression(Semivariance ~ (mW/m^2)^2), main="Central WV", xlab = 'Separation Distance (m)', pch = 16, col = 'blue', ylim = c(0,400), xlim = c(0,60000), cex=0.5)
+p9dRmOpsr = plot(rv.DeepCWV_RmOps, plot.numbers=F, ylab=expression(Semivariance ~ (mW/m^2)^2), main="Central WV", xlab = 'Separation Distance (m)', pch = 16, col = 'green', ylim = c(0,400), xlim = c(0,60000), cex=0.5)
 
 
 png("Variograms_UniqueYAxis_CompareESDA_DeepToOutliers.png", width=13, height=10, units="in", res=300)
@@ -4635,6 +5741,125 @@ plot(p9, split = c(4,2,4,3), more=T)
 
 plot(p10dzz, split=c(2,3,4,3), more=T)
 plot(p10zz, split = c(2,3,4,3), more=T)
+
+dev.off()
+
+png("Variograms_UniqueYAxis_CompareESDA_DeepToOutliers_RmOps.png", width=13, height=10, units="in", res=300)
+plot(p1dRmOps, split=c(1,1,4,3), more=T)
+plot(p1RmOps, split = c(1,1,4,3), more=T)
+
+plot(p2dRmOps, split=c(4,1,4,3), more=T)
+plot(p2RmOps, split = c(4,1,4,3), more=T)
+
+plot(p3dRmOps, split=c(1,2,4,3), more=T)
+plot(p3RmOps, split = c(1,2,4,3), more=T)
+
+plot(p4dRmOps, split=c(2,2,4,3), more=T)
+plot(p4RmOps, split = c(2,2,4,3), more=T)
+
+plot(p5dRmOps, split=c(3,1,4,3), more=T)
+plot(p5RmOps, split = c(3,1,4,3), more=T)
+
+plot(p6dzzRmOps, split=c(3,2,4,3), more=T)
+plot(p6zzRmOps, split = c(3,2,4,3), more=T)
+
+plot(p7dzzRmOps, split=c(2,1,4,3), more=T)
+plot(p7zzRmOps, split = c(2,1,4,3), more=T)
+
+plot(p8dRmOps, split=c(1,3,4,3), more=T)
+plot(p8RmOps, split = c(1,3,4,3), more=T)
+
+plot(p9dRmOps, split=c(4,2,4,3), more=T)
+plot(p9RmOps, split = c(4,2,4,3), more=T)
+
+plot(p10dzzRmOps, split=c(2,3,4,3), more=T)
+plot(p10zzRmOps, split = c(2,3,4,3), more=T)
+
+dev.off()
+
+png("Variograms_UniqueYAxis_CompareESDA_DeepToOutliers_Robust.png", width=13, height=10, units="in", res=300)
+plot(p1d, split=c(1,1,4,3), more=T)
+plot(p1dr, split=c(1,1,4,3), more=T)
+plot(p1, split = c(1,1,4,3), more=T)
+
+plot(p2d, split=c(4,1,4,3), more=T)
+plot(p2dr, split=c(4,1,4,3), more=T)
+plot(p2, split = c(4,1,4,3), more=T)
+
+plot(p3d, split=c(1,2,4,3), more=T)
+plot(p3dr, split=c(1,2,4,3), more=T)
+plot(p3, split = c(1,2,4,3), more=T)
+
+plot(p4d, split=c(2,2,4,3), more=T)
+plot(p4dr, split=c(2,2,4,3), more=T)
+plot(p4, split = c(2,2,4,3), more=T)
+
+plot(p5d, split=c(3,1,4,3), more=T)
+plot(p5dr, split=c(3,1,4,3), more=T)
+plot(p5, split = c(3,1,4,3), more=T)
+
+plot(p6dzz, split=c(3,2,4,3), more=T)
+plot(p6dzzr, split=c(3,2,4,3), more=T)
+plot(p6zz, split = c(3,2,4,3), more=T)
+
+plot(p7dzz, split=c(2,1,4,3), more=T)
+plot(p7dzzr, split=c(2,1,4,3), more=T)
+plot(p7zz, split = c(2,1,4,3), more=T)
+
+plot(p8d, split=c(1,3,4,3), more=T)
+plot(p8dr, split=c(1,3,4,3), more=T)
+plot(p8, split = c(1,3,4,3), more=T)
+
+plot(p9d, split=c(4,2,4,3), more=T)
+plot(p9dr, split=c(4,2,4,3), more=T)
+plot(p9, split = c(4,2,4,3), more=T)
+
+plot(p10dzz, split=c(2,3,4,3), more=T)
+plot(p10dzzr, split=c(2,3,4,3), more=T)
+plot(p10zz, split = c(2,3,4,3), more=T)
+
+dev.off()
+
+png("Variograms_UniqueYAxis_CompareESDA_DeepToOutliers_Robust_RmOps.png", width=13, height=10, units="in", res=300)
+plot(p1dRmOps, split=c(1,1,4,3), more=T)
+plot(p1dRmOpsr, split=c(1,1,4,3), more=T)
+plot(p1RmOps, split = c(1,1,4,3), more=T)
+
+plot(p2dRmOps, split=c(4,1,4,3), more=T)
+plot(p2dRmOpsr, split=c(4,1,4,3), more=T)
+plot(p2RmOps, split = c(4,1,4,3), more=T)
+
+plot(p3dRmOps, split=c(1,2,4,3), more=T)
+plot(p3dRmOpsr, split=c(1,2,4,3), more=T)
+plot(p3RmOps, split = c(1,2,4,3), more=T)
+
+plot(p4dRmOps, split=c(2,2,4,3), more=T)
+plot(p4dRmOpsr, split=c(2,2,4,3), more=T)
+plot(p4RmOps, split = c(2,2,4,3), more=T)
+
+plot(p5dRmOps, split=c(3,1,4,3), more=T)
+plot(p5dRmOpsr, split=c(3,1,4,3), more=T)
+plot(p5RmOps, split = c(3,1,4,3), more=T)
+
+plot(p6dzzRmOps, split=c(3,2,4,3), more=T)
+plot(p6dzzRmOpsr, split=c(3,2,4,3), more=T)
+plot(p6zzRmOps, split = c(3,2,4,3), more=T)
+
+plot(p7dzzRmOps, split=c(2,1,4,3), more=T)
+plot(p7dzzRmOpsr, split=c(2,1,4,3), more=T)
+plot(p7zzRmOps, split = c(2,1,4,3), more=T)
+
+plot(p8dRmOps, split=c(1,3,4,3), more=T)
+plot(p8dRmOpsr, split=c(1,3,4,3), more=T)
+plot(p8RmOps, split = c(1,3,4,3), more=T)
+
+plot(p9dRmOps, split=c(4,2,4,3), more=T)
+plot(p9dRmOpsr, split=c(4,2,4,3), more=T)
+plot(p9RmOps, split = c(4,2,4,3), more=T)
+
+plot(p10dzzRmOps, split=c(2,3,4,3), more=T)
+plot(p10dzzRmOpsr, split=c(2,3,4,3), more=T)
+plot(p10zzRmOps, split = c(2,3,4,3), more=T)
 
 dev.off()
 
@@ -4751,186 +5976,186 @@ plot(p10zz, split = c(2,3,4,3), more=T)
 
 dev.off()
 
-#Confidence intervals for variogram lags----
-#Fixme: There is a real need to parallelize this code. It is way too slow for large samples (> 1000 points)
+#   Confidence intervals for variogram lags----
 #Note that if the number of point pairs in a bin is 2, then the standard deviation will be 0 because when only 2 samples are removed in that bin there is sample reuse because each point contributes the same value when it is removed. Therefore the jackknife variance is likely too small when the number of data points is small.
 #Also note that point pairs is not the same as number of points.
-JackKnife = function(Dat,      #Spatial points datafame containing the points to be jackknifed. Should be in UTM coordinates.
-                      bins,    #Number of lags for the semi-variogram
-                      cut,     #Cutoff distance for the semi-variogram
-                      anis=NA, #anisotropy for semi-variogram. Currently only works for 2 directions.
-                      v.Dat    #variogram model for Dat using all of the data. Must have same bins, cut, and anis as specified.
-                      )
-  {  
-  if (is.na(anis[1]) == FALSE){
-    #Anisotropic Variogram
-    if (length(anis) < 2){
-      print('Error, need to have at least 2 angles for the anisotropy angle')
-      stop
-    }
-    #Expand the length of VarioMat matrix to accommodate the number of angles in anis
-    VarioMat = Pts = Dist = Gamma = matrix(NA, nrow=nrow(Dat)*length(anis), ncol=bins)
-    
-    #Make a vector of the number of replications of each bin from the jackknife. This number only changes if a given resampling results in no estimate for a given bin.
-    Nmat = rbind(rep(nrow(Dat), bins), rep(nrow(Dat), bins))
-    
-    #Fixme: Make a storage for the anisotropic variogram for any angle length. Currently at 2 (most common) but can be nrow(Dat)*length(anis) + i
-    for (i in 1:nrow(Dat)){
-      #Make a variogram, and save the bin information in VarioMat
-      #Use anisotropic variogram.
-      vj = variogram(Qs~1, data = Dat[-i,], cutoff=cut, width=cut/bins, alpha=anis)
-      
-      #Get the indicies in vj that are populated with information for the direction of interest.
-      Ind1 = which(vj$dir.hor == anis[1])
-      Ind2 = which(vj$dir.hor == anis[2])
-      
-      Pts[i, 1:length(Ind1)] = vj$np[Ind1]
-      Pts[(nrow(Dat) + i), 1:length(Ind2)] = vj$np[Ind2]
-      Dist[i,1:length(Ind1)] = vj$dist[Ind1]
-      Dist[(nrow(Dat) + i), 1:length(Ind2)] = vj$dist[Ind2]
-      Gamma[i, 1:length(Ind1)] = vj$gamma[Ind1]
-      Gamma[(nrow(Dat) + i), 1:length(Ind2)] = vj$gamma[Ind2]
-      
-      if (any(is.na(Pts[i,])) || any(Pts[i,] < 2)){
-        #Mark the distance as NA and reduce the number of points in Nvec. The model will have to be rerun with the new Nvec...
-        ind = which(is.na(Pts[i,]) == TRUE | Pts[i,] < 2)
-        Pts[i, ind] = NA
-        Dist[i, ind] = NA
-        Nmat[1, ind] = Nmat[1, ind] - 1
-        Gamma[i, ind] = NA
-      }
-      if (any(is.na(Pts[(nrow(Dat) + i),])) || any(Pts[(nrow(Dat) + i),] < 2)){
-        #Mark the distance as NA and reduce the number of points in Nvec. The model will have to be rerun with the new Nvec...
-        ind = which(is.na(Pts[(nrow(Dat) + i),]) == TRUE | Pts[(nrow(Dat) + i),] < 2)
-        Pts[(nrow(Dat) + i), ind] = NA
-        Dist[(nrow(Dat) + i), ind] = NA
-        Nmat[2, ind] = Nmat[2, ind] - 1
-        Gamma[(nrow(Dat) + i), ind] = NA
-      }
-      if (i == nrow(Dat)){
-        print('finished first loop')
-      }
-    }
-    rm(i)
-    
-    #Get the indices of the anisotropy for the variogram with all of the points. This will contain the maximum number of bins for each angle.
-    Ind1 = which(v.Dat$dir.hor == anis[1])
-    Ind2 = which(v.Dat$dir.hor == anis[2])
-    
-    #Fill in the matrix of the estimates. The transposition is a faster way of using sweep() to multiply a vector by row of a matrix.
-    VarioMat[1:nrow(Dat), 1:length(Ind1)] = t(Nmat[1, 1:length(Ind1)]*v.Dat$gamma[Ind1] - t(t(t(Gamma[1:nrow(Dat), 1:length(Ind1)])*(Nmat[1, 1:length(Ind1)]-1))))
-    VarioMat[(nrow(Dat)+1):(2*nrow(Dat)), 1:length(Ind2)] = t(Nmat[2, 1:length(Ind2)]*v.Dat$gamma[Ind2] - t(t(t(Gamma[(nrow(Dat)+1):(2*nrow(Dat)), 1:length(Ind2)])*(Nmat[2, 1:length(Ind2)]-1))))
-    
-    #Calculate the Jackknife mean
-    BinMean_1 = apply(VarioMat[1:nrow(Dat), ], 2, FUN=sum, na.rm=TRUE)/Nmat[1,]
-    BinMean_2 = apply(VarioMat[(nrow(Dat)+1):(nrow(Dat)*2), ], 2, FUN=sum, na.rm=TRUE)/Nmat[2,]
-    
-    BinMean = rbind(BinMean_1, BinMean_2)
-    
-    #Calculate the average bin distances for plotting purposes
-    BinMean_dist1 = apply(Dist[1:nrow(Dat), ], 2, FUN=sum, na.rm=TRUE)/Nmat[1,]
-    BinMean_dist2 = apply(Dist[(nrow(Dat)+1):(2*nrow(Dat)), ], 2, FUN=sum, na.rm=TRUE)/Nmat[2,]
-    
-    BinMean_dist = rbind(BinMean_dist1, BinMean_dist2)
-    
-    
-    #Calculate the jackknife standard error
-    VarioMatSquaredMatrix = matrix(NA, ncol=bins, nrow=nrow(Dat)*length(anis))
-    DistSd = matrix(NA, ncol=bins, nrow=nrow(Dat)*length(anis))
-    for (j in 1:(nrow(Dat)*length(anis))){
-      if (j <= nrow(Dat)){
-        VarioMatSquaredMatrix[j,] = (VarioMat[j,] - BinMean_1)^2
-        DistSd[j, ] = (Dist[j, ] - BinMean_dist1)^2
-      }
-      else{
-        VarioMatSquaredMatrix[j,] = (VarioMat[j,] - BinMean_2)^2
-        DistSd[j, ] = (Dist[j, ] - BinMean_dist2)^2
-      }
-      if (j == nrow(Dat)*length(anis)){
-        print('finished second loop')
-      }
-    }
-    rm(j)
-    
-    
-    #Calculate the jackknife variance for each bin
-    VarEst = matrix(NA, ncol=bins, nrow=length(anis))
-    VarEst[1,] = apply(VarioMatSquaredMatrix[1:nrow(Dat),], 2, FUN=sum, na.rm=TRUE)/(Nmat[1,]*(Nmat[1,]-1))
-    VarEst[2,] = apply(VarioMatSquaredMatrix[(nrow(Dat)+1):(nrow(Dat)*2),], 2, FUN=sum, na.rm=TRUE)/(Nmat[2,]*(Nmat[2,]-1))
-    
-    SdEst = sqrt(VarEst)
-    
-    #Calculate the standard deviation of the bin distances for plotting error bars on the positions
-    BinVar_dist1 = apply(DistSd[1:nrow(Dat), ], 2, FUN=sum, na.rm=TRUE)/(Nmat[1,] - 1)
-    BinVar_dist2 = apply(DistSd[(nrow(Dat)+1):(2*nrow(Dat)), ], 2, FUN=sum, na.rm=TRUE)/(Nmat[2,] - 1)
-    BinSd_dist1 = sqrt(BinVar_dist1)
-    BinSd_dist2 = sqrt(BinVar_dist2)
-    BinSd_dist = rbind(BinSd_dist1, BinSd_dist2)
-    
-    Nvec=Nmat
-  }
-  else {
-    #Make a matrix for storing the bin estimates of variance, number of points, and the distance to points.
-    VarioMat = Pts = Dist = Gamma = matrix(NA, nrow=nrow(Dat), ncol=bins)
-    
-    #Make a vector of the number of replications of each bin from the jackknife. This number only changes if a given resampling results in no estimate for a given bin.
-    Nvec = rep(nrow(Dat), bins)
-    
-    #Start jackknife
-    for (i in 1:nrow(Dat)){
-      vj = variogram(Qs~1, data = Dat[-i,], cutoff=cut, width=cut/bins)
-      
-      #Store the number of points in each lag and the average lag distance.
-      Pts[i,] = vj$np
-      Dist[i,] = vj$dist
-      Gamma[i,] = vj$gamma
-      
-      if (any(is.na(Pts[i,])) || any(Pts[i,] < 2)){
-        #Mark the distance as NA and reduce the number of points in Nvec. The model will have to be rerun with the new Nvec...
-        ind = which((is.na(Pts[i,]) == TRUE) | (Pts[i,] < 2))
-        Pts[i, ind] = NA
-        Dist[i, ind] = NA
-        Nvec[ind] = Nvec[ind] - 1
-        Gamma[i, ind] = NA
-      }
-    }
-    rm(i)
-    
-    #Calculate the estimate of the bin mean from the jackknife. The transposition is a faster way of using sweep() to multiply a vector by row of a matrix.
-    VarioMat =  t(Nvec*v.Dat$gamma - t(t(t(Gamma)*(Nvec-1))))
-    
-    #Calculate the Jackknife mean. Remove NAs generated from before.
-    BinMean = apply(VarioMat, 2, FUN=sum, na.rm=TRUE)/Nvec
-    
-    #Calculate the average bin distance for plotting purposes
-    BinMean_dist = apply(Dist, 2, FUN=sum, na.rm=TRUE)/Nvec
-    
-    #Calculate the jackknife standard error
-    VarioMatSquaredMatrix = matrix(NA, ncol=bins, nrow=nrow(Dat))
-    DistSd = matrix(NA, ncol=bins, nrow=nrow(Dat))
-    for (j in 1:nrow(Dat)){
-      VarioMatSquaredMatrix[j, ] = (VarioMat[j, ] - BinMean)^2
-      DistSd[j, ] = (Dist[j, ] - BinMean_dist)^2
-    }
-    rm(j)
-    
-    #Calculate the jackknife variance for each bin
-    VarEst = apply(VarioMatSquaredMatrix, 2, FUN=sum, na.rm=TRUE)/(Nvec*(Nvec-1))
-    
-    SdEst = sqrt(VarEst)
-    
-    #Calculate the standard deviation of the bin distances for plotting error bars on the positions
-    BinVar_dist = apply(DistSd, 2, FUN=sum, na.rm=TRUE)/(Nvec - 1)
-    BinSd_dist = sqrt(BinVar_dist)
-    
-  }
-  
-  #return a list
-  lst = list(SdEst = SdEst, BinMean = BinMean, AvgDist = BinMean_dist, SdDist = BinSd_dist, NumPts = Pts, N = Nvec)
-  return(lst)
-}
+# JackKnife = function(Dat,      #Spatial points datafame containing the points to be jackknifed. Should be in UTM coordinates.
+#                       bins,    #Number of lags for the semi-variogram
+#                       cut,     #Cutoff distance for the semi-variogram
+#                       anis=NA, #anisotropy for semi-variogram. Currently only works for 2 directions.
+#                       v.Dat    #variogram model for Dat using all of the data. Must have same bins, cut, and anis as specified.
+#                       )
+#   {  
+#   if (is.na(anis[1]) == FALSE){
+#     #Anisotropic Variogram
+#     if (length(anis) < 2){
+#       print('Error, need to have at least 2 angles for the anisotropy angle')
+#       stop
+#     }
+#     #Expand the length of VarioMat matrix to accommodate the number of angles in anis
+#     VarioMat = Pts = Dist = Gamma = matrix(NA, nrow=nrow(Dat)*length(anis), ncol=bins)
+#     
+#     #Make a vector of the number of replications of each bin from the jackknife. This number only changes if a given resampling results in no estimate for a given bin.
+#     Nmat = rbind(rep(nrow(Dat), bins), rep(nrow(Dat), bins))
+#     
+#     #Fixme: Make a storage for the anisotropic variogram for any angle length. Currently at 2 (most common) but can be nrow(Dat)*length(anis) + i
+#     for (i in 1:nrow(Dat)){
+#       #Make a variogram, and save the bin information in VarioMat
+#       #Use anisotropic variogram.
+#       vj = variogram(Qs~1, data = Dat[-i,], cutoff=cut, width=cut/bins, alpha=anis)
+#       
+#       #Get the indicies in vj that are populated with information for the direction of interest.
+#       Ind1 = which(vj$dir.hor == anis[1])
+#       Ind2 = which(vj$dir.hor == anis[2])
+#       
+#       Pts[i, 1:length(Ind1)] = vj$np[Ind1]
+#       Pts[(nrow(Dat) + i), 1:length(Ind2)] = vj$np[Ind2]
+#       Dist[i,1:length(Ind1)] = vj$dist[Ind1]
+#       Dist[(nrow(Dat) + i), 1:length(Ind2)] = vj$dist[Ind2]
+#       Gamma[i, 1:length(Ind1)] = vj$gamma[Ind1]
+#       Gamma[(nrow(Dat) + i), 1:length(Ind2)] = vj$gamma[Ind2]
+#       
+#       if (any(is.na(Pts[i,])) || any(Pts[i,] < 2)){
+#         #Mark the distance as NA and reduce the number of points in Nvec. The model will have to be rerun with the new Nvec...
+#         ind = which(is.na(Pts[i,]) == TRUE | Pts[i,] < 2)
+#         Pts[i, ind] = NA
+#         Dist[i, ind] = NA
+#         Nmat[1, ind] = Nmat[1, ind] - 1
+#         Gamma[i, ind] = NA
+#       }
+#       if (any(is.na(Pts[(nrow(Dat) + i),])) || any(Pts[(nrow(Dat) + i),] < 2)){
+#         #Mark the distance as NA and reduce the number of points in Nvec. The model will have to be rerun with the new Nvec...
+#         ind = which(is.na(Pts[(nrow(Dat) + i),]) == TRUE | Pts[(nrow(Dat) + i),] < 2)
+#         Pts[(nrow(Dat) + i), ind] = NA
+#         Dist[(nrow(Dat) + i), ind] = NA
+#         Nmat[2, ind] = Nmat[2, ind] - 1
+#         Gamma[(nrow(Dat) + i), ind] = NA
+#       }
+#       if (i == nrow(Dat)){
+#         print('finished first loop')
+#       }
+#     }
+#     rm(i)
+#     
+#     #Get the indices of the anisotropy for the variogram with all of the points. This will contain the maximum number of bins for each angle.
+#     Ind1 = which(v.Dat$dir.hor == anis[1])
+#     Ind2 = which(v.Dat$dir.hor == anis[2])
+#     
+#     #Fill in the matrix of the estimates. The transposition is a faster way of using sweep() to multiply a vector by row of a matrix.
+#     VarioMat[1:nrow(Dat), 1:length(Ind1)] = t(Nmat[1, 1:length(Ind1)]*v.Dat$gamma[Ind1] - t(t(t(Gamma[1:nrow(Dat), 1:length(Ind1)])*(Nmat[1, 1:length(Ind1)]-1))))
+#     VarioMat[(nrow(Dat)+1):(2*nrow(Dat)), 1:length(Ind2)] = t(Nmat[2, 1:length(Ind2)]*v.Dat$gamma[Ind2] - t(t(t(Gamma[(nrow(Dat)+1):(2*nrow(Dat)), 1:length(Ind2)])*(Nmat[2, 1:length(Ind2)]-1))))
+#     
+#     #Calculate the Jackknife mean
+#     BinMean_1 = apply(VarioMat[1:nrow(Dat), ], 2, FUN=sum, na.rm=TRUE)/Nmat[1,]
+#     BinMean_2 = apply(VarioMat[(nrow(Dat)+1):(nrow(Dat)*2), ], 2, FUN=sum, na.rm=TRUE)/Nmat[2,]
+#     
+#     BinMean = rbind(BinMean_1, BinMean_2)
+#     
+#     #Calculate the average bin distances for plotting purposes
+#     BinMean_dist1 = apply(Dist[1:nrow(Dat), ], 2, FUN=sum, na.rm=TRUE)/Nmat[1,]
+#     BinMean_dist2 = apply(Dist[(nrow(Dat)+1):(2*nrow(Dat)), ], 2, FUN=sum, na.rm=TRUE)/Nmat[2,]
+#     
+#     BinMean_dist = rbind(BinMean_dist1, BinMean_dist2)
+#     
+#     
+#     #Calculate the jackknife standard error
+#     VarioMatSquaredMatrix = matrix(NA, ncol=bins, nrow=nrow(Dat)*length(anis))
+#     DistSd = matrix(NA, ncol=bins, nrow=nrow(Dat)*length(anis))
+#     for (j in 1:(nrow(Dat)*length(anis))){
+#       if (j <= nrow(Dat)){
+#         VarioMatSquaredMatrix[j,] = (VarioMat[j,] - BinMean_1)^2
+#         DistSd[j, ] = (Dist[j, ] - BinMean_dist1)^2
+#       }
+#       else{
+#         VarioMatSquaredMatrix[j,] = (VarioMat[j,] - BinMean_2)^2
+#         DistSd[j, ] = (Dist[j, ] - BinMean_dist2)^2
+#       }
+#       if (j == nrow(Dat)*length(anis)){
+#         print('finished second loop')
+#       }
+#     }
+#     rm(j)
+#     
+#     
+#     #Calculate the jackknife variance for each bin
+#     VarEst = matrix(NA, ncol=bins, nrow=length(anis))
+#     VarEst[1,] = apply(VarioMatSquaredMatrix[1:nrow(Dat),], 2, FUN=sum, na.rm=TRUE)/(Nmat[1,]*(Nmat[1,]-1))
+#     VarEst[2,] = apply(VarioMatSquaredMatrix[(nrow(Dat)+1):(nrow(Dat)*2),], 2, FUN=sum, na.rm=TRUE)/(Nmat[2,]*(Nmat[2,]-1))
+#     
+#     SdEst = sqrt(VarEst)
+#     
+#     #Calculate the standard deviation of the bin distances for plotting error bars on the positions
+#     BinVar_dist1 = apply(DistSd[1:nrow(Dat), ], 2, FUN=sum, na.rm=TRUE)/(Nmat[1,] - 1)
+#     BinVar_dist2 = apply(DistSd[(nrow(Dat)+1):(2*nrow(Dat)), ], 2, FUN=sum, na.rm=TRUE)/(Nmat[2,] - 1)
+#     BinSd_dist1 = sqrt(BinVar_dist1)
+#     BinSd_dist2 = sqrt(BinVar_dist2)
+#     BinSd_dist = rbind(BinSd_dist1, BinSd_dist2)
+#     
+#     Nvec=Nmat
+#   }
+#   else {
+#     #Make a matrix for storing the bin estimates of variance, number of points, and the distance to points.
+#     VarioMat = Pts = Dist = Gamma = matrix(NA, nrow=nrow(Dat), ncol=bins)
+#     
+#     #Make a vector of the number of replications of each bin from the jackknife. This number only changes if a given resampling results in no estimate for a given bin.
+#     Nvec = rep(nrow(Dat), bins)
+#     
+#     #Start jackknife
+#     for (i in 1:nrow(Dat)){
+#       vj = variogram(Qs~1, data = Dat[-i,], cutoff=cut, width=cut/bins)
+#       
+#       #Store the number of points in each lag and the average lag distance.
+#       Pts[i,] = vj$np
+#       Dist[i,] = vj$dist
+#       Gamma[i,] = vj$gamma
+#       
+#       if (any(is.na(Pts[i,])) || any(Pts[i,] < 2)){
+#         #Mark the distance as NA and reduce the number of points in Nvec. The model will have to be rerun with the new Nvec...
+#         ind = which((is.na(Pts[i,]) == TRUE) | (Pts[i,] < 2))
+#         Pts[i, ind] = NA
+#         Dist[i, ind] = NA
+#         Nvec[ind] = Nvec[ind] - 1
+#         Gamma[i, ind] = NA
+#       }
+#     }
+#     rm(i)
+#     
+#     #Calculate the estimate of the bin mean from the jackknife. The transposition is a faster way of using sweep() to multiply a vector by row of a matrix.
+#     VarioMat =  t(Nvec*v.Dat$gamma - t(t(t(Gamma)*(Nvec-1))))
+#     
+#     #Calculate the Jackknife mean. Remove NAs generated from before.
+#     BinMean = apply(VarioMat, 2, FUN=sum, na.rm=TRUE)/Nvec
+#     
+#     #Calculate the average bin distance for plotting purposes
+#     BinMean_dist = apply(Dist, 2, FUN=sum, na.rm=TRUE)/Nvec
+#     
+#     #Calculate the jackknife standard error
+#     VarioMatSquaredMatrix = matrix(NA, ncol=bins, nrow=nrow(Dat))
+#     DistSd = matrix(NA, ncol=bins, nrow=nrow(Dat))
+#     for (j in 1:nrow(Dat)){
+#       VarioMatSquaredMatrix[j, ] = (VarioMat[j, ] - BinMean)^2
+#       DistSd[j, ] = (Dist[j, ] - BinMean_dist)^2
+#     }
+#     rm(j)
+#     
+#     #Calculate the jackknife variance for each bin
+#     VarEst = apply(VarioMatSquaredMatrix, 2, FUN=sum, na.rm=TRUE)/(Nvec*(Nvec-1))
+#     
+#     SdEst = sqrt(VarEst)
+#     
+#     #Calculate the standard deviation of the bin distances for plotting error bars on the positions
+#     BinVar_dist = apply(DistSd, 2, FUN=sum, na.rm=TRUE)/(Nvec - 1)
+#     BinSd_dist = sqrt(BinVar_dist)
+#     
+#   }
+#   
+#   #return a list
+#   lst = list(SdEst = SdEst, BinMean = BinMean, AvgDist = BinMean_dist, SdDist = BinSd_dist, NumPts = Pts, N = Nvec)
+#   return(lst)
+# }
 
-#Parallel Jackknife function. Anisotropy part still needs work----
+#    Parallel Jackknife function----
+#Fixme: Anisotropy component still needs work, see previous commented out function
 JackKnifePar = function(Dat,      #Spatial points datafame containing the points to be jackknifed. Should be in UTM coordinates.
                      bins,    #Number of lags for the semi-variogram
                      cut,     #Cutoff distance for the semi-variogram
@@ -5117,7 +6342,7 @@ JackKnifePar = function(Dat,      #Spatial points datafame containing the points
 cores = detectCores() - 1 
 cl = makeCluster(cores)
 registerDoParallel(cl)
-#Compute jackknife estimates of variogram----
+#    Compute jackknife estimates of variogram----
 JackPreCT  = JackKnifePar(Dat = PreCT, bins=50, cut=60000, v.Dat = v.PreCT)
 JackPreCNY = JackKnifePar(Dat = PreCNY, bins=15, cut=60000, v.Dat = v.PreCNY)
 JackPreCWV = JackKnifePar(Dat = PreCWV, bins=50, cut=60000, v.Dat = v.PreCWV)
@@ -5239,9 +6464,31 @@ JackNWPANY_k5p0 = JackKnifePar(Dat = NWPANY_k5p0, bins=20, cut=60000, v.Dat = v.
 JackMT_k5p0 = JackKnifePar(Dat = MT_k5p0, bins=50, cut=60000, v.Dat = v.MT_k5p0)
 JackVR_k5p0 = JackKnifePar(Dat = VR_k5p0, bins=20, cut=60000, v.Dat = v.VR_k5p0)
 
+JackDeepCT_RmOps  = JackKnifePar(Dat = DeepCT_RmOps, bins=50, cut=60000, v.Dat = v.DeepCT_RmOps)
+JackDeepCNY_RmOps = JackKnifePar(Dat = DeepCNY_RmOps, bins=15, cut=60000, v.Dat = v.DeepCNY_RmOps)
+JackDeepCWV_RmOps = JackKnifePar(Dat = DeepCWV_RmOps, bins=50, cut=60000, v.Dat = v.DeepCWV_RmOps)
+JackDeepENY_RmOps = JackKnifePar(Dat = DeepENY_RmOps, bins=15, cut=60000, v.Dat = v.DeepENY_RmOps)
+JackDeepENYPA_RmOps = JackKnifePar(Dat = DeepENYPA_RmOps, bins=40, cut=60000, v.Dat = v.DeepENYPA_RmOps)
+JackDeepWPA_RmOps  = JackKnifePar(Dat = DeepWPA_RmOps, bins=50, cut=60000, v.Dat = v.DeepWPA_RmOps)
+JackDeepSWPA_RmOps = JackKnifePar(Dat = DeepSWPA_RmOps, bins=50, cut=60000, v.Dat = v.DeepSWPA_RmOps)
+JackDeepNWPANY_RmOps = JackKnifePar(Dat = DeepNWPANY_RmOps, bins=20, cut=60000, v.Dat = v.DeepNWPANY_RmOps)
+JackDeepMT_RmOps = JackKnifePar(Dat = DeepMT_RmOps, bins=50, cut=60000, v.Dat = v.DeepMT_RmOps)
+JackDeepVR_RmOps = JackKnifePar(Dat = DeepVR_RmOps, bins=20, cut=60000, v.Dat = v.DeepVR_RmOps)
+
+JackCT_RmOps  = JackKnifePar(Dat = CT_RmOps, bins=50, cut=60000, v.Dat = v.CT_RmOps)
+JackCNY_RmOps = JackKnifePar(Dat = CNY_RmOps, bins=15, cut=60000, v.Dat = v.CNY_RmOps)
+JackCWV_RmOps = JackKnifePar(Dat = CWV_RmOps, bins=50, cut=60000, v.Dat = v.CWV_RmOps)
+JackENY_RmOps = JackKnifePar(Dat = ENY_RmOps, bins=15, cut=60000, v.Dat = v.ENY_RmOps)
+JackENYPA_RmOps = JackKnifePar(Dat = ENYPA_RmOps, bins=40, cut=60000, v.Dat = v.ENYPA_RmOps)
+JackWPA_RmOps  = JackKnifePar(Dat = WPA_RmOps, bins=50, cut=60000, v.Dat = v.WPA_RmOps)
+JackSWPA_RmOps = JackKnifePar(Dat = SWPA_RmOps, bins=50, cut=60000, v.Dat = v.SWPA_RmOps)
+JackNWPANY_RmOps = JackKnifePar(Dat = NWPANY_RmOps, bins=20, cut=60000, v.Dat = v.NWPANY_RmOps)
+JackMT_RmOps = JackKnifePar(Dat = MT_RmOps, bins=50, cut=60000, v.Dat = v.MT_RmOps)
+JackVR_RmOps = JackKnifePar(Dat = VR_RmOps, bins=20, cut=60000, v.Dat = v.VR_RmOps)
+
 stopCluster(cl)
 
-#Plot the variograms with confidence intervals----
+#    Plot the variograms with confidence intervals----
 png("Variograms_UniqueYAxis_CompareESDA_95ConfInt.png", width=13, height=10, units="in", res=300)
 plot(p1p, split=c(1,1,4,3), more=T)
 plot(p1d, split=c(1,1,4,3), more=T)
@@ -5365,18 +6612,153 @@ trellis.unfocus()
 
 dev.off()
 
+png("Variograms_UniqueYAxis_CompareESDA_95ConfInt_RmOps.png", width=13, height=10, units="in", res=300)
+plot(p1p, split=c(1,1,4,3), more=T)
+plot(p1dRmOps, split=c(1,1,4,3), more=T)
+plot(p1RmOps, split = c(1,1,4,3), more=T)
+trellis.focus('panel', 1,1)
+lpoints(x = JackCT_RmOps$AvgDist, y = (JackCT_RmOps$BinMean + JackCT_RmOps$SdEst*2), ylim=p1RmOps$y.limits, pch=1, type='o', lty=2, cex=0.7, lwd=1.5, col='red')
+lpoints(x = JackCT_RmOps$AvgDist, y = (JackCT_RmOps$BinMean - JackCT_RmOps$SdEst*2), ylim=p1RmOps$y.limits, pch=1, type='o', lty=2, cex=0.7, lwd=1.5, col='red')
+lpoints(x = JackPreCT$AvgDist, y = (JackPreCT$BinMean + JackPreCT$SdEst*2), ylim=p1RmOps$y.limits, pch=1, type='o', lty=2, cex=0.7, lwd=1.5, col='black')
+lpoints(x = JackPreCT$AvgDist, y = (JackPreCT$BinMean - JackPreCT$SdEst*2), ylim=p1RmOps$y.limits, pch=1, type='o', lty=2, cex=0.7, lwd=1.5, col='black')
+lpoints(x = JackDeepCT_RmOps$AvgDist, y = (JackDeepCT_RmOps$BinMean + JackDeepCT_RmOps$SdEst*2), ylim=p1RmOps$y.limits, pch=1, type='o', lty=2, cex=0.7, lwd=1.5, col='blue')
+lpoints(x = JackDeepCT_RmOps$AvgDist, y = (JackDeepCT_RmOps$BinMean - JackDeepCT_RmOps$SdEst*2), ylim=p1RmOps$y.limits, pch=1, type='o', lty=2, cex=0.7, lwd=1.5, col='blue')
+trellis.unfocus()
+
+plot(p2p, split=c(4,1,4,3), more=T)
+plot(p2dRmOps, split=c(4,1,4,3), more=T)
+plot(p2RmOps, split = c(4,1,4,3), more=T)
+trellis.focus('panel', 1,1)
+lpoints(x = JackCNY_RmOps$AvgDist, y = (JackCNY_RmOps$BinMean + JackCNY_RmOps$SdEst*2), ylim=p2RmOps$y.limits, pch=1, type='o', lty=2, cex=0.7, lwd=1.5, col='red')
+lpoints(x = JackCNY_RmOps$AvgDist, y = (JackCNY_RmOps$BinMean - JackCNY_RmOps$SdEst*2), ylim=p2RmOps$y.limits, pch=1, type='o', lty=2, cex=0.7, lwd=1.5, col='red')
+lpoints(x = JackPreCNY$AvgDist, y = (JackPreCNY$BinMean + JackPreCNY$SdEst*2), ylim=p2RmOps$y.limits, pch=1, type='o', lty=2, cex=0.7, lwd=1.5, col='black')
+lpoints(x = JackPreCNY$AvgDist, y = (JackPreCNY$BinMean - JackPreCNY$SdEst*2), ylim=p2RmOps$y.limits, pch=1, type='o', lty=2, cex=0.7, lwd=1.5, col='black')
+lpoints(x = JackDeepCNY_RmOps$AvgDist, y = (JackDeepCNY_RmOps$BinMean + JackDeepCNY_RmOps$SdEst*2), ylim=p2RmOps$y.limits, pch=1, type='o', lty=2, cex=0.7, lwd=1.5, col='blue')
+lpoints(x = JackDeepCNY_RmOps$AvgDist, y = (JackDeepCNY_RmOps$BinMean - JackDeepCNY_RmOps$SdEst*2), ylim=p2RmOps$y.limits, pch=1, type='o', lty=2, cex=0.7, lwd=1.5, col='blue')
+trellis.unfocus()
+
+plot(p3p, split=c(1,2,4,3), more=T)
+plot(p3dRmOps, split=c(1,2,4,3), more=T)
+plot(p3RmOps, split = c(1,2,4,3), more=T)
+trellis.focus('panel', 1,1)
+lpoints(x = JackENY_RmOps$AvgDist, y = (JackENY_RmOps$BinMean + JackENY_RmOps$SdEst*2), ylim=p3RmOps$y.limits, pch=1, type='o', lty=2, cex=0.7, lwd=1.5, col='red')
+lpoints(x = JackENY_RmOps$AvgDist, y = (JackENY_RmOps$BinMean - JackENY_RmOps$SdEst*2), ylim=p3RmOps$y.limits, pch=1, type='o', lty=2, cex=0.7, lwd=1.5, col='red')
+lpoints(x = JackPreENY$AvgDist, y = (JackPreENY$BinMean + JackPreENY$SdEst*2), ylim=p3RmOps$y.limits, pch=1, type='o', lty=2, cex=0.7, lwd=1.5, col='black')
+lpoints(x = JackPreENY$AvgDist, y = (JackPreENY$BinMean - JackPreENY$SdEst*2), ylim=p3RmOps$y.limits, pch=1, type='o', lty=2, cex=0.7, lwd=1.5, col='black')
+lpoints(x = JackDeepENY_RmOps$AvgDist, y = (JackDeepENY_RmOps$BinMean + JackDeepENY_RmOps$SdEst*2), ylim=p3RmOps$y.limits, pch=1, type='o', lty=2, cex=0.7, lwd=1.5, col='blue')
+lpoints(x = JackDeepENY_RmOps$AvgDist, y = (JackDeepENY_RmOps$BinMean - JackDeepENY_RmOps$SdEst*2), ylim=p3RmOps$y.limits, pch=1, type='o', lty=2, cex=0.7, lwd=1.5, col='blue')
+trellis.unfocus()
+
+plot(p4p, split=c(2,2,4,3), more=T)
+plot(p4dRmOps, split=c(2,2,4,3), more=T)
+plot(p4RmOps, split = c(2,2,4,3), more=T)
+trellis.focus('panel', 1,1)
+lpoints(x = JackENYPA_RmOps$AvgDist, y = (JackENYPA_RmOps$BinMean + JackENYPA_RmOps$SdEst*2), ylim=p4RmOps$y.limits, pch=1, type='o', lty=2, cex=0.7, lwd=1.5, col='red')
+lpoints(x = JackENYPA_RmOps$AvgDist, y = (JackENYPA_RmOps$BinMean - JackENYPA_RmOps$SdEst*2), ylim=p4RmOps$y.limits, pch=1, type='o', lty=2, cex=0.7, lwd=1.5, col='red')
+lpoints(x = JackPreENYPA$AvgDist, y = (JackPreENYPA$BinMean + JackPreENYPA$SdEst*2), ylim=p4RmOps$y.limits, pch=1, type='o', lty=2, cex=0.7, lwd=1.5, col='black')
+lpoints(x = JackPreENYPA$AvgDist, y = (JackPreENYPA$BinMean - JackPreENYPA$SdEst*2), ylim=p4RmOps$y.limits, pch=1, type='o', lty=2, cex=0.7, lwd=1.5, col='black')
+lpoints(x = JackDeepENYPA_RmOps$AvgDist, y = (JackDeepENYPA_RmOps$BinMean + JackDeepENYPA_RmOps$SdEst*2), ylim=p4RmOps$y.limits, pch=1, type='o', lty=2, cex=0.7, lwd=1.5, col='blue')
+lpoints(x = JackDeepENYPA_RmOps$AvgDist, y = (JackDeepENYPA_RmOps$BinMean - JackDeepENYPA_RmOps$SdEst*2), ylim=p4RmOps$y.limits, pch=1, type='o', lty=2, cex=0.7, lwd=1.5, col='blue')
+trellis.unfocus()
+
+plot(p5p, split=c(3,1,4,3), more=T)
+plot(p5dRmOps, split=c(3,1,4,3), more=T)
+plot(p5RmOps, split = c(3,1,4,3), more=T)
+trellis.focus('panel', 1,1)
+lpoints(x = JackNWPANY_RmOps$AvgDist, y = (JackNWPANY_RmOps$BinMean + JackNWPANY_RmOps$SdEst*2), ylim=p5RmOps$y.limits, pch=1, type='o', lty=2, cex=0.7, lwd=1.5, col='red')
+lpoints(x = JackNWPANY_RmOps$AvgDist, y = (JackNWPANY_RmOps$BinMean - JackNWPANY_RmOps$SdEst*2), ylim=p5RmOps$y.limits, pch=1, type='o', lty=2, cex=0.7, lwd=1.5, col='red')
+lpoints(x = JackPreNWPANY$AvgDist, y = (JackPreNWPANY$BinMean + JackPreNWPANY$SdEst*2), ylim=p5RmOps$y.limits, pch=1, type='o', lty=2, cex=0.7, lwd=1.5, col='black')
+lpoints(x = JackPreNWPANY$AvgDist, y = (JackPreNWPANY$BinMean - JackPreNWPANY$SdEst*2), ylim=p5RmOps$y.limits, pch=1, type='o', lty=2, cex=0.7, lwd=1.5, col='black')
+lpoints(x = JackDeepNWPANY_RmOps$AvgDist, y = (JackDeepNWPANY_RmOps$BinMean + JackDeepNWPANY_RmOps$SdEst*2), ylim=p5RmOps$y.limits, pch=1, type='o', lty=2, cex=0.7, lwd=1.5, col='blue')
+lpoints(x = JackDeepNWPANY_RmOps$AvgDist, y = (JackDeepNWPANY_RmOps$BinMean - JackDeepNWPANY_RmOps$SdEst*2), ylim=p5RmOps$y.limits, pch=1, type='o', lty=2, cex=0.7, lwd=1.5, col='blue')
+trellis.unfocus()
+
+plot(p6p, split=c(3,2,4,3), more=T)
+plot(p6dRmOps, split=c(3,2,4,3), more=T)
+plot(p6RmOps, split = c(3,2,4,3), more=T)
+trellis.focus('panel', 1,1)
+lpoints(x = JackSWPA_RmOps$AvgDist, y = (JackSWPA_RmOps$BinMean + JackSWPA_RmOps$SdEst*2), ylim=p6RmOps$y.limits, pch=1, type='o', lty=2, cex=0.7, lwd=1.5, col='red')
+lpoints(x = JackSWPA_RmOps$AvgDist, y = (JackSWPA_RmOps$BinMean - JackSWPA_RmOps$SdEst*2), ylim=p6RmOps$y.limits, pch=1, type='o', lty=2, cex=0.7, lwd=1.5, col='red')
+lpoints(x = JackPreSWPA$AvgDist, y = (JackPreSWPA$BinMean + JackPreSWPA$SdEst*2), ylim=p6RmOps$y.limits, pch=1, type='o', lty=2, cex=0.7, lwd=1.5, col='black')
+lpoints(x = JackPreSWPA$AvgDist, y = (JackPreSWPA$BinMean - JackPreSWPA$SdEst*2), ylim=p6RmOps$y.limits, pch=1, type='o', lty=2, cex=0.7, lwd=1.5, col='black')
+lpoints(x = JackDeepSWPA_RmOps$AvgDist, y = (JackDeepSWPA_RmOps$BinMean + JackDeepSWPA_RmOps$SdEst*2), ylim=p6RmOps$y.limits, pch=1, type='o', lty=2, cex=0.7, lwd=1.5, col='blue')
+lpoints(x = JackDeepSWPA_RmOps$AvgDist, y = (JackDeepSWPA_RmOps$BinMean - JackDeepSWPA_RmOps$SdEst*2), ylim=p6RmOps$y.limits, pch=1, type='o', lty=2, cex=0.7, lwd=1.5, col='blue')
+trellis.unfocus()
+
+plot(p7p, split=c(2,1,4,3), more=T)
+plot(p7dRmOps, split=c(2,1,4,3), more=T)
+plot(p7RmOps, split = c(2,1,4,3), more=T)
+trellis.focus('panel', 1,1)
+lpoints(x = JackWPA_RmOps$AvgDist, y = (JackWPA_RmOps$BinMean + JackWPA_RmOps$SdEst*2), ylim=p7RmOps$y.limits, pch=1, type='o', lty=2, cex=0.7, lwd=1.5, col='red')
+lpoints(x = JackWPA_RmOps$AvgDist, y = (JackWPA_RmOps$BinMean - JackWPA_RmOps$SdEst*2), ylim=p7RmOps$y.limits, pch=1, type='o', lty=2, cex=0.7, lwd=1.5, col='red')
+lpoints(x = JackPreWPA$AvgDist, y = (JackPreWPA$BinMean + JackPreWPA$SdEst*2), ylim=p7RmOps$y.limits, pch=1, type='o', lty=2, cex=0.7, lwd=1.5, col='black')
+lpoints(x = JackPreWPA$AvgDist, y = (JackPreWPA$BinMean - JackPreWPA$SdEst*2), ylim=p7RmOps$y.limits, pch=1, type='o', lty=2, cex=0.7, lwd=1.5, col='black')
+lpoints(x = JackDeepWPA_RmOps$AvgDist, y = (JackDeepWPA_RmOps$BinMean + JackDeepWPA_RmOps$SdEst*2), ylim=p7RmOps$y.limits, pch=1, type='o', lty=2, cex=0.7, lwd=1.5, col='blue')
+lpoints(x = JackDeepWPA_RmOps$AvgDist, y = (JackDeepWPA_RmOps$BinMean - JackDeepWPA_RmOps$SdEst*2), ylim=p7RmOps$y.limits, pch=1, type='o', lty=2, cex=0.7, lwd=1.5, col='blue')
+trellis.unfocus()
+
+plot(p8p, split=c(1,3,4,3), more=T)
+plot(p8dRmOps, split=c(1,3,4,3), more=T)
+plot(p8RmOps, split = c(1,3,4,3), more=T)
+trellis.focus('panel', 1,1)
+lpoints(x = JackMT_RmOps$AvgDist, y = (JackMT_RmOps$BinMean + JackMT_RmOps$SdEst*2), ylim=p8RmOps$y.limits, pch=1, type='o', lty=2, cex=0.7, lwd=1.5, col='red')
+lpoints(x = JackMT_RmOps$AvgDist, y = (JackMT_RmOps$BinMean - JackMT_RmOps$SdEst*2), ylim=p8RmOps$y.limits, pch=1, type='o', lty=2, cex=0.7, lwd=1.5, col='red')
+lpoints(x = JackPreMT$AvgDist, y = (JackPreMT$BinMean + JackPreMT$SdEst*2), ylim=p8RmOps$y.limits, pch=1, type='o', lty=2, cex=0.7, lwd=1.5, col='black')
+lpoints(x = JackPreMT$AvgDist, y = (JackPreMT$BinMean - JackPreMT$SdEst*2), ylim=p8RmOps$y.limits, pch=1, type='o', lty=2, cex=0.7, lwd=1.5, col='black')
+lpoints(x = JackDeepMT_RmOps$AvgDist, y = (JackDeepMT_RmOps$BinMean + JackDeepMT_RmOps$SdEst*2), ylim=p8RmOps$y.limits, pch=1, type='o', lty=2, cex=0.7, lwd=1.5, col='blue')
+lpoints(x = JackDeepMT_RmOps$AvgDist, y = (JackDeepMT_RmOps$BinMean - JackDeepMT_RmOps$SdEst*2), ylim=p8RmOps$y.limits, pch=1, type='o', lty=2, cex=0.7, lwd=1.5, col='blue')
+trellis.unfocus()
+
+plot(p9p, split=c(4,2,4,3), more=T)
+plot(p9dRmOps, split=c(4,2,4,3), more=T)
+plot(p9RmOps, split = c(4,2,4,3), more=T)
+trellis.focus('panel', 1,1)
+lpoints(x = JackCWV_RmOps$AvgDist, y = (JackCWV_RmOps$BinMean + JackCWV_RmOps$SdEst*2), ylim=p9RmOps$y.limits, pch=1, type='o', lty=2, cex=0.7, lwd=1.5, col='red')
+lpoints(x = JackCWV_RmOps$AvgDist, y = (JackCWV_RmOps$BinMean - JackCWV_RmOps$SdEst*2), ylim=p9RmOps$y.limits, pch=1, type='o', lty=2, cex=0.7, lwd=1.5, col='red')
+lpoints(x = JackPreCWV$AvgDist, y = (JackPreCWV$BinMean + JackPreCWV$SdEst*2), ylim=p9RmOps$y.limits, pch=1, type='o', lty=2, cex=0.7, lwd=1.5, col='black')
+lpoints(x = JackPreCWV$AvgDist, y = (JackPreCWV$BinMean - JackPreCWV$SdEst*2), ylim=p9RmOps$y.limits, pch=1, type='o', lty=2, cex=0.7, lwd=1.5, col='black')
+lpoints(x = JackDeepCWV_RmOps$AvgDist, y = (JackDeepCWV_RmOps$BinMean + JackDeepCWV_RmOps$SdEst*2), ylim=p9RmOps$y.limits, pch=1, type='o', lty=2, cex=0.7, lwd=1.5, col='blue')
+lpoints(x = JackDeepCWV_RmOps$AvgDist, y = (JackDeepCWV_RmOps$BinMean - JackDeepCWV_RmOps$SdEst*2), ylim=p9RmOps$y.limits, pch=1, type='o', lty=2, cex=0.7, lwd=1.5, col='blue')
+trellis.unfocus()
+
+plot(p10p, split=c(2,3,4,3), more=T)
+plot(p10dRmOps, split=c(2,3,4,3), more=T)
+plot(p10RmOps, split = c(2,3,4,3), more=T)
+trellis.focus('panel', 1,1)
+lpoints(x = JackVR_RmOps$AvgDist, y = (JackVR_RmOps$BinMean + JackVR_RmOps$SdEst*2), ylim=p10RmOps$y.limits, pch=1, type='o', lty=2, cex=0.7, lwd=1.5, col='red')
+lpoints(x = JackVR_RmOps$AvgDist, y = (JackVR_RmOps$BinMean - JackVR_RmOps$SdEst*2), ylim=p10RmOps$y.limits, pch=1, type='o', lty=2, cex=0.7, lwd=1.5, col='red')
+lpoints(x = JackPreVR$AvgDist, y = (JackPreVR$BinMean + JackPreVR$SdEst*2), ylim=p10RmOps$y.limits, pch=1, type='o', lty=2, cex=0.7, lwd=1.5, col='black')
+lpoints(x = JackPreVR$AvgDist, y = (JackPreVR$BinMean - JackPreVR$SdEst*2), ylim=p10RmOps$y.limits, pch=1, type='o', lty=2, cex=0.7, lwd=1.5, col='black')
+lpoints(x = JackDeepVR_RmOps$AvgDist, y = (JackDeepVR_RmOps$BinMean + JackDeepVR_RmOps$SdEst*2), ylim=p10RmOps$y.limits, pch=1, type='o', lty=2, cex=0.7, lwd=1.5, col='blue')
+lpoints(x = JackDeepVR_RmOps$AvgDist, y = (JackDeepVR_RmOps$BinMean - JackDeepVR_RmOps$SdEst*2), ylim=p10RmOps$y.limits, pch=1, type='o', lty=2, cex=0.7, lwd=1.5, col='blue')
+trellis.unfocus()
+
+dev.off()
+
 #Only deep and post-ESDA
 p2 = plot(v.CNY,plot.numbers=F, ylab=expression(Semivariance ~ (mW/m^2)^2), main="Central NY", xlab = 'Separation Distance (m)', pch = 16, ylim = c(0,200), col = 'red', xlim = c(0,60000), cex=0.5)
 p2d = plot(v.DeepCNY,plot.numbers=F, ylab=expression(Semivariance ~ (mW/m^2)^2), main="Central NY", xlab = 'Separation Distance (m)', pch = 16, col = 'blue', ylim = c(0,200), xlim = c(0,60000), cex=0.5)
 
+p2RmOps = plot(v.CNY_RmOps,plot.numbers=F, ylab=expression(Semivariance ~ (mW/m^2)^2), main="Central NY", xlab = 'Separation Distance (m)', pch = 16, ylim = c(0,200), col = 'red', xlim = c(0,60000), cex=0.5)
+p2dRmOps = plot(v.DeepCNY_RmOps,plot.numbers=F, ylab=expression(Semivariance ~ (mW/m^2)^2), main="Central NY", xlab = 'Separation Distance (m)', pch = 16, col = 'blue', ylim = c(0,200), xlim = c(0,60000), cex=0.5)
+
 p3 = plot(v.ENY, plot.numbers=F, ylab=expression(Semivariance ~ (mW/m^2)^2), main="Eastern NY", xlab = 'Separation Distance (m)', pch = 16, col = 'red', ylim = c(0,100), xlim = c(0,60000), cex=0.5)
 p3d = plot(v.DeepENY, plot.numbers=F, ylab=expression(Semivariance ~ (mW/m^2)^2), main="Eastern NY", xlab = 'Separation Distance (m)', pch = 16, col = 'blue', ylim = c(0,100), xlim = c(0,60000), cex=0.5)
+
+p3RmOps = plot(v.ENY_RmOps, plot.numbers=F, ylab=expression(Semivariance ~ (mW/m^2)^2), main="Eastern NY", xlab = 'Separation Distance (m)', pch = 16, col = 'red', ylim = c(0,100), xlim = c(0,60000), cex=0.5)
+p3dRmOps = plot(v.DeepENY_RmOps, plot.numbers=F, ylab=expression(Semivariance ~ (mW/m^2)^2), main="Eastern NY", xlab = 'Separation Distance (m)', pch = 16, col = 'blue', ylim = c(0,100), xlim = c(0,60000), cex=0.5)
 
 p5 = plot(v.NWPANY, plot.numbers=F, ylab=expression(Semivariance ~ (mW/m^2)^2), main="Northwestern PA & NY", xlab = 'Separation Distance (m)', pch = 16, col = 'red', xlim = c(0,60000), ylim = c(0,150), cex=0.5)
 p5d = plot(v.DeepNWPANY, plot.numbers=F, ylab=expression(Semivariance ~ (mW/m^2)^2), main="Northwestern PA & NY", xlab = 'Separation Distance (m)', pch = 16, col = 'blue', xlim = c(0,60000), ylim = c(0,150), cex=0.5)
 
+p5RmOps = plot(v.NWPANY_RmOps, plot.numbers=F, ylab=expression(Semivariance ~ (mW/m^2)^2), main="Northwestern PA & NY", xlab = 'Separation Distance (m)', pch = 16, col = 'red', xlim = c(0,60000), ylim = c(0,150), cex=0.5)
+p5dRmOps = plot(v.DeepNWPANY_RmOps, plot.numbers=F, ylab=expression(Semivariance ~ (mW/m^2)^2), main="Northwestern PA & NY", xlab = 'Separation Distance (m)', pch = 16, col = 'blue', xlim = c(0,60000), ylim = c(0,150), cex=0.5)
+
 p9 = plot(v.CWV, plot.numbers=F, ylab=expression(Semivariance ~ (mW/m^2)^2), main="Central WV", xlab = 'Separation Distance (m)', pch = 16, col = 'red', ylim = c(0,400), xlim = c(0,60000), cex=0.5)
 p9d = plot(v.DeepCWV, plot.numbers=F, ylab=expression(Semivariance ~ (mW/m^2)^2), main="Central WV", xlab = 'Separation Distance (m)', pch = 16, col = 'blue', ylim = c(0,400), xlim = c(0,60000), cex=0.5)
+
+p9RmOps = plot(v.CWV_RmOps, plot.numbers=F, ylab=expression(Semivariance ~ (mW/m^2)^2), main="Central WV", xlab = 'Separation Distance (m)', pch = 16, col = 'red', ylim = c(0,400), xlim = c(0,60000), cex=0.5)
+p9dRmOps = plot(v.DeepCWV_RmOps, plot.numbers=F, ylab=expression(Semivariance ~ (mW/m^2)^2), main="Central WV", xlab = 'Separation Distance (m)', pch = 16, col = 'blue', ylim = c(0,400), xlim = c(0,60000), cex=0.5)
 
 png("Variograms_UniqueYAxis_CompareESDA_DeepPost_95ConfInt.png", width=13, height=10, units="in", res=300)
 plot(p1d, split=c(1,1,4,3), more=T)
@@ -5471,7 +6853,100 @@ trellis.unfocus()
 
 dev.off()
 
-# Table of variogram lag estimates at close separation distances----
+png("Variograms_UniqueYAxis_CompareESDA_95ConfInt_DeepPost_RmOps.png", width=13, height=10, units="in", res=300)
+plot(p1dRmOps, split=c(1,1,4,3), more=T)
+plot(p1RmOps, split = c(1,1,4,3), more=T)
+trellis.focus('panel', 1,1)
+lpoints(x = JackCT_RmOps$AvgDist, y = (JackCT_RmOps$BinMean + JackCT_RmOps$SdEst*2), ylim=p1RmOps$y.limits, pch=1, type='o', lty=2, cex=0.7, lwd=1.5, col='red')
+lpoints(x = JackCT_RmOps$AvgDist, y = (JackCT_RmOps$BinMean - JackCT_RmOps$SdEst*2), ylim=p1RmOps$y.limits, pch=1, type='o', lty=2, cex=0.7, lwd=1.5, col='red')
+lpoints(x = JackDeepCT_RmOps$AvgDist, y = (JackDeepCT_RmOps$BinMean + JackDeepCT_RmOps$SdEst*2), ylim=p1RmOps$y.limits, pch=1, type='o', lty=2, cex=0.7, lwd=1.5, col='blue')
+lpoints(x = JackDeepCT_RmOps$AvgDist, y = (JackDeepCT_RmOps$BinMean - JackDeepCT_RmOps$SdEst*2), ylim=p1RmOps$y.limits, pch=1, type='o', lty=2, cex=0.7, lwd=1.5, col='blue')
+trellis.unfocus()
+
+plot(p2dRmOps, split=c(4,1,4,3), more=T)
+plot(p2RmOps, split = c(4,1,4,3), more=T)
+trellis.focus('panel', 1,1)
+lpoints(x = JackCNY_RmOps$AvgDist, y = (JackCNY_RmOps$BinMean + JackCNY_RmOps$SdEst*2), ylim=p2RmOps$y.limits, pch=1, type='o', lty=2, cex=0.7, lwd=1.5, col='red')
+lpoints(x = JackCNY_RmOps$AvgDist, y = (JackCNY_RmOps$BinMean - JackCNY_RmOps$SdEst*2), ylim=p2RmOps$y.limits, pch=1, type='o', lty=2, cex=0.7, lwd=1.5, col='red')
+lpoints(x = JackDeepCNY_RmOps$AvgDist, y = (JackDeepCNY_RmOps$BinMean + JackDeepCNY_RmOps$SdEst*2), ylim=p2RmOps$y.limits, pch=1, type='o', lty=2, cex=0.7, lwd=1.5, col='blue')
+lpoints(x = JackDeepCNY_RmOps$AvgDist, y = (JackDeepCNY_RmOps$BinMean - JackDeepCNY_RmOps$SdEst*2), ylim=p2RmOps$y.limits, pch=1, type='o', lty=2, cex=0.7, lwd=1.5, col='blue')
+trellis.unfocus()
+
+plot(p3dRmOps, split=c(1,2,4,3), more=T)
+plot(p3RmOps, split = c(1,2,4,3), more=T)
+trellis.focus('panel', 1,1)
+lpoints(x = JackENY_RmOps$AvgDist, y = (JackENY_RmOps$BinMean + JackENY_RmOps$SdEst*2), ylim=p3RmOps$y.limits, pch=1, type='o', lty=2, cex=0.7, lwd=1.5, col='red')
+lpoints(x = JackENY_RmOps$AvgDist, y = (JackENY_RmOps$BinMean - JackENY_RmOps$SdEst*2), ylim=p3RmOps$y.limits, pch=1, type='o', lty=2, cex=0.7, lwd=1.5, col='red')
+lpoints(x = JackDeepENY_RmOps$AvgDist, y = (JackDeepENY_RmOps$BinMean + JackDeepENY_RmOps$SdEst*2), ylim=p3RmOps$y.limits, pch=1, type='o', lty=2, cex=0.7, lwd=1.5, col='blue')
+lpoints(x = JackDeepENY_RmOps$AvgDist, y = (JackDeepENY_RmOps$BinMean - JackDeepENY_RmOps$SdEst*2), ylim=p3RmOps$y.limits, pch=1, type='o', lty=2, cex=0.7, lwd=1.5, col='blue')
+trellis.unfocus()
+
+plot(p4dRmOps, split=c(2,2,4,3), more=T)
+plot(p4RmOps, split = c(2,2,4,3), more=T)
+trellis.focus('panel', 1,1)
+lpoints(x = JackENYPA_RmOps$AvgDist, y = (JackENYPA_RmOps$BinMean + JackENYPA_RmOps$SdEst*2), ylim=p4RmOps$y.limits, pch=1, type='o', lty=2, cex=0.7, lwd=1.5, col='red')
+lpoints(x = JackENYPA_RmOps$AvgDist, y = (JackENYPA_RmOps$BinMean - JackENYPA_RmOps$SdEst*2), ylim=p4RmOps$y.limits, pch=1, type='o', lty=2, cex=0.7, lwd=1.5, col='red')
+lpoints(x = JackDeepENYPA_RmOps$AvgDist, y = (JackDeepENYPA_RmOps$BinMean + JackDeepENYPA_RmOps$SdEst*2), ylim=p4RmOps$y.limits, pch=1, type='o', lty=2, cex=0.7, lwd=1.5, col='blue')
+lpoints(x = JackDeepENYPA_RmOps$AvgDist, y = (JackDeepENYPA_RmOps$BinMean - JackDeepENYPA_RmOps$SdEst*2), ylim=p4RmOps$y.limits, pch=1, type='o', lty=2, cex=0.7, lwd=1.5, col='blue')
+trellis.unfocus()
+
+plot(p5dRmOps, split=c(3,1,4,3), more=T)
+plot(p5RmOps, split = c(3,1,4,3), more=T)
+trellis.focus('panel', 1,1)
+lpoints(x = JackNWPANY_RmOps$AvgDist, y = (JackNWPANY_RmOps$BinMean + JackNWPANY_RmOps$SdEst*2), ylim=p5RmOps$y.limits, pch=1, type='o', lty=2, cex=0.7, lwd=1.5, col='red')
+lpoints(x = JackNWPANY_RmOps$AvgDist, y = (JackNWPANY_RmOps$BinMean - JackNWPANY_RmOps$SdEst*2), ylim=p5RmOps$y.limits, pch=1, type='o', lty=2, cex=0.7, lwd=1.5, col='red')
+lpoints(x = JackDeepNWPANY_RmOps$AvgDist, y = (JackDeepNWPANY_RmOps$BinMean + JackDeepNWPANY_RmOps$SdEst*2), ylim=p5RmOps$y.limits, pch=1, type='o', lty=2, cex=0.7, lwd=1.5, col='blue')
+lpoints(x = JackDeepNWPANY_RmOps$AvgDist, y = (JackDeepNWPANY_RmOps$BinMean - JackDeepNWPANY_RmOps$SdEst*2), ylim=p5RmOps$y.limits, pch=1, type='o', lty=2, cex=0.7, lwd=1.5, col='blue')
+trellis.unfocus()
+
+plot(p6dRmOps, split=c(3,2,4,3), more=T)
+plot(p6RmOps, split = c(3,2,4,3), more=T)
+trellis.focus('panel', 1,1)
+lpoints(x = JackSWPA_RmOps$AvgDist, y = (JackSWPA_RmOps$BinMean + JackSWPA_RmOps$SdEst*2), ylim=p6RmOps$y.limits, pch=1, type='o', lty=2, cex=0.7, lwd=1.5, col='red')
+lpoints(x = JackSWPA_RmOps$AvgDist, y = (JackSWPA_RmOps$BinMean - JackSWPA_RmOps$SdEst*2), ylim=p6RmOps$y.limits, pch=1, type='o', lty=2, cex=0.7, lwd=1.5, col='red')
+lpoints(x = JackDeepSWPA_RmOps$AvgDist, y = (JackDeepSWPA_RmOps$BinMean + JackDeepSWPA_RmOps$SdEst*2), ylim=p6RmOps$y.limits, pch=1, type='o', lty=2, cex=0.7, lwd=1.5, col='blue')
+lpoints(x = JackDeepSWPA_RmOps$AvgDist, y = (JackDeepSWPA_RmOps$BinMean - JackDeepSWPA_RmOps$SdEst*2), ylim=p6RmOps$y.limits, pch=1, type='o', lty=2, cex=0.7, lwd=1.5, col='blue')
+trellis.unfocus()
+
+plot(p7dRmOps, split=c(2,1,4,3), more=T)
+plot(p7RmOps, split = c(2,1,4,3), more=T)
+trellis.focus('panel', 1,1)
+lpoints(x = JackWPA_RmOps$AvgDist, y = (JackWPA_RmOps$BinMean + JackWPA_RmOps$SdEst*2), ylim=p7RmOps$y.limits, pch=1, type='o', lty=2, cex=0.7, lwd=1.5, col='red')
+lpoints(x = JackWPA_RmOps$AvgDist, y = (JackWPA_RmOps$BinMean - JackWPA_RmOps$SdEst*2), ylim=p7RmOps$y.limits, pch=1, type='o', lty=2, cex=0.7, lwd=1.5, col='red')
+lpoints(x = JackDeepWPA_RmOps$AvgDist, y = (JackDeepWPA_RmOps$BinMean + JackDeepWPA_RmOps$SdEst*2), ylim=p7RmOps$y.limits, pch=1, type='o', lty=2, cex=0.7, lwd=1.5, col='blue')
+lpoints(x = JackDeepWPA_RmOps$AvgDist, y = (JackDeepWPA_RmOps$BinMean - JackDeepWPA_RmOps$SdEst*2), ylim=p7RmOps$y.limits, pch=1, type='o', lty=2, cex=0.7, lwd=1.5, col='blue')
+trellis.unfocus()
+
+plot(p8dRmOps, split=c(1,3,4,3), more=T)
+plot(p8RmOps, split = c(1,3,4,3), more=T)
+trellis.focus('panel', 1,1)
+lpoints(x = JackMT_RmOps$AvgDist, y = (JackMT_RmOps$BinMean + JackMT_RmOps$SdEst*2), ylim=p8RmOps$y.limits, pch=1, type='o', lty=2, cex=0.7, lwd=1.5, col='red')
+lpoints(x = JackMT_RmOps$AvgDist, y = (JackMT_RmOps$BinMean - JackMT_RmOps$SdEst*2), ylim=p8RmOps$y.limits, pch=1, type='o', lty=2, cex=0.7, lwd=1.5, col='red')
+lpoints(x = JackDeepMT_RmOps$AvgDist, y = (JackDeepMT_RmOps$BinMean + JackDeepMT_RmOps$SdEst*2), ylim=p8RmOps$y.limits, pch=1, type='o', lty=2, cex=0.7, lwd=1.5, col='blue')
+lpoints(x = JackDeepMT_RmOps$AvgDist, y = (JackDeepMT_RmOps$BinMean - JackDeepMT_RmOps$SdEst*2), ylim=p8RmOps$y.limits, pch=1, type='o', lty=2, cex=0.7, lwd=1.5, col='blue')
+trellis.unfocus()
+
+plot(p9dRmOps, split=c(4,2,4,3), more=T)
+plot(p9RmOps, split = c(4,2,4,3), more=T)
+trellis.focus('panel', 1,1)
+lpoints(x = JackCWV_RmOps$AvgDist, y = (JackCWV_RmOps$BinMean + JackCWV_RmOps$SdEst*2), ylim=p9RmOps$y.limits, pch=1, type='o', lty=2, cex=0.7, lwd=1.5, col='red')
+lpoints(x = JackCWV_RmOps$AvgDist, y = (JackCWV_RmOps$BinMean - JackCWV_RmOps$SdEst*2), ylim=p9RmOps$y.limits, pch=1, type='o', lty=2, cex=0.7, lwd=1.5, col='red')
+lpoints(x = JackDeepCWV_RmOps$AvgDist, y = (JackDeepCWV_RmOps$BinMean + JackDeepCWV_RmOps$SdEst*2), ylim=p9RmOps$y.limits, pch=1, type='o', lty=2, cex=0.7, lwd=1.5, col='blue')
+lpoints(x = JackDeepCWV_RmOps$AvgDist, y = (JackDeepCWV_RmOps$BinMean - JackDeepCWV_RmOps$SdEst*2), ylim=p9RmOps$y.limits, pch=1, type='o', lty=2, cex=0.7, lwd=1.5, col='blue')
+trellis.unfocus()
+
+plot(p10dRmOps, split=c(2,3,4,3), more=T)
+plot(p10RmOps, split = c(2,3,4,3), more=T)
+trellis.focus('panel', 1,1)
+lpoints(x = JackVR_RmOps$AvgDist, y = (JackVR_RmOps$BinMean + JackVR_RmOps$SdEst*2), ylim=p10RmOps$y.limits, pch=1, type='o', lty=2, cex=0.7, lwd=1.5, col='red')
+lpoints(x = JackVR_RmOps$AvgDist, y = (JackVR_RmOps$BinMean - JackVR_RmOps$SdEst*2), ylim=p10RmOps$y.limits, pch=1, type='o', lty=2, cex=0.7, lwd=1.5, col='red')
+lpoints(x = JackDeepVR_RmOps$AvgDist, y = (JackDeepVR_RmOps$BinMean + JackDeepVR_RmOps$SdEst*2), ylim=p10RmOps$y.limits, pch=1, type='o', lty=2, cex=0.7, lwd=1.5, col='blue')
+lpoints(x = JackDeepVR_RmOps$AvgDist, y = (JackDeepVR_RmOps$BinMean - JackDeepVR_RmOps$SdEst*2), ylim=p10RmOps$y.limits, pch=1, type='o', lty=2, cex=0.7, lwd=1.5, col='blue')
+trellis.unfocus()
+
+dev.off()
+
+#    Table of variogram lag estimates at close separation distances----
 #Separation distance targets
 SepTargets = c(2500, 5000, 10000, 20000)
 #Dataframe to store the table of values
@@ -5604,37 +7079,38 @@ write.csv(VarLagsTable, file = 'TableVarianceLags.csv')
 #  Operator data----
 #Wow! This region becomes manageable with its variogram by removing these points
 #Add operators and Waco drilled wells to the dataset
-MT@data$Waco = 0
-for (i in 1:nrow(MT)){
-  if (length(which(MT$StateID[i] %in% Wacos$StateID)) > 0){
-    MT@data$Waco[i] = 1
+MT_Waco = MT
+MT_Waco@data$Waco = 0
+for (i in 1:nrow(MT_Waco)){
+  if (length(which(MT_Waco$StateID[i] %in% Wacos$StateID)) > 0){
+    MT_Waco@data$Waco[i] = 1
   }
 }
-MT$Waco[MT$StateID == 'WV1336'] = 1
+MT_Waco$Waco[MT_Waco$StateID == 'WV1336'] = 1
 rm(i)
 
 #Map - the region with these wells still has data.
-plot(MT, pch = 16, cex = 0.1)
-plot(MT[-which(MT$Operator == 'Waco Oil & Gas Co., Inc.'),], col = 'red', add = T, pch = 16, cex = 0.2 )
-plot(MT[-which(MT$Waco == 1),], col = 'purple', add = T, pch = 16, cex = 0.2 )
+plot(MT_Waco, pch = 16, cex = 0.1)
+plot(MT_Waco[-which(MT_Waco$Operator == 'Waco Oil & Gas Co., Inc.'),], col = 'red', add = T, pch = 16, cex = 0.2 )
+plot(MT_Waco[-which(MT_Waco$Waco == 1),], col = 'purple', add = T, pch = 16, cex = 0.2 )
 
 #Variogram cloud for Western West Virginia region
-plot(variogram(Qs~1, MT[-which(MT$Operator == 'Waco Oil & Gas Co., Inc.'),], cutoff=60000, cloud = TRUE))
-plot(variogram(Qs~1, MT[-which(MT$Waco == 1),], cutoff=60000, cloud = TRUE))
+plot(variogram(Qs~1, MT_Waco[-which(MT_Waco$Operator == 'Waco Oil & Gas Co., Inc.'),], cutoff=60000, cloud = TRUE))
+plot(variogram(Qs~1, MT_Waco[-which(MT_Waco$Waco == 1),], cutoff=60000, cloud = TRUE))
 
-test = plot(variogram(Qs~1, MT[-which(MT$Operator == 'Waco Oil & Gas Co., Inc.'),], cutoff=60000, cloud = TRUE), digitize = TRUE)
+test = plot(variogram(Qs~1, MT_Waco[-which(MT_Waco$Operator == 'Waco Oil & Gas Co., Inc.'),], cutoff=60000, cloud = TRUE), digitize = TRUE)
 
-test = plot(variogram(Qs~1, MT[-which(MT$Operator == 'Waco Oil & Gas Co., Inc.'),][-248,][-246,][-245,], cutoff=60000, cloud = TRUE), digitize = TRUE)
+test = plot(variogram(Qs~1, MT_Waco[-which(MT_Waco$Operator == 'Waco Oil & Gas Co., Inc.'),][-248,][-246,][-245,], cutoff=60000, cloud = TRUE), digitize = TRUE)
 hist(c(test$head, test$tail), breaks = 100000)
 mode(c(test$head, test$tail))
 #251
-MT[-which(MT$Operator == 'Waco Oil & Gas Co., Inc.'),][-248,][-246,][-245,][251,]
+MT_Waco[-which(MT_Waco$Operator == 'Waco Oil & Gas Co., Inc.'),][-248,][-246,][-245,][251,]
 
-p8 = plot(variogram(Qs~1, MT, cutoff=30000, width=30000/70), plot.numbers=F, ylab=expression(Semivariance ~ (mW/m^2)^2), main="Western WV", xlab = 'Separation Distance (m)', pch = 16, col = 'red', cex=0.5)
+p8 = plot(variogram(Qs~1, MT_Waco, cutoff=30000, width=30000/70), plot.numbers=F, ylab=expression(Semivariance ~ (mW/m^2)^2), main="Western WV", xlab = 'Separation Distance (m)', pch = 16, col = 'red', cex=0.5, ylim = c(0,700), xlim = c(0,60000))
 plot(p8)
-p8 = plot(variogram(Qs~1, MT[-which(MT$Operator == 'Waco Oil & Gas Co., Inc.'),][-248,][-246,][-245,][-251,], cutoff=30000, width=30000/70), plot.numbers=F, ylab=expression(Semivariance ~ (mW/m^2)^2), main="Western WV", xlab = 'Separation Distance (m)', pch = 16, col = 'red', cex=0.5)
+p8 = plot(variogram(Qs~1, MT_Waco[-which(MT_Waco$Operator == 'Waco Oil & Gas Co., Inc.'),][-248,][-246,][-245,][-251,], cutoff=30000, width=30000/70), plot.numbers=F, ylab=expression(Semivariance ~ (mW/m^2)^2), main="Western WV", xlab = 'Separation Distance (m)', pch = 16, col = 'red', cex=0.5)
 plot(p8)
-p8 = plot(variogram(Qs~1, MT[-which(MT$Operator == 'Waco Oil & Gas Co., Inc.'),][-248,][-246,][-245,][-251,], cutoff=1000, width=1000/50, cloud = TRUE), plot.numbers=F, ylab=expression(Semivariance ~ (mW/m^2)^2), main="Western WV", xlab = 'Separation Distance (m)', pch = 16, col = 'red', cex=0.5)
+p8 = plot(variogram(Qs~1, MT_Waco[-which(MT_Waco$Operator == 'Waco Oil & Gas Co., Inc.'),][-248,][-246,][-245,][-251,], cutoff=60000, width=60000/50), plot.numbers=F, ylab=expression(Semivariance ~ (mW/m^2)^2), main="Western WV", xlab = 'Separation Distance (m)', pch = 16, col = 'red', cex=0.5, ylim = c(0,700), xlim = c(0,60000))
 plot(p8)
 
 p9 = plot(variogram(Qs~1, CWV, cutoff=60000, width=60000/500), plot.numbers=F, ylab=expression(Semivariance ~ (mW/m^2)^2), main="Western WV", xlab = 'Separation Distance (m)', pch = 16, col = 'red', cex=0.5)
@@ -5642,14 +7118,16 @@ plot(p9)
 p9 = plot(variogram(Qs~1, CWV[-which(CWV$Operator == 'Waco Oil & Gas Co., Inc.'),], cutoff=60000, width=60000/500), plot.numbers=F, ylab=expression(Semivariance ~ (mW/m^2)^2), main="Western WV", xlab = 'Separation Distance (m)', pch = 16, col = 'red', cex=0.5)
 plot(p9)
 
+p8 = plot(variogram(Qs~1, MT_Waco, cutoff=60000, width=60000/50), plot.numbers=F, ylab=expression(Semivariance ~ (mW/m^2)^2), main="Western WV", xlab = 'Separation Distance (m)', pch = 16, col = 'red', cex=0.5, ylim = c(0,700), xlim = c(0,60000))
+
 png('VariogramMT_WacoOperatorRemoved.png', res = 300, height = 5, width = 5, units = 'in')
 plot(p8p, more=T)
 plot(p8d, more=T)
 plot(p8, more=T)
-plot(plot(variogram(Qs~1, MT[-which(MT$Waco == 1),], cutoff=60000, width = 60000/50), plot.numbers=F, ylab=expression(Semivariance ~ (mW/m^2)^2), main="Western WV", xlab = 'Separation Distance (m)', ylim = c(0,700), xlim = c(0,60000), col = 'green', pch = 16, cex = 0.5), more=F)
+plot(plot(variogram(Qs~1, MT_Waco[-which(MT_Waco$Waco == 1),], cutoff=60000, width = 60000/50), plot.numbers=F, ylab=expression(Semivariance ~ (mW/m^2)^2), main="Western WV", xlab = 'Separation Distance (m)', ylim = c(0,700), xlim = c(0,60000), col = 'green', pch = 16, cex = 0.5), more=F)
 dev.off()
 
 # Fixme: Variogram point cloud for outlier analysis----
 #  Uses dataset that is deeper than 1 km, and all points have unique spatial locations.
 #  Analysis only for points within geologic regions
-test = plot(variogram(Qs~1, ENY, cutoff=60000, cloud = TRUE))
+#test = plot(variogram(Qs~1, ENY, cutoff=60000, cloud = TRUE))
