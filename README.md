@@ -34,3 +34,6 @@ Additional Contributions:
 3) Jackknife confidence intervals for semi-variograms (JackknifeSemivariogramConfInts.R)
 
 4) Diagnostic plots to discover operators that had systematically rogue data (bias and/or variance) as a result of their data recording behavior. (OperatorDiagnostics.R)
+
+Note on running script:
+Input data used to run the script for Smith et al. is provided in the repository. Output data is too large to host on Github. Please write to Jared Smith (jds485@cornell.edu) if you would like to have the output Rdata file.
