@@ -31,6 +31,6 @@ Additional Contributions:
 
 2) Sensitivity analysis of outlier algorithm for this dataset (OutAlgoSensitivity.R)
 
-3) Jackknife confidence intervals for semi-variograms (JackknifeConfInts.R)
+3) Jackknife confidence intervals for semi-variograms (JackknifeSemivariogramConfInts.R)
 
 4) Diagnostic plots to discover operators that had systematically rogue data (bias and/or variance) as a result of their data recording behavior. (OperatorDiagnostics.R)
