@@ -1,7 +1,7 @@
 # Geothermal_ESDA
-This repository contains exploratory spatial data analysis (ESDA) functions and scripts that were used in Smith et al. (2019) "Exploratory Spatial Data Analysis for Geothermal Datasets: An Appalachian Basin Case Study"
+This repository contains exploratory spatial data analysis (ESDA) functions and scripts that were used in Smith et al. "Exploratory Spatial Data Analysis for Geothermal Resource Assessments: An Appalachian Basin Case Study" paper submitted to Geothermics.
 
-These functions are developed for ESDA on geothermal spatial datasets and should be applicable to other spatial datasets.
+These functions are developed for ESDA on geothermal spatial datasets and are applicable to other spatial datasets.
 
 This repository depends on functions located in the following repositories:
 
@@ -12,12 +12,12 @@ jds485 -> Geothermal_DataAnalysis_CrossSections
 The methods used in ESDA_Main.R include:
 
 0) Identification and processing of data in the same spatial location
-  i) Nugget semi-variance for data in same location
-  ii) Plot of similarity for data in the same locations based on covariate (depth of measurement)
+  i) Nugget semi-variance calculation for data in same exact spatial location
+  ii) Plot of similarity for data in the same locations based on a covariate (depth of measurement)
 
 1) Local Median/Mean Deviation (LocalDevition.R)
 
-2) Spatial Outlier Analysis
+2) Local Spatial Outlier Analysis (see geothermal_pfa repository for R script containing the functions)
   i) Plots by depth slices
 
 3) Q-Q plots
