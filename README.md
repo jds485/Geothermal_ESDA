@@ -30,3 +30,5 @@ Additional Contributions:
 1) Discrete Color Function for Map Making (ColorFunctions.R)
 
 2) Sensitivity analysis of outlier algorithm for this dataset (OutAlgoSensitivity.R)
+
+3) Diagnostic plots to discover operators that had systematically rogue data (bias and/or variance) as a result of their data recording behavior. (OperatorDiagnostics.R)
